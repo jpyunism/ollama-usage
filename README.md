@@ -7,6 +7,8 @@ App Android para ver el consumo del plan de **Ollama Cloud** (session usage, wee
 - **Session usage** (%) con hora de reset
 - **Weekly usage** (%) con desglose por modelo (requests y %)
 - **Alertas configurables por %**: umbral de alerta y crítico independientes para semana y sesión (sliders 50–99%), con switch maestro de notificaciones
+- **Consumo en pantalla de bloqueo**: notificación permanente (ongoing) con semana/sesión/plan, visible sin desbloquear
+- **Frecuencia de refresco configurable**: 15 min, 30 min, 1 h, 2 h, 4 h, 6 h o 12 h (mínimo 15 min por WorkManager)
 - **Notificaciones automáticas** al cruzar los umbrales configurados (revisión cada 4h en segundo plano con WorkManager, sin duplicados hasta que baje del umbral)
 - **Material You**: colores dinámicos en Android 12+, tema claro/oscuro automático
 - **8 temas de color**: Sistema (dinámico), Índigo, Esmeralda, Teal, Océano, Violeta, Rosa y Ámbar — se aplican al instante y se guardan
@@ -33,7 +35,7 @@ La página `https://ollama.com/settings` muestra el consumo en tiempo real pero 
 ## Tests
 
 ```bash
-./gradlew testDebugUnitTest   # 24 tests: scraper + ViewModel + umbrales + temas
+./gradlew testDebugUnitTest   # 26 tests: scraper + ViewModel + umbrales + temas + refresco
 ```
 
 ## Setup

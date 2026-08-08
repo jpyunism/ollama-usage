@@ -32,10 +32,12 @@ class UsageViewModelTest {
         every { prefs.getString(UsageViewModel.KEY_COOKIE, null) } returns null
         every { prefs.contains(UsageViewModel.KEY_COOKIE) } returns false
         every { prefs.getBoolean(UsageViewModel.KEY_NOTIF_ENABLED, true) } returns true
+        every { prefs.getBoolean(UsageViewModel.KEY_PERSISTENT_ENABLED, true) } returns true
         every { prefs.getInt(UsageViewModel.KEY_WEEKLY_ALERT, 80) } returns 80
         every { prefs.getInt(UsageViewModel.KEY_WEEKLY_CRITICAL, 95) } returns 95
         every { prefs.getInt(UsageViewModel.KEY_SESSION_ALERT, 80) } returns 80
         every { prefs.getInt(UsageViewModel.KEY_SESSION_CRITICAL, 95) } returns 95
+        every { prefs.getInt(UsageViewModel.KEY_REFRESH_INTERVAL, 60) } returns 60
         every { prefs.edit() } returns mockk(relaxed = true)
         return prefs
     }
@@ -146,6 +148,8 @@ class UsageViewModelTest {
         assertEquals(80, s.sessionAlert)
         assertEquals(95, s.sessionCritical)
         assertTrue(s.notificationsEnabled)
+        assertTrue(s.persistentEnabled)
+        assertEquals(60, s.refreshIntervalMinutes)
     }
 
     @Test
@@ -165,6 +169,8 @@ class UsageViewModelTest {
                 weeklyCritical = 90,
                 sessionAlert = 60,
                 sessionCritical = 85,
+                persistentEnabled = false,
+                refreshIntervalMinutes = 30,
             )
         )
 
@@ -174,12 +180,31 @@ class UsageViewModelTest {
         assertEquals(90, s.weeklyCritical)
         assertEquals(60, s.sessionAlert)
         assertEquals(85, s.sessionCritical)
+        assertFalse(s.persistentEnabled)
+        assertEquals(30, s.refreshIntervalMinutes)
 
         verify { editor.putBoolean(UsageViewModel.KEY_NOTIF_ENABLED, false) }
         verify { editor.putInt(UsageViewModel.KEY_WEEKLY_ALERT, 70) }
         verify { editor.putInt(UsageViewModel.KEY_WEEKLY_CRITICAL, 90) }
         verify { editor.putInt(UsageViewModel.KEY_SESSION_ALERT, 60) }
         verify { editor.putInt(UsageViewModel.KEY_SESSION_CRITICAL, 85) }
+        verify { editor.putBoolean(UsageViewModel.KEY_PERSISTENT_ENABLED, false) }
+        verify { editor.putInt(UsageViewModel.KEY_REFRESH_INTERVAL, 30) }
+    }
+
+    @Test
+    fun `cambiar frecuencia de refresco reprograma el worker`() = runTest {
+        val prefs = fakePrefs()
+        val editor = mockk<SharedPreferences.Editor>(relaxed = true)
+        every { editor.putBoolean(any(), any()) } returns editor
+        every { editor.putInt(any(), any()) } returns editor
+        every { prefs.edit() } returns editor
+
+        var rescheduled = -1
+        val vm = UsageViewModel(prefs, mockk(relaxed = true), ioDispatcher = StandardTestDispatcher(testScheduler)) { rescheduled = it }
+        vm.updateSettings(vm.settings.value.copy(refreshIntervalMinutes = 30))
+
+        assertEquals(30, rescheduled)
     }
 
     @Test

@@ -1,26 +1,15 @@
 package com.jpyunism.ollamacloudusage
 
 import android.app.Application
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
-import java.util.concurrent.TimeUnit
 
 class OllamaUsageApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        UsageNotifier.ensureChannel(this)
-        schedulePeriodicCheck()
-    }
-
-    private fun schedulePeriodicCheck() {
-        val request = PeriodicWorkRequestBuilder<UsageWorker>(4, TimeUnit.HOURS)
-            .build()
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-            "usage_periodic_check",
-            ExistingPeriodicWorkPolicy.UPDATE,
-            request,
-        )
+        UsageNotifier.ensureChannels(this)
+        // Programa con el intervalo guardado (o el default 60 min).
+        val prefs = getSharedPreferences("ollama_usage", MODE_PRIVATE)
+        val interval = prefs.getInt(UsageViewModel.KEY_REFRESH_INTERVAL, UsageViewModel.DEFAULT_REFRESH_MINUTES)
+        UsageScheduler.schedule(this, interval)
     }
 }

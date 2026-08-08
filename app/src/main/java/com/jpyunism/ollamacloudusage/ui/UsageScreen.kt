@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
@@ -38,6 +39,7 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -69,6 +71,7 @@ import com.jpyunism.ollamacloudusage.AppTheme
 import com.jpyunism.ollamacloudusage.ModelUsage
 import com.jpyunism.ollamacloudusage.UiState
 import com.jpyunism.ollamacloudusage.UsageData
+import com.jpyunism.ollamacloudusage.UsageScheduler
 import com.jpyunism.ollamacloudusage.UsageViewModel
 import java.time.Instant
 import java.time.ZoneId
@@ -327,6 +330,8 @@ private fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
     var weeklyCritical by remember { mutableIntStateOf(settings.weeklyCritical) }
     var sessionAlert by remember { mutableIntStateOf(settings.sessionAlert) }
     var sessionCritical by remember { mutableIntStateOf(settings.sessionCritical) }
+    var persistentEnabled by remember { mutableStateOf(settings.persistentEnabled) }
+    var refreshInterval by remember { mutableIntStateOf(settings.refreshIntervalMinutes) }
 
     Column(
         modifier = Modifier
@@ -337,8 +342,8 @@ private fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
     ) {
         Text("Alertas de consumo", style = MaterialTheme.typography.headlineSmall)
         Text(
-            "La app revisa tu consumo cada 4 horas en segundo plano y te avisa cuando " +
-                "se acerca al límite de tu plan.",
+            "La app revisa tu consumo en segundo plano y te avisa cuando se acerca " +
+                "al límite de tu plan.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -380,7 +385,7 @@ private fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
 
         ThresholdCard(
             title = "Límite semanal",
-            subtitle = "Se revisa cada 4h. Alerta al cruzar el umbral.",
+            subtitle = "Alerta al cruzar el umbral.",
             alert = weeklyAlert,
             critical = weeklyCritical,
             onAlertChange = { weeklyAlert = it },
@@ -396,6 +401,69 @@ private fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
             onCriticalChange = { sessionCritical = it },
         )
 
+        // ── Pantalla de bloqueo ──
+        Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+            Row(
+                Modifier.padding(16.dp).fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Filled.Lock,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Pantalla de bloqueo", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        if (persistentEnabled) "Consumo siempre visible" else "Oculto",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = persistentEnabled,
+                    onCheckedChange = { persistentEnabled = it },
+                )
+            }
+        }
+
+        // ── Frecuencia de refresco ──
+        Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+            Column(Modifier.padding(16.dp)) {
+                Text("Frecuencia de refresco", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Cada cuánto se actualiza el consumo en segundo plano " +
+                        "(mínimo 15 min).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    UsageScheduler.REFRESH_INTERVALS.forEach { minutes ->
+                        val selected = minutes == refreshInterval
+                        FilterChip(
+                            selected = selected,
+                            onClick = { refreshInterval = minutes },
+                            label = { Text(formatInterval(minutes)) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+        }
+
         FilledTonalButton(
             onClick = {
                 vm.updateSettings(
@@ -405,6 +473,8 @@ private fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
                         weeklyCritical = weeklyCritical,
                         sessionAlert = sessionAlert,
                         sessionCritical = sessionCritical,
+                        persistentEnabled = persistentEnabled,
+                        refreshIntervalMinutes = refreshInterval,
                     )
                 )
             },
@@ -413,6 +483,12 @@ private fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
             Text("Guardar configuración")
         }
     }
+}
+
+private fun formatInterval(minutes: Int): String = when {
+    minutes < 60 -> "$minutes min"
+    minutes % 60 == 0 -> "${minutes / 60} h"
+    else -> "$minutes min"
 }
 
 @Composable

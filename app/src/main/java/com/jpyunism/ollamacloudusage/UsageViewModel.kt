@@ -23,13 +23,15 @@ sealed interface UiState {
     data class Error(val message: String) : UiState
 }
 
-/** Configuración de alertas por porcentaje de consumo. */
+/** Configuración de alertas y pantalla de bloqueo. */
 data class AlertSettings(
     val notificationsEnabled: Boolean = true,
     val weeklyAlert: Int = 80,
     val weeklyCritical: Int = 95,
     val sessionAlert: Int = 80,
     val sessionCritical: Int = 95,
+    val persistentEnabled: Boolean = true,
+    val refreshIntervalMinutes: Int = 60,
 ) {
     companion object {
         const val MIN_THRESHOLD = 50
@@ -41,6 +43,7 @@ class UsageViewModel(
     private val prefs: android.content.SharedPreferences,
     private val scraper: UsageScraper,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val reschedule: (Int) -> Unit = {},
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
@@ -69,6 +72,7 @@ class UsageViewModel(
     fun hasCookie(): Boolean = prefs.contains(KEY_COOKIE)
 
     fun updateSettings(s: AlertSettings) {
+        val previous = _settings.value
         _settings.value = s
         prefs.edit()
             .putBoolean(KEY_NOTIF_ENABLED, s.notificationsEnabled)
@@ -76,7 +80,13 @@ class UsageViewModel(
             .putInt(KEY_WEEKLY_CRITICAL, s.weeklyCritical)
             .putInt(KEY_SESSION_ALERT, s.sessionAlert)
             .putInt(KEY_SESSION_CRITICAL, s.sessionCritical)
+            .putBoolean(KEY_PERSISTENT_ENABLED, s.persistentEnabled)
+            .putInt(KEY_REFRESH_INTERVAL, s.refreshIntervalMinutes)
             .apply()
+        // Si cambió la frecuencia, reprograma el worker en segundo plano.
+        if (s.refreshIntervalMinutes != previous.refreshIntervalMinutes) {
+            reschedule(s.refreshIntervalMinutes)
+        }
     }
 
     fun updateTheme(theme: AppTheme) {
@@ -117,6 +127,8 @@ class UsageViewModel(
         weeklyCritical = prefs.getInt(KEY_WEEKLY_CRITICAL, 95),
         sessionAlert = prefs.getInt(KEY_SESSION_ALERT, 80),
         sessionCritical = prefs.getInt(KEY_SESSION_CRITICAL, 95),
+        persistentEnabled = prefs.getBoolean(KEY_PERSISTENT_ENABLED, true),
+        refreshIntervalMinutes = prefs.getInt(KEY_REFRESH_INTERVAL, DEFAULT_REFRESH_MINUTES),
     )
 
     private fun loadTheme(): AppTheme =
@@ -133,6 +145,9 @@ class UsageViewModel(
         const val KEY_SESSION_ALERT = "session_alert"
         const val KEY_SESSION_CRITICAL = "session_critical"
         const val KEY_THEME = "theme"
+        const val KEY_PERSISTENT_ENABLED = "persistent_enabled"
+        const val KEY_REFRESH_INTERVAL = "refresh_interval"
+        const val DEFAULT_REFRESH_MINUTES = 60
 
         fun factory(context: Context): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
@@ -140,7 +155,11 @@ class UsageViewModel(
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     val app = context.applicationContext
                     val prefs = app.getSharedPreferences("ollama_usage", Context.MODE_PRIVATE)
-                    return UsageViewModel(prefs, OllamaUsageScraper()) as T
+                    return UsageViewModel(
+                        prefs,
+                        OllamaUsageScraper(),
+                        reschedule = { UsageScheduler.schedule(app, it) },
+                    ) as T
                 }
             }
     }

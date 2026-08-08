@@ -19,14 +19,21 @@ class UsageWorker(
         val appContext = applicationContext
         val prefs = appContext.getSharedPreferences("ollama_usage", Context.MODE_PRIVATE)
 
-        // Si el usuario desactivó las notificaciones, no hacer nada.
-        if (!prefs.getBoolean(UsageViewModel.KEY_NOTIF_ENABLED, true)) return Result.success()
-
         val cookie = prefs.getString(UsageViewModel.KEY_COOKIE, null) ?: return Result.success()
 
         val data = withContext(Dispatchers.IO) {
             runCatching { OllamaUsageScraper().fetchUsage(cookie) }.getOrNull()
         } ?: return Result.retry()
+
+        // Notificación permanente (pantalla de bloqueo) — independiente de las alertas.
+        if (prefs.getBoolean(UsageViewModel.KEY_PERSISTENT_ENABLED, true)) {
+            UsageNotifier.showPersistent(appContext, data)
+        } else {
+            UsageNotifier.hidePersistent(appContext)
+        }
+
+        // Alertas de umbral — solo si el usuario las activó.
+        if (!prefs.getBoolean(UsageViewModel.KEY_NOTIF_ENABLED, true)) return Result.success()
 
         val settings = AlertSettings(
             notificationsEnabled = true,
