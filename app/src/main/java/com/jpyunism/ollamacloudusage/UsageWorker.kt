@@ -17,7 +17,7 @@ class UsageWorker(
 
     override suspend fun doWork(): Result {
         val appContext = applicationContext
-        val prefs = appContext.getSharedPreferences("ollama_usage", Context.MODE_PRIVATE)
+        val prefs = SecurePrefs.get(appContext)
 
         val cookie = prefs.getString(UsageViewModel.KEY_COOKIE, null) ?: return Result.success()
 

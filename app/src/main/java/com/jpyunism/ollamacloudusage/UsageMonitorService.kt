@@ -23,6 +23,7 @@ class UsageMonitorService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var intervalMinutes = UsageScheduler.MIN_PERIODIC_MINUTES
+    private var consecutiveFailures = 0
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -34,21 +35,32 @@ class UsageMonitorService : Service() {
         return START_STICKY
     }
 
-    private fun prefs() = getSharedPreferences("ollama_usage", Context.MODE_PRIVATE)
+    private fun prefs() = SecurePrefs.get(this)
 
     private fun startLoop() {
         scope.launch {
             while (isActive) {
-                refreshOnce()
-                delay(intervalMinutes * 60_000L)
+                val ok = refreshOnce()
+                if (ok) {
+                    consecutiveFailures = 0
+                    delay(intervalMinutes * 60_000L)
+                } else {
+                    // Backoff exponencial: si el fetch falla en bucle (red caída,
+                    // cookie inválida), no martillear ollama.com. 1, 2, 4... 30 min máx.
+                    consecutiveFailures = (consecutiveFailures + 1).coerceAtMost(6)
+                    val backoffSeconds = (60L shl (consecutiveFailures - 1)).coerceAtMost(30 * 60L)
+                    delay(backoffSeconds * 1_000L)
+                }
             }
         }
     }
 
-    private suspend fun refreshOnce() {
-        val cookie = prefs().getString(UsageViewModel.KEY_COOKIE, null) ?: return
-        val data = runCatching { OllamaUsageScraper().fetchUsage(cookie) }.getOrNull() ?: return
+    /** true si el refresco fue exitoso; false si falló (activa backoff). */
+    private suspend fun refreshOnce(): Boolean {
+        val cookie = prefs().getString(UsageViewModel.KEY_COOKIE, null) ?: return false
+        val data = runCatching { OllamaUsageScraper().fetchUsage(cookie) }.getOrNull() ?: return false
         UsageNotifier.showPersistent(this, data)
+        return true
     }
 
     override fun onDestroy() {

@@ -1,6 +1,7 @@
 package com.jpyunism.ollamacloudusage
 
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.time.Instant
 
@@ -18,15 +19,20 @@ class OllamaUsageScraper : UsageScraper {
             .header("Cookie", cookie)
             .timeout(15_000)
             .get()
+        return parseUsage(doc)
+    }
 
-        if (doc.title().contains("Sign in") || doc.select("input[type=password]").isNotEmpty()) {
-            throw CookieExpiredException()
-        }
+    /**
+     * Parsea el HTML de ollama.com/settings. Lógica pura, sin red:
+     * testable con un Document armado desde un string.
+     */
+    internal fun parseUsage(doc: Document): UsageData {
+        if (isLoginPage(doc)) throw CookieExpiredException()
 
         val plan = doc.selectFirst("h2 span.capitalize")?.text() ?: "unknown"
 
-        val session = parseMeter(doc.selectFirst("[data-usage-track][aria-label*='Session']"), "Session")
-        val weekly = parseMeter(doc.selectFirst("[data-usage-track][aria-label*='Weekly']"), "Weekly")
+        val session = parseMeter(doc.selectFirst("[data-usage-track][aria-label*='Session']"))
+        val weekly = parseMeter(doc.selectFirst("[data-usage-track][aria-label*='Weekly']"))
 
         val sessionReset = doc.selectFirst("[data-time]")?.attr("data-time")
             ?.let { runCatching { Instant.parse(it) }.getOrNull() }
@@ -41,9 +47,14 @@ class OllamaUsageScraper : UsageScraper {
         )
     }
 
-    private data class Meter(val percent: Double, val models: List<ModelUsage>)
+    /** true si el documento es la página de login (cookie inválida/expirada). */
+    internal fun isLoginPage(doc: Document): Boolean =
+        doc.title().contains("Sign in") || doc.select("input[type=password]").isNotEmpty()
 
-    private fun parseMeter(track: Element?, label: String): Meter {
+    internal data class Meter(val percent: Double, val models: List<ModelUsage>)
+
+    /** Extrae el porcentaje y el desglose por modelo de un meter [data-usage-track]. */
+    internal fun parseMeter(track: Element?): Meter {
         if (track == null) return Meter(0.0, emptyList())
 
         val pct = Regex("""([\d.]+)%\s+used""")

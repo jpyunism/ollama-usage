@@ -154,7 +154,7 @@ class UsageViewModel(
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     val app = context.applicationContext
-                    val prefs = app.getSharedPreferences("ollama_usage", Context.MODE_PRIVATE)
+                    val prefs = SecurePrefs.get(app)
                     return UsageViewModel(
                         prefs,
                         OllamaUsageScraper(),

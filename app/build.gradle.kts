@@ -86,6 +86,11 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.jsoup:jsoup:1.18.1")
 
+    // Cifrado de la cookie de sesión en reposo (AndroidX Security)
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    // Tink (usado por security-crypto) referencia anotaciones errorprone; R8 las necesita.
+    compileOnly("com.google.errorprone:error_prone_annotations:2.23.0")
+
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     // Background check + notificaciones de límite
