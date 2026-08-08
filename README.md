@@ -2,6 +2,8 @@
 
 App Android para ver el consumo del plan de **Ollama Cloud** (session usage, weekly usage y desglose por modelo).
 
+[![Auditoría Motoko](https://raw.githubusercontent.com/motoko-section9/powned-by-motoko/main/badges/ollama-usage-10.webp)](https://github.com/motoko-section9/powned-by-motoko)
+
 ## Funcionalidades
 
 - **Session usage** (%) con hora de reset
