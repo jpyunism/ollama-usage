@@ -199,4 +199,44 @@ class UsageViewModelTest {
         assertEquals(55, s.sessionAlert)
         assertEquals(82, s.sessionCritical)
     }
+
+    // ─────────── Temas ───────────
+
+    @Test
+    fun `tema por defecto es Sistema`() = runTest {
+        val vm = buildVm(fakePrefs(), mockk(relaxed = true))
+        assertEquals(AppTheme.System, vm.theme.value)
+    }
+
+    @Test
+    fun `updateTheme persiste y actualiza`() = runTest {
+        val prefs = fakePrefs()
+        val editor = mockk<SharedPreferences.Editor>(relaxed = true)
+        every { editor.putString(any(), any()) } returns editor
+        every { prefs.edit() } returns editor
+
+        val vm = buildVm(prefs, mockk(relaxed = true))
+        vm.updateTheme(AppTheme.Emerald)
+
+        assertEquals(AppTheme.Emerald, vm.theme.value)
+        verify { editor.putString(UsageViewModel.KEY_THEME, "Emerald") }
+    }
+
+    @Test
+    fun `tema guardado se carga al iniciar`() = runTest {
+        val prefs = fakePrefs()
+        every { prefs.getString(UsageViewModel.KEY_THEME, null) } returns "Rose"
+
+        val vm = buildVm(prefs, mockk(relaxed = true))
+        assertEquals(AppTheme.Rose, vm.theme.value)
+    }
+
+    @Test
+    fun `tema invalido en prefs cae a Sistema`() = runTest {
+        val prefs = fakePrefs()
+        every { prefs.getString(UsageViewModel.KEY_THEME, null) } returns "NoExiste"
+
+        val vm = buildVm(prefs, mockk(relaxed = true))
+        assertEquals(AppTheme.System, vm.theme.value)
+    }
 }

@@ -8,14 +8,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jpyunism.ollamacloudusage.ui.OllamaUsageTheme
 import com.jpyunism.ollamacloudusage.ui.UsageScreen
-import com.jpyunism.ollamacloudusage.UsageViewModel
 
 class MainActivity : ComponentActivity() {
 
@@ -27,11 +27,13 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         requestNotificationPermissionIfNeeded()
         setContent {
-            OllamaUsageTheme {
+            val vm: UsageViewModel = viewModel(
+                factory = UsageViewModel.factory(applicationContext),
+            )
+            val theme by vm.theme.collectAsStateWithLifecycle()
+
+            OllamaUsageTheme(theme = theme) {
                 Surface(modifier = Modifier) {
-                    val vm: UsageViewModel = viewModel(
-                        factory = UsageViewModel.factory(applicationContext),
-                    )
                     UsageScreen(vm)
                 }
             }

@@ -2,6 +2,7 @@ package com.jpyunism.ollamacloudusage.ui
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -9,30 +10,36 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
+import com.jpyunism.ollamacloudusage.AppTheme
 
-private val LightColors = lightColorScheme(
-    primary = Color(0xFF4F46E5),
+/** Genera el esquema claro a partir del color semilla. */
+private fun lightScheme(seed: Color): ColorScheme = lightColorScheme(
+    primary = seed,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFE0E7FF),
-    onPrimaryContainer = Color(0xFF1E1B4B),
-    secondary = Color(0xFFF97316),
-    secondaryContainer = Color(0xFFFFEDD5),
-    onSecondaryContainer = Color(0xFF431407),
+    primaryContainer = lerp(seed, Color.White, 0.85f),
+    onPrimaryContainer = lerp(seed, Color.Black, 0.6f),
+    secondary = lerp(seed, Color.Black, 0.25f),
+    onSecondary = Color.White,
+    secondaryContainer = lerp(seed, Color.White, 0.75f),
+    onSecondaryContainer = lerp(seed, Color.Black, 0.6f),
     background = Color(0xFFFAFAFA),
     surface = Color(0xFFFFFFFF),
     surfaceVariant = Color(0xFFF1F5F9),
     error = Color(0xFFDC2626),
 )
 
-private val DarkColors = darkColorScheme(
-    primary = Color(0xFF818CF8),
-    onPrimary = Color(0xFF1E1B4B),
-    primaryContainer = Color(0xFF3730A3),
-    onPrimaryContainer = Color(0xFFE0E7FF),
-    secondary = Color(0xFFFB923C),
-    secondaryContainer = Color(0xFF7C2D12),
-    onSecondaryContainer = Color(0xFFFFEDD5),
+/** Genera el esquema oscuro a partir del color semilla. */
+private fun darkScheme(seed: Color): ColorScheme = darkColorScheme(
+    primary = lerp(seed, Color.White, 0.35f),
+    onPrimary = lerp(seed, Color.Black, 0.7f),
+    primaryContainer = lerp(seed, Color.Black, 0.65f),
+    onPrimaryContainer = lerp(seed, Color.White, 0.75f),
+    secondary = lerp(seed, Color.White, 0.55f),
+    onSecondary = lerp(seed, Color.Black, 0.7f),
+    secondaryContainer = lerp(seed, Color.Black, 0.55f),
+    onSecondaryContainer = lerp(seed, Color.White, 0.8f),
     background = Color(0xFF0D0D0D),
     surface = Color(0xFF171717),
     surfaceVariant = Color(0xFF262626),
@@ -41,19 +48,18 @@ private val DarkColors = darkColorScheme(
 
 @Composable
 fun OllamaUsageTheme(
+    theme: AppTheme = AppTheme.System,
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
 
-    // Dynamic color (Material You) en Android 12+; fallback a la paleta custom.
+    // "Sistema" usa Material You (colores dinámicos) en Android 12+; fallback a Índigo.
     val colorScheme = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            if (darkTheme) dynamicDarkColorScheme(context)
-            else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColors
-        else -> LightColors
+        theme == AppTheme.System && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        darkTheme -> darkScheme(theme.seed)
+        else -> lightScheme(theme.seed)
     }
 
     MaterialTheme(

@@ -9,7 +9,8 @@ App Android para ver el consumo del plan de **Ollama Cloud** (session usage, wee
 - **Alertas configurables por %**: umbral de alerta y crítico independientes para semana y sesión (sliders 50–99%), con switch maestro de notificaciones
 - **Notificaciones automáticas** al cruzar los umbrales configurados (revisión cada 4h en segundo plano con WorkManager, sin duplicados hasta que baje del umbral)
 - **Material You**: colores dinámicos en Android 12+, tema claro/oscuro automático
-- **Navegación por tabs** (Uso / Alertas) con Material 3 NavigationBar
+- **8 temas de color**: Sistema (dinámico), Índigo, Esmeralda, Teal, Océano, Violeta, Rosa y Ámbar — se aplican al instante y se guardan
+- **Navegación por tabs** (Uso / Alertas / Temas) con Material 3 NavigationBar
 - **Edge-to-edge** con insets correctos (IME, system bars)
 - **Release firmado** con R8 + shrink (APK de ~1.4 MB)
 
@@ -32,7 +33,7 @@ La página `https://ollama.com/settings` muestra el consumo en tiempo real pero 
 ## Tests
 
 ```bash
-./gradlew testDebugUnitTest   # 20 tests: scraper + ViewModel + umbrales de alerta
+./gradlew testDebugUnitTest   # 24 tests: scraper + ViewModel + umbrales + temas
 ```
 
 ## Setup

@@ -23,10 +23,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -62,6 +65,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jpyunism.ollamacloudusage.AlertSettings
+import com.jpyunism.ollamacloudusage.AppTheme
 import com.jpyunism.ollamacloudusage.ModelUsage
 import com.jpyunism.ollamacloudusage.UiState
 import com.jpyunism.ollamacloudusage.UsageData
@@ -74,6 +78,7 @@ import kotlin.math.abs
 private enum class Tab(val label: String, val icon: ImageVector, val selectedIcon: ImageVector) {
     Usage("Uso", Icons.Outlined.Speed, Icons.Filled.Speed),
     Alerts("Alertas", Icons.Outlined.Notifications, Icons.Filled.Notifications),
+    Themes("Temas", Icons.Outlined.Palette, Icons.Filled.Palette),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -118,6 +123,7 @@ fun UsageScreen(vm: UsageViewModel) {
             when (tab) {
                 Tab.Usage -> UsageTab(vm, state)
                 Tab.Alerts -> AlertsTab(vm, settings)
+                Tab.Themes -> ThemesTab(vm)
             }
         }
     }
@@ -480,5 +486,83 @@ private fun ThresholdSlider(
             modifier = Modifier.width(48.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.End,
         )
+    }
+}
+
+// ─────────────────────────── Tab: Temas ───────────────────────────
+
+@Composable
+private fun ThemesTab(vm: UsageViewModel) {
+    val current by vm.theme.collectAsStateWithLifecycle()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text("Temas de color", style = MaterialTheme.typography.headlineSmall)
+        Text(
+            "Elige el color principal de la app. Se aplica al instante y se guarda " +
+                "automáticamente. El tema Sistema usa los colores dinámicos de tu wallpaper " +
+                "(Android 12+).",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        AppTheme.entries.forEach { theme ->
+            ThemeRow(
+                theme = theme,
+                selected = theme == current,
+                onClick = { vm.updateTheme(theme) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ThemeRow(
+    theme: AppTheme,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            },
+        ),
+    ) {
+        Row(
+            Modifier.padding(16.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Círculo con el color semilla del tema
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(theme.seed),
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                theme.label,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
+            )
+            if (selected) {
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = "Seleccionado",
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+        }
     }
 }

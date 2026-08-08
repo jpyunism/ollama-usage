@@ -49,6 +49,9 @@ class UsageViewModel(
     private val _settings = MutableStateFlow(loadSettings())
     val settings: StateFlow<AlertSettings> = _settings
 
+    private val _theme = MutableStateFlow(loadTheme())
+    val theme: StateFlow<AppTheme> = _theme
+
     init {
         if (prefs.contains(KEY_COOKIE)) refresh()
     }
@@ -74,6 +77,11 @@ class UsageViewModel(
             .putInt(KEY_SESSION_ALERT, s.sessionAlert)
             .putInt(KEY_SESSION_CRITICAL, s.sessionCritical)
             .apply()
+    }
+
+    fun updateTheme(theme: AppTheme) {
+        _theme.value = theme
+        prefs.edit().putString(KEY_THEME, theme.name).apply()
     }
 
     fun refresh() {
@@ -111,6 +119,11 @@ class UsageViewModel(
         sessionCritical = prefs.getInt(KEY_SESSION_CRITICAL, 95),
     )
 
+    private fun loadTheme(): AppTheme =
+        prefs.getString(KEY_THEME, null)
+            ?.let { name -> AppTheme.entries.firstOrNull { it.name == name } }
+            ?: AppTheme.System
+
     companion object {
         const val KEY_COOKIE = "session_cookie"
         const val KEY_LAST_UPDATED = "last_updated"
@@ -119,6 +132,7 @@ class UsageViewModel(
         const val KEY_WEEKLY_CRITICAL = "weekly_critical"
         const val KEY_SESSION_ALERT = "session_alert"
         const val KEY_SESSION_CRITICAL = "session_critical"
+        const val KEY_THEME = "theme"
 
         fun factory(context: Context): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
