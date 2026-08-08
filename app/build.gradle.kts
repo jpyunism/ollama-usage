@@ -89,7 +89,7 @@ dependencies {
     // Cifrado de la cookie de sesión en reposo (AndroidX Security)
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     // Tink (usado por security-crypto) referencia anotaciones errorprone; R8 las necesita.
-    compileOnly("com.google.errorprone:error_prone_annotations:2.23.0")
+    compileOnly("com.google.errorprone:error_prone_annotations:2.50.0")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
