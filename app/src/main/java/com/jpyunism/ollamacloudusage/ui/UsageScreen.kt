@@ -441,25 +441,37 @@ private fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
             Column(Modifier.padding(16.dp)) {
                 Text("Frecuencia de refresco", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "Cada cuánto se actualiza el consumo en segundo plano " +
-                        "(mínimo 15 min).",
+                    "Cada cuánto se actualiza el consumo en segundo plano. " +
+                        "De 1 a 14 min usa un servicio en primer plano; " +
+                        "de 15 min en adelante usa WorkManager.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
+                Slider(
+                    value = refreshInterval.toFloat(),
+                    onValueChange = { refreshInterval = it.toInt() },
+                    valueRange = UsageScheduler.MIN_REFRESH_MINUTES.toFloat()..
+                        UsageScheduler.MAX_REFRESH_MINUTES.toFloat(),
+                    steps = 30,
+                    colors = SliderDefaults.colors(
+                        thumbColor = MaterialTheme.colorScheme.primary,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                )
                 Row(
                     Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    UsageScheduler.REFRESH_INTERVALS.forEach { minutes ->
-                        val selected = minutes == refreshInterval
-                        FilterChip(
-                            selected = selected,
-                            onClick = { refreshInterval = minutes },
-                            label = { Text(formatInterval(minutes)) },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
+                    Text("1 min", style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        formatInterval(refreshInterval),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Text("12 h", style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
@@ -488,7 +500,7 @@ private fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
 private fun formatInterval(minutes: Int): String = when {
     minutes < 60 -> "$minutes min"
     minutes % 60 == 0 -> "${minutes / 60} h"
-    else -> "$minutes min"
+    else -> "${minutes / 60} h ${minutes % 60} min"
 }
 
 @Composable

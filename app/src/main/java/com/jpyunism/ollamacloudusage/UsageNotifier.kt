@@ -1,8 +1,10 @@
 package com.jpyunism.ollamacloudusage
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.os.Bundle
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import java.time.Instant
@@ -14,7 +16,7 @@ object UsageNotifier {
     const val CHANNEL_ID = "usage_alerts"
     const val CHANNEL_PERSISTENT_ID = "usage_persistent"
     private const val NOTIFICATION_ID = 1001
-    private const val PERSISTENT_ID = 1002
+    const val PERSISTENT_ID = 1002
 
     fun ensureChannels(context: Context) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -55,30 +57,65 @@ object UsageNotifier {
         }
     }
 
-    /** Notificación permanente (ongoing) con el consumo actual, visible en pantalla de bloqueo. */
-    fun showPersistent(context: Context, data: UsageData) {
-        val time = Instant.ofEpochMilli(System.currentTimeMillis())
-            .atZone(ZoneId.systemDefault())
-            .format(DateTimeFormatter.ofPattern("HH:mm"))
-
-        val body = buildString {
-            append("Semana: ${data.weeklyPercent}% · Sesión: ${data.sessionPercent}%\n")
-            append("Plan ${data.plan} · Actualizado $time")
+    /** Construye la notificación permanente (ongoing) con el consumo actual. */
+    fun buildPersistent(context: Context, data: UsageData?): Notification {
+        val title = if (data != null) {
+            "Ollama Cloud — ${data.weeklyPercent}% semanal"
+        } else {
+            "Ollama Cloud — actualizando…"
+        }
+        val text = if (data != null) {
+            "Sesión ${data.sessionPercent}% · Plan ${data.plan}"
+        } else {
+            "Consultando consumo…"
+        }
+        val body = if (data != null) {
+            val time = Instant.ofEpochMilli(System.currentTimeMillis())
+                .atZone(ZoneId.systemDefault())
+                .format(DateTimeFormatter.ofPattern("HH:mm"))
+            buildString {
+                append("Semana: ${data.weeklyPercent}% · Sesión: ${data.sessionPercent}%\n")
+                append("Plan ${data.plan} · Actualizado $time")
+            }
+        } else {
+            "Consultando consumo…"
         }
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_PERSISTENT_ID)
+        // Samsung Live Notifications / Now Bar (best-effort: requiere whitelist
+        // en One UI 7, o Live Updates habilitado en opciones de desarrollador en One UI 8).
+        val extras = Bundle().apply {
+            putInt("android.ongoingActivityNoti.style", 1)
+            putString("android.ongoingActivityNoti.primaryInfo", title)
+            putString("android.ongoingActivityNoti.secondaryInfo", text)
+            putString(
+                "android.ongoingActivityNoti.chipExpandedText",
+                if (data != null) "Ollama ${data.weeklyPercent}%" else "Ollama",
+            )
+            if (data != null) {
+                putInt("android.ongoingActivityNoti.progress", data.weeklyPercent.toInt().coerceIn(0, 100))
+                putInt("android.ongoingActivityNoti.progressMax", 100)
+                putString("android.ongoingActivityNoti.nowbarPrimaryInfo", "Ollama ${data.weeklyPercent}%")
+                putString("android.ongoingActivityNoti.nowbarSecondaryInfo", "Sesión ${data.sessionPercent}%")
+            }
+        }
+
+        return NotificationCompat.Builder(context, CHANNEL_PERSISTENT_ID)
             .setSmallIcon(android.R.drawable.stat_notify_sync)
-            .setContentTitle("Ollama Cloud — ${data.weeklyPercent}% semanal")
-            .setContentText("Sesión ${data.sessionPercent}% · Plan ${data.plan}")
+            .setContentTitle(title)
+            .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setExtras(extras)
             .build()
+    }
 
+    /** Notificación permanente (ongoing) con el consumo actual, visible en pantalla de bloqueo. */
+    fun showPersistent(context: Context, data: UsageData) {
         runCatching {
-            NotificationManagerCompat.from(context).notify(PERSISTENT_ID, notification)
+            NotificationManagerCompat.from(context).notify(PERSISTENT_ID, buildPersistent(context, data))
         }
     }
 
