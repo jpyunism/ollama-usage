@@ -35,12 +35,21 @@ La página `https://ollama.com/settings` muestra el consumo en tiempo real pero 
 ## Tests
 
 ```bash
-./gradlew testDebugUnitTest   # 26 tests: scraper + ViewModel + umbrales + temas + refresco
+./gradlew testDebugUnitTest   # 32 tests: scraper (parsing real sin red) + ViewModel + umbrales + temas + refresco
 ```
+
+## CI
+
+GitHub Actions corre `testDebugUnitTest` + `lintDebug` en cada push/PR (`.github/workflows/ci.yml`). Dependabot revisa dependencias semanalmente.
+
+## Seguridad
+
+- La cookie de sesión se guarda **cifrada** (EncryptedSharedPreferences + Android Keystore, AES256), no en claro.
+- Contraseñas de firma del release: solo en `local.properties` (no versionado) o variables de entorno, nunca en el repo.
 
 ## Setup
 
-1. Abre el proyecto en Android Studio (o `./gradlew assembleRelease`).
+1. Abre el proyecto en Android Studio (o `./gradlew assembleRelease` — el wrapper está versionado, no necesitas Gradle manual).
 2. En la app, pega tu cookie de `ollama.com` (DevTools → Application → Cookies: `aid=...; __Secure-session=...`).
 3. Toca "Actualizar" para refrescar.
 
