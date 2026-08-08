@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -22,10 +24,22 @@ android {
         create("release") {
             val keystore = rootProject.file("keystore/release.jks")
             if (keystore.exists()) {
+                // Contraseñas desde local.properties (NO versionado) o env vars.
+                // Nunca hardcodear credenciales de firma en el repo.
+                val props = Properties().apply {
+                    val f = rootProject.file("local.properties")
+                    if (f.exists()) f.inputStream().use { load(it) }
+                }
                 storeFile = keystore
-                storePassword = "REDACTED"
-                keyAlias = "ollama-usage"
-                keyPassword = "REDACTED"
+                storePassword = props.getProperty("RELEASE_STORE_PASSWORD")
+                    ?: System.getenv("RELEASE_STORE_PASSWORD")
+                    ?: error("RELEASE_STORE_PASSWORD no definida (local.properties o env)")
+                keyAlias = props.getProperty("RELEASE_KEY_ALIAS")
+                    ?: System.getenv("RELEASE_KEY_ALIAS")
+                    ?: "ollama-usage"
+                keyPassword = props.getProperty("RELEASE_KEY_PASSWORD")
+                    ?: System.getenv("RELEASE_KEY_PASSWORD")
+                    ?: error("RELEASE_KEY_PASSWORD no definida (local.properties o env)")
             }
         }
     }

@@ -4,9 +4,14 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.PackageManager
+import android.Manifest
+import android.annotation.SuppressLint
+import android.os.Build
 import android.os.Bundle
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -42,7 +47,9 @@ object UsageNotifier {
         manager.createNotificationChannel(persistent)
     }
 
+    @SuppressLint("MissingPermission") // canNotify() verifica el permiso antes
     fun notifyLimit(context: Context, title: String, message: String) {
+        if (!canNotify(context)) return
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_notify_error)
             .setContentTitle(title)
@@ -113,7 +120,9 @@ object UsageNotifier {
     }
 
     /** Notificación permanente (ongoing) con el consumo actual, visible en pantalla de bloqueo. */
+    @SuppressLint("MissingPermission") // canNotify() verifica el permiso antes
     fun showPersistent(context: Context, data: UsageData) {
+        if (!canNotify(context)) return
         runCatching {
             NotificationManagerCompat.from(context).notify(PERSISTENT_ID, buildPersistent(context, data))
         }
@@ -124,4 +133,11 @@ object UsageNotifier {
             NotificationManagerCompat.from(context).cancel(PERSISTENT_ID)
         }
     }
+
+    /** true si la app tiene permiso de notificaciones (Android 13+) o no lo requiere. */
+    @SuppressLint("MissingPermission")
+    private fun canNotify(context: Context): Boolean =
+        Build.VERSION.SDK_INT < 33 ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
 }
