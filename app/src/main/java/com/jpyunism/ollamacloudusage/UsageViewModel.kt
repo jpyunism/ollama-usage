@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,14 +23,31 @@ sealed interface UiState {
     data class Error(val message: String) : UiState
 }
 
+/** Configuración de alertas por porcentaje de consumo. */
+data class AlertSettings(
+    val notificationsEnabled: Boolean = true,
+    val weeklyAlert: Int = 80,
+    val weeklyCritical: Int = 95,
+    val sessionAlert: Int = 80,
+    val sessionCritical: Int = 95,
+) {
+    companion object {
+        const val MIN_THRESHOLD = 50
+        const val MAX_THRESHOLD = 99
+    }
+}
+
 class UsageViewModel(
     private val prefs: android.content.SharedPreferences,
     private val scraper: UsageScraper,
-    private val ioDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState
+
+    private val _settings = MutableStateFlow(loadSettings())
+    val settings: StateFlow<AlertSettings> = _settings
 
     init {
         if (prefs.contains(KEY_COOKIE)) refresh()
@@ -46,6 +64,17 @@ class UsageViewModel(
     }
 
     fun hasCookie(): Boolean = prefs.contains(KEY_COOKIE)
+
+    fun updateSettings(s: AlertSettings) {
+        _settings.value = s
+        prefs.edit()
+            .putBoolean(KEY_NOTIF_ENABLED, s.notificationsEnabled)
+            .putInt(KEY_WEEKLY_ALERT, s.weeklyAlert)
+            .putInt(KEY_WEEKLY_CRITICAL, s.weeklyCritical)
+            .putInt(KEY_SESSION_ALERT, s.sessionAlert)
+            .putInt(KEY_SESSION_CRITICAL, s.sessionCritical)
+            .apply()
+    }
 
     fun refresh() {
         val cookie = prefs.getString(KEY_COOKIE, null) ?: run {
@@ -74,9 +103,22 @@ class UsageViewModel(
         }
     }
 
+    private fun loadSettings(): AlertSettings = AlertSettings(
+        notificationsEnabled = prefs.getBoolean(KEY_NOTIF_ENABLED, true),
+        weeklyAlert = prefs.getInt(KEY_WEEKLY_ALERT, 80),
+        weeklyCritical = prefs.getInt(KEY_WEEKLY_CRITICAL, 95),
+        sessionAlert = prefs.getInt(KEY_SESSION_ALERT, 80),
+        sessionCritical = prefs.getInt(KEY_SESSION_CRITICAL, 95),
+    )
+
     companion object {
         const val KEY_COOKIE = "session_cookie"
         const val KEY_LAST_UPDATED = "last_updated"
+        const val KEY_NOTIF_ENABLED = "notif_enabled"
+        const val KEY_WEEKLY_ALERT = "weekly_alert"
+        const val KEY_WEEKLY_CRITICAL = "weekly_critical"
+        const val KEY_SESSION_ALERT = "session_alert"
+        const val KEY_SESSION_CRITICAL = "session_critical"
 
         fun factory(context: Context): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {

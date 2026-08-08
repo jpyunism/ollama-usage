@@ -1,5 +1,6 @@
 package com.jpyunism.ollamacloudusage
 
+import android.content.Context
 import android.content.SharedPreferences
 import io.mockk.every
 import io.mockk.mockk
@@ -13,6 +14,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
@@ -29,6 +31,11 @@ class UsageViewModelTest {
         val prefs = mockk<SharedPreferences>(relaxed = true)
         every { prefs.getString(UsageViewModel.KEY_COOKIE, null) } returns null
         every { prefs.contains(UsageViewModel.KEY_COOKIE) } returns false
+        every { prefs.getBoolean(UsageViewModel.KEY_NOTIF_ENABLED, true) } returns true
+        every { prefs.getInt(UsageViewModel.KEY_WEEKLY_ALERT, 80) } returns 80
+        every { prefs.getInt(UsageViewModel.KEY_WEEKLY_CRITICAL, 95) } returns 95
+        every { prefs.getInt(UsageViewModel.KEY_SESSION_ALERT, 80) } returns 80
+        every { prefs.getInt(UsageViewModel.KEY_SESSION_CRITICAL, 95) } returns 95
         every { prefs.edit() } returns mockk(relaxed = true)
         return prefs
     }
@@ -126,5 +133,70 @@ class UsageViewModelTest {
 
         vm.clearCookie()
         assertEquals(UiState.Idle, vm.uiState.value)
+    }
+
+    // ─────────── Configuración de alertas ───────────
+
+    @Test
+    fun `settings por defecto son 80 y 95`() = runTest {
+        val vm = buildVm(fakePrefs(), mockk(relaxed = true))
+        val s = vm.settings.value
+        assertEquals(80, s.weeklyAlert)
+        assertEquals(95, s.weeklyCritical)
+        assertEquals(80, s.sessionAlert)
+        assertEquals(95, s.sessionCritical)
+        assertTrue(s.notificationsEnabled)
+    }
+
+    @Test
+    fun `updateSettings persiste y actualiza el estado`() = runTest {
+        val prefs = fakePrefs()
+        val editor = mockk<SharedPreferences.Editor>(relaxed = true)
+        // Encadenamiento: cada put devuelve el mismo editor.
+        every { editor.putBoolean(any(), any()) } returns editor
+        every { editor.putInt(any(), any()) } returns editor
+        every { prefs.edit() } returns editor
+
+        val vm = buildVm(prefs, mockk(relaxed = true))
+        vm.updateSettings(
+            AlertSettings(
+                notificationsEnabled = false,
+                weeklyAlert = 70,
+                weeklyCritical = 90,
+                sessionAlert = 60,
+                sessionCritical = 85,
+            )
+        )
+
+        val s = vm.settings.value
+        assertFalse(s.notificationsEnabled)
+        assertEquals(70, s.weeklyAlert)
+        assertEquals(90, s.weeklyCritical)
+        assertEquals(60, s.sessionAlert)
+        assertEquals(85, s.sessionCritical)
+
+        verify { editor.putBoolean(UsageViewModel.KEY_NOTIF_ENABLED, false) }
+        verify { editor.putInt(UsageViewModel.KEY_WEEKLY_ALERT, 70) }
+        verify { editor.putInt(UsageViewModel.KEY_WEEKLY_CRITICAL, 90) }
+        verify { editor.putInt(UsageViewModel.KEY_SESSION_ALERT, 60) }
+        verify { editor.putInt(UsageViewModel.KEY_SESSION_CRITICAL, 85) }
+    }
+
+    @Test
+    fun `settings cargan valores guardados`() = runTest {
+        val prefs = fakePrefs()
+        every { prefs.getBoolean(UsageViewModel.KEY_NOTIF_ENABLED, true) } returns false
+        every { prefs.getInt(UsageViewModel.KEY_WEEKLY_ALERT, 80) } returns 65
+        every { prefs.getInt(UsageViewModel.KEY_WEEKLY_CRITICAL, 95) } returns 88
+        every { prefs.getInt(UsageViewModel.KEY_SESSION_ALERT, 80) } returns 55
+        every { prefs.getInt(UsageViewModel.KEY_SESSION_CRITICAL, 95) } returns 82
+
+        val vm = buildVm(prefs, mockk(relaxed = true))
+        val s = vm.settings.value
+        assertFalse(s.notificationsEnabled)
+        assertEquals(65, s.weeklyAlert)
+        assertEquals(88, s.weeklyCritical)
+        assertEquals(55, s.sessionAlert)
+        assertEquals(82, s.sessionCritical)
     }
 }
