@@ -6,11 +6,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,10 +22,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,39 +43,46 @@ import com.jpyunism.ollamacloudusage.ModelUsage
 import com.jpyunism.ollamacloudusage.UiState
 import com.jpyunism.ollamacloudusage.UsageData
 import com.jpyunism.ollamacloudusage.UsageViewModel
-
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UsageScreen(vm: UsageViewModel) {
     val state by vm.uiState.collectAsStateWithLifecycle()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        if (state is UiState.Success) {
-            val data = (state as UiState.Success).data
-            Header(data)
-            UsageMeterCard("Session usage", data.sessionPercent, data.sessionModels, data.sessionResetAt)
-            UsageMeterCard("Weekly usage", data.weeklyPercent, data.weeklyModels, null)
-            Row {
-                Button(onClick = { vm.refresh() }, modifier = Modifier.weight(1f)) {
-                    Text("Actualizar")
+    Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing,
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (state is UiState.Success) {
+                val data = (state as UiState.Success).data
+                Header(data, (state as UiState.Success).lastUpdated)
+                UsageMeterCard("Session usage", data.sessionPercent, data.sessionModels, data.sessionResetAt)
+                UsageMeterCard("Weekly usage", data.weeklyPercent, data.weeklyModels, null)
+                Row {
+                    Button(onClick = { vm.refresh() }, modifier = Modifier.weight(1f)) {
+                        Text("Actualizar")
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    OutlinedButton(onClick = { vm.clearCookie() }) {
+                        Text("Cambiar cookie")
+                    }
                 }
-                Spacer(Modifier.width(8.dp))
-                OutlinedButton(onClick = { vm.clearCookie() }) {
-                    Text("Cambiar cookie")
-                }
+            } else {
+                CookieSetup(vm, state)
             }
-        } else {
-            CookieSetup(vm, state)
         }
     }
 }
@@ -115,10 +128,20 @@ private fun CookieSetup(vm: UsageViewModel, state: UiState) {
 }
 
 @Composable
-private fun Header(data: UsageData) {
+private fun Header(data: UsageData, lastUpdated: Long?) {
     Column {
         Text("Consumo Ollama Cloud", style = MaterialTheme.typography.headlineSmall)
         Text("Plan: ${data.plan}", style = MaterialTheme.typography.bodyMedium)
+        if (lastUpdated != null) {
+            val time = Instant.ofEpochMilli(lastUpdated)
+                .atZone(ZoneId.systemDefault())
+                .format(DateTimeFormatter.ofPattern("HH:mm"))
+            Text(
+                "Actualizado: $time",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

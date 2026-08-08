@@ -1,7 +1,8 @@
 package com.jpyunism.ollamacloudusage
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import android.content.Context
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,14 +13,20 @@ import kotlinx.coroutines.withContext
 sealed interface UiState {
     data object Idle : UiState
     data object Loading : UiState
-    data class Success(val data: UsageData, val cookieStored: Boolean) : UiState
+    data class Success(
+        val data: UsageData,
+        val cookieStored: Boolean,
+        val lastUpdated: Long? = null,
+    ) : UiState
+
     data class Error(val message: String) : UiState
 }
 
-class UsageViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val prefs = application.getSharedPreferences("ollama_usage", android.content.Context.MODE_PRIVATE)
-    private val scraper = OllamaUsageScraper()
+class UsageViewModel(
+    private val prefs: android.content.SharedPreferences,
+    private val scraper: UsageScraper,
+    private val ioDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState
@@ -47,11 +54,15 @@ class UsageViewModel(application: Application) : AndroidViewModel(application) {
         }
         _uiState.value = UiState.Loading
         viewModelScope.launch {
-            val result = withContext(Dispatchers.IO) {
+            val result = withContext(ioDispatcher) {
                 runCatching { scraper.fetchUsage(cookie) }
             }
             _uiState.value = result.fold(
-                onSuccess = { UiState.Success(it, cookieStored = true) },
+                onSuccess = {
+                    val now = System.currentTimeMillis()
+                    prefs.edit().putLong(KEY_LAST_UPDATED, now).apply()
+                    UiState.Success(it, cookieStored = true, lastUpdated = now)
+                },
                 onFailure = { e ->
                     val msg = when (e) {
                         is CookieExpiredException -> e.message ?: "Cookie expirada"
@@ -64,6 +75,17 @@ class UsageViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     companion object {
-        private const val KEY_COOKIE = "session_cookie"
+        const val KEY_COOKIE = "session_cookie"
+        const val KEY_LAST_UPDATED = "last_updated"
+
+        fun factory(context: Context): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    val app = context.applicationContext
+                    val prefs = app.getSharedPreferences("ollama_usage", Context.MODE_PRIVATE)
+                    return UsageViewModel(prefs, OllamaUsageScraper()) as T
+                }
+            }
     }
 }

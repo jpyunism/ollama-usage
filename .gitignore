@@ -11,6 +11,7 @@
 .cxx
 *.keystore
 !debug.keystore
+keystore/
 
 # Misc
 *.log

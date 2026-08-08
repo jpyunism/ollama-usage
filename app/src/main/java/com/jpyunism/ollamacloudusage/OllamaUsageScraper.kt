@@ -4,10 +4,14 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import java.time.Instant
 
-class OllamaUsageScraper {
+interface UsageScraper {
+    fun fetchUsage(cookie: String): UsageData
+}
+
+class OllamaUsageScraper : UsageScraper {
 
     /** Obtiene el consumo desde https://ollama.com/settings usando la cookie de sesión. */
-    fun fetchUsage(cookie: String): UsageData {
+    override fun fetchUsage(cookie: String): UsageData {
         val doc = Jsoup.connect("https://ollama.com/settings")
             .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126.0 Mobile Safari/537.36")
             .header("Accept", "text/html,application/xhtml+xml")
