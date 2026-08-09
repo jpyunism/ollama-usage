@@ -63,10 +63,10 @@ class UsageViewModelTest {
     }
 
     @Test
-    fun `sin cookie queda en Idle`() = runTest {
+    fun `sin auth queda en Idle`() = runTest {
         val vm = buildVm(fakePrefs(), mockk(relaxed = true))
         assertEquals(UiState.Idle, vm.uiState.value)
-        assertTrue(!vm.hasCookie())
+        assertTrue(!vm.hasAuth())
     }
 
     @Test
@@ -122,7 +122,7 @@ class UsageViewModelTest {
     }
 
     @Test
-    fun `clearCookie vuelve a Idle`() = runTest {
+    fun `clearAuth vuelve a Idle`() = runTest {
         val scraper = mockk<UsageScraper>()
         every { scraper.fetchUsage(any()) } returns sampleData()
 
@@ -134,7 +134,7 @@ class UsageViewModelTest {
         testScheduler.advanceUntilIdle()
         assertTrue(vm.uiState.value is UiState.Success)
 
-        vm.clearCookie()
+        vm.clearAuth()
         assertEquals(UiState.Idle, vm.uiState.value)
     }
 

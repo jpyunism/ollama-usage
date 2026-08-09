@@ -67,8 +67,8 @@ fun UsageTab(vm: UsageViewModel, state: UiState) {
                         Spacer(Modifier.width(6.dp))
                         Text(stringResource(R.string.refresh))
                     }
-                    OutlinedButton(onClick = { vm.clearCookie() }, modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.change_cookie))
+                    OutlinedButton(onClick = { vm.clearAuth() }, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.change_auth))
                     }
                 }
             }

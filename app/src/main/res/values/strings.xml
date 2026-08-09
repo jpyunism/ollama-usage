@@ -19,11 +19,18 @@
     <string name="resets_at">Resets: %1$s</string>
     <string name="requests_percent">%1$d req · %2$s%%</string>
 
-    <!-- Cookie setup -->
+    <!-- Cookie / API key setup -->
     <string name="connect_account">Conecta tu cuenta</string>
+    <string name="auth_instructions">Elige cómo autenticar el consumo de tu cuenta de Ollama Cloud.</string>
+    <string name="auth_api_key">API key de Ollama Cloud</string>
+    <string name="auth_api_key_hint">Recomendada. Crea una en ollama.com/settings/keys.</string>
+    <string name="auth_cookie">Cookie de sesión</string>
+    <string name="auth_cookie_hint">Para acceso web; expira y hay que renovarla.</string>
+    <string name="api_key_label">API key (ollama.com/settings/keys)</string>
     <string name="cookie_instructions">Pega la cookie de tu sesión de ollama.com. Abre DevTools → Application → Cookies y copia los valores de aid y __Secure-session separados por ;</string>
     <string name="cookie_label">Cookie (aid=...; __Secure-session=...)</string>
     <string name="save_and_check">Guardar y consultar</string>
+    <string name="change_auth">Cambiar acceso</string>
 
     <!-- Alerts -->
     <string name="consumption_alerts">Alertas de consumo</string>
@@ -93,6 +100,7 @@
 
     <!-- Errors -->
     <string name="cookie_expired">Cookie expirada</string>
+    <string name="api_key_invalid">API key inválida o expirada. Crea una nueva en ollama.com/settings/keys.</string>
     <string name="network_error">Error de red: %1$s</string>
 
     <!-- Widget -->

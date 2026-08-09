@@ -14,8 +14,8 @@ android {
         applicationId = "com.jpyunism.ollamacloudusage"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "0.9.0"
+        versionCode = 6
+        versionName = "0.10.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -100,6 +100,8 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("io.mockk:mockk:1.13.12")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    // Implementación real de org.json para tests unitarios (android.jar la mockea).
+    testImplementation("org.json:json:20240303")
     testImplementation(composeBom)
     testImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation(composeBom)

@@ -46,10 +46,14 @@ class UsageViewModel(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val reschedule: (Int) -> Unit = {},
     private val context: android.content.Context? = null,
+    private val apiScraper: UsageScraper = OllamaApiUsage(),
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState
+
+    private val _authSource = MutableStateFlow(loadAuthSource())
+    val authSource: StateFlow<AuthSource> = _authSource
 
     private val _settings = MutableStateFlow(loadSettings())
     val settings: StateFlow<AlertSettings> = _settings
@@ -58,21 +62,79 @@ class UsageViewModel(
     val theme: StateFlow<AppTheme> = _theme
 
     init {
-        if (prefs.contains(KEY_COOKIE)) refresh()
+        if (hasAuth()) refresh()
     }
 
+    /** Guarda la cookie de sesión como método de autenticación. */
     fun saveCookie(cookie: String) {
-        prefs.edit().putString(KEY_COOKIE, cookie.trim()).apply()
+        prefs.edit()
+            .putString(KEY_COOKIE, cookie.trim())
+            .putString(KEY_AUTH_SOURCE, AuthSource.COOKIE.name)
+            .apply()
+        _authSource.value = AuthSource.COOKIE
         refresh()
     }
 
-    fun clearCookie() {
-        prefs.edit().remove(KEY_COOKIE).apply()
+    /** Guarda la API key de Ollama Cloud como método de autenticación. */
+    fun saveApiKey(apiKey: String) {
+        prefs.edit()
+            .putString(KEY_API_KEY, apiKey.trim())
+            .putString(KEY_AUTH_SOURCE, AuthSource.API_KEY.name)
+            .apply()
+        _authSource.value = AuthSource.API_KEY
+        refresh()
+    }
+
+    fun clearAuth() {
+        prefs.edit()
+            .remove(KEY_COOKIE)
+            .remove(KEY_API_KEY)
+            .apply()
         _uiState.value = UiState.Idle
     }
 
-    fun hasCookie(): Boolean = prefs.contains(KEY_COOKIE)
+    fun hasAuth(): Boolean = when (loadAuthSource()) {
+        AuthSource.COOKIE -> prefs.contains(KEY_COOKIE)
+        AuthSource.API_KEY -> prefs.contains(KEY_API_KEY)
+    }
 
+    fun refresh() {
+        val source = loadAuthSource()
+        val credential = when (source) {
+            AuthSource.COOKIE -> prefs.getString(KEY_COOKIE, null)
+            AuthSource.API_KEY -> prefs.getString(KEY_API_KEY, null)
+        } ?: run {
+            _uiState.value = UiState.Idle
+            return
+        }
+        val fetcher = if (source == AuthSource.API_KEY) apiScraper else scraper
+        _uiState.value = UiState.Loading
+        viewModelScope.launch {
+            val result = withContext(ioDispatcher) {
+                runCatching { fetcher.fetchUsage(credential) }
+            }
+            _uiState.value = result.fold(
+                onSuccess = {
+                    val now = System.currentTimeMillis()
+                    prefs.edit().putLong(KEY_LAST_UPDATED, now).apply()
+                    // Widget del home screen: refleja el refresh manual.
+                    context?.let { ctx -> UsageWidgetProvider.saveData(ctx, it) }
+                    UiState.Success(it, cookieStored = true, lastUpdated = now)
+                },
+                onFailure = { e ->
+                    val msg = when (e) {
+                        is CookieExpiredException ->
+                            context?.getString(R.string.cookie_expired) ?: (e.message ?: "Cookie expirada")
+                        is InvalidApiKeyException ->
+                            context?.getString(R.string.api_key_invalid) ?: (e.message ?: "API key inválida")
+                        else ->
+                            context?.getString(R.string.network_error, e.message) ?: "Error de red: ${e.message}"
+                    }
+                    UiState.Error(msg)
+                },
+            )
+        }
+    }
     fun updateSettings(s: AlertSettings) {
         val previous = _settings.value
         _settings.value = s
@@ -97,37 +159,6 @@ class UsageViewModel(
         prefs.edit().putString(KEY_THEME, theme.name).apply()
     }
 
-    fun refresh() {
-        val cookie = prefs.getString(KEY_COOKIE, null) ?: run {
-            _uiState.value = UiState.Idle
-            return
-        }
-        _uiState.value = UiState.Loading
-        viewModelScope.launch {
-            val result = withContext(ioDispatcher) {
-                runCatching { scraper.fetchUsage(cookie) }
-            }
-            _uiState.value = result.fold(
-                onSuccess = {
-                    val now = System.currentTimeMillis()
-                    prefs.edit().putLong(KEY_LAST_UPDATED, now).apply()
-                    // Widget del home screen: refleja el refresh manual.
-                    context?.let { ctx -> UsageWidgetProvider.saveData(ctx, it) }
-                    UiState.Success(it, cookieStored = true, lastUpdated = now)
-                },
-                onFailure = { e ->
-                    val msg = when (e) {
-                        is CookieExpiredException ->
-                            context?.getString(R.string.cookie_expired) ?: (e.message ?: "Cookie expirada")
-                        else ->
-                            context?.getString(R.string.network_error, e.message) ?: "Error de red: ${e.message}"
-                    }
-                    UiState.Error(msg)
-                },
-            )
-        }
-    }
-
     private fun loadSettings(): AlertSettings = AlertSettings(
         notificationsEnabled = prefs.getBoolean(KEY_NOTIF_ENABLED, true),
         weeklyAlert = prefs.getInt(KEY_WEEKLY_ALERT, 80),
@@ -146,8 +177,15 @@ class UsageViewModel(
             ?.let { name -> AppTheme.entries.firstOrNull { it.name == name } }
             ?: AppTheme.System
 
+    private fun loadAuthSource(): AuthSource =
+        prefs.getString(KEY_AUTH_SOURCE, null)
+            ?.let { name -> AuthSource.entries.firstOrNull { it.name == name } }
+            ?: AuthSource.COOKIE
+
     companion object {
         const val KEY_COOKIE = "session_cookie"
+        const val KEY_API_KEY = "api_key"
+        const val KEY_AUTH_SOURCE = "auth_source"
         const val KEY_LAST_UPDATED = "last_updated"
         const val KEY_NOTIF_ENABLED = "notif_enabled"
         const val KEY_WEEKLY_ALERT = "weekly_alert"

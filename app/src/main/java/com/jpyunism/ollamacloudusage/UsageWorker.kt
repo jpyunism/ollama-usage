@@ -19,10 +19,8 @@ class UsageWorker(
         val appContext = applicationContext
         val prefs = SecurePrefs.get(appContext)
 
-        val cookie = prefs.getString(UsageViewModel.KEY_COOKIE, null) ?: return Result.success()
-
         val data = withContext(Dispatchers.IO) {
-            runCatching { OllamaUsageScraper().fetchUsage(cookie) }.getOrNull()
+            runCatching { fetchCurrentUsage(prefs) }.getOrNull()
         } ?: return Result.retry()
 
         // Widget del home screen: guarda el último consumo y lo re-renderiza.
@@ -119,7 +117,29 @@ class UsageWorker(
      * - ALERT si pct >= alert y aún no se notificó el nivel de alerta.
      * - -1 si pct < alert (reset) o ya se notificó ese nivel.
      */
+    /**
+     * Obtiene el consumo con el método de autenticación configurado
+     * (cookie de sesión o API key de Ollama Cloud).
+     */
     companion object {
+        fun fetchCurrentUsage(prefs: android.content.SharedPreferences): UsageData {
+            val source = prefs.getString(UsageViewModel.KEY_AUTH_SOURCE, null)
+                ?.let { name -> AuthSource.entries.firstOrNull { it.name == name } }
+                ?: AuthSource.COOKIE
+            return when (source) {
+                AuthSource.COOKIE -> {
+                    val cookie = prefs.getString(UsageViewModel.KEY_COOKIE, null)
+                        ?: throw IllegalStateException("Sin cookie")
+                    OllamaUsageScraper().fetchUsage(cookie)
+                }
+                AuthSource.API_KEY -> {
+                    val apiKey = prefs.getString(UsageViewModel.KEY_API_KEY, null)
+                        ?: throw IllegalStateException("Sin API key")
+                    OllamaApiUsage().fetchUsage(apiKey)
+                }
+            }
+        }
+
         const val KEY_LAST_NOTIFIED_WEEKLY = "last_notified_weekly"
         const val KEY_LAST_NOTIFIED_SESSION = "last_notified_session"
         private const val ALERT = 0
