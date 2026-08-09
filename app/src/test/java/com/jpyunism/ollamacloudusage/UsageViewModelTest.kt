@@ -138,6 +138,56 @@ class UsageViewModelTest {
         assertEquals(UiState.Idle, vm.uiState.value)
     }
 
+    // ─────────── Ambos secretos coexisten ───────────
+
+    @Test
+    fun `saveApiKey no borra la cookie guardada`() = runTest {
+        val prefs = fakePrefs()
+        val editor = mockk<SharedPreferences.Editor>(relaxed = true)
+        every { editor.putString(any(), any()) } returns editor
+        every { prefs.edit() } returns editor
+
+        val vm = buildVm(prefs, mockk(relaxed = true))
+        vm.saveApiKey("sk-test")
+
+        verify { editor.putString(UsageViewModel.KEY_API_KEY, "sk-test") }
+        verify { editor.putString(UsageViewModel.KEY_AUTH_SOURCE, AuthSource.API_KEY.name) }
+        verify(exactly = 0) { editor.remove(UsageViewModel.KEY_COOKIE) }
+    }
+
+    @Test
+    fun `saveCookie no borra la api key guardada`() = runTest {
+        val prefs = fakePrefs()
+        val editor = mockk<SharedPreferences.Editor>(relaxed = true)
+        every { editor.putString(any(), any()) } returns editor
+        every { prefs.edit() } returns editor
+
+        val vm = buildVm(prefs, mockk(relaxed = true))
+        vm.saveCookie("aid=abc; __Secure-session=xyz")
+
+        verify { editor.putString(UsageViewModel.KEY_COOKIE, "aid=abc; __Secure-session=xyz") }
+        verify { editor.putString(UsageViewModel.KEY_AUTH_SOURCE, AuthSource.COOKIE.name) }
+        verify(exactly = 0) { editor.remove(UsageViewModel.KEY_API_KEY) }
+    }
+
+    @Test
+    fun `currentSecret devuelve el secreto guardado del metodo indicado`() = runTest {
+        val prefs = fakePrefs()
+        every { prefs.getString(UsageViewModel.KEY_API_KEY, null) } returns "sk-guardada"
+        every { prefs.getString(UsageViewModel.KEY_COOKIE, null) } returns "cookie-guardada"
+
+        val vm = buildVm(prefs, mockk(relaxed = true))
+        assertEquals("sk-guardada", vm.currentSecret(AuthSource.API_KEY))
+        assertEquals("cookie-guardada", vm.currentSecret(AuthSource.COOKIE))
+    }
+
+    @Test
+    fun `currentSecret devuelve vacio si no hay secreto`() = runTest {
+        val vm = buildVm(fakePrefs(), mockk(relaxed = true))
+        assertEquals("", vm.currentSecret(AuthSource.API_KEY))
+        assertEquals("", vm.currentSecret(AuthSource.COOKIE))
+    }
+
     // ─────────── Configuración de alertas ───────────
 
     @Test

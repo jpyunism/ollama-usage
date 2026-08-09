@@ -85,11 +85,11 @@ class UsageWidgetProvider : AppWidgetProvider() {
             } else {
                 views.setTextViewText(
                     R.id.widget_week,
-                    context.getString(R.string.widget_week, data.weeklyPercent.toString()),
+                    context.getString(R.string.widget_week, formatPercent(data.weeklyPercent)),
                 )
                 views.setTextViewText(
                     R.id.widget_session,
-                    context.getString(R.string.widget_session, data.sessionPercent.toString()),
+                    context.getString(R.string.widget_session, formatPercent(data.sessionPercent)),
                 )
                 views.setTextViewText(R.id.widget_plan, context.getString(R.string.widget_plan, data.plan))
                 views.setProgressBar(

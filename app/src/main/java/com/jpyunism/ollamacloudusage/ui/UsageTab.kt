@@ -44,6 +44,7 @@ import com.jpyunism.ollamacloudusage.ResetDisplayMode
 import com.jpyunism.ollamacloudusage.UiState
 import com.jpyunism.ollamacloudusage.UsageData
 import com.jpyunism.ollamacloudusage.UsageViewModel
+import com.jpyunism.ollamacloudusage.formatPercent
 import com.jpyunism.ollamacloudusage.formatReset
 import java.time.Instant
 import java.time.ZoneId
@@ -132,7 +133,7 @@ private fun UsageMeterCard(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(title, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    stringResource(R.string.percent_used, "${percent}"),
+                    stringResource(R.string.percent_used, formatPercent(percent)),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = when {
@@ -164,7 +165,7 @@ private fun UsageMeterCard(
                     ) {
                         Text(m.model, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                         Text(
-                            stringResource(R.string.requests_percent, m.requests, "${m.percent}"),
+                            stringResource(R.string.requests_percent, m.requests, formatPercent(m.percent)),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

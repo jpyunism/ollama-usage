@@ -70,12 +70,12 @@ object UsageNotifier {
     /** Construye la notificación permanente (ongoing) con el consumo actual. */
     fun buildPersistent(context: Context, data: UsageData?): Notification {
         val title = if (data != null) {
-            context.getString(R.string.persistent_title_weekly, data.weeklyPercent.toString())
+            context.getString(R.string.persistent_title_weekly, formatPercent(data.weeklyPercent))
         } else {
             context.getString(R.string.persistent_title_updating)
         }
         val text = if (data != null) {
-            context.getString(R.string.persistent_text_session, data.sessionPercent.toString(), data.plan)
+            context.getString(R.string.persistent_text_session, formatPercent(data.sessionPercent), data.plan)
         } else {
             context.getString(R.string.checking_usage)
         }
@@ -85,7 +85,7 @@ object UsageNotifier {
                 .format(DateTimeFormatter.ofPattern("HH:mm"))
             val mode = resetDisplayMode(context)
             buildString {
-                append(context.getString(R.string.persistent_body_week_session, data.weeklyPercent.toString(), data.sessionPercent.toString()))
+                append(context.getString(R.string.persistent_body_week_session, formatPercent(data.weeklyPercent), formatPercent(data.sessionPercent)))
                 formatReset(data.weeklyResetAt, mode, locale = context.resources.configuration.locales[0])?.let {
                     append(context.getString(R.string.persistent_body_week_reset, it))
                 }
@@ -106,13 +106,13 @@ object UsageNotifier {
             putString("android.ongoingActivityNoti.secondaryInfo", text)
             putString(
                 "android.ongoingActivityNoti.chipExpandedText",
-                if (data != null) context.getString(R.string.chip_weekly, data.weeklyPercent.toString()) else "Ollama",
+                if (data != null) context.getString(R.string.chip_weekly, formatPercent(data.weeklyPercent)) else "Ollama",
             )
             if (data != null) {
                 putInt("android.ongoingActivityNoti.progress", data.weeklyPercent.toInt().coerceIn(0, 100))
                 putInt("android.ongoingActivityNoti.progressMax", 100)
-                putString("android.ongoingActivityNoti.nowbarPrimaryInfo", context.getString(R.string.chip_weekly, data.weeklyPercent.toString()))
-                putString("android.ongoingActivityNoti.nowbarSecondaryInfo", context.getString(R.string.nowbar_session, data.sessionPercent.toString()))
+                putString("android.ongoingActivityNoti.nowbarPrimaryInfo", context.getString(R.string.chip_weekly, formatPercent(data.weeklyPercent)))
+                putString("android.ongoingActivityNoti.nowbarSecondaryInfo", context.getString(R.string.nowbar_session, formatPercent(data.sessionPercent)))
             }
         }
 

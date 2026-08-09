@@ -97,6 +97,12 @@ class UsageViewModel(
         refresh()
     }
 
+    /** Valor del secreto guardado para el método indicado (vacío si no existe). */
+    fun currentSecret(source: AuthSource): String = when (source) {
+        AuthSource.COOKIE -> prefs.getString(KEY_COOKIE, null).orEmpty()
+        AuthSource.API_KEY -> prefs.getString(KEY_API_KEY, null).orEmpty()
+    }
+
     /** Abre la pantalla de cambio de acceso sin tocar las credenciales guardadas. */
     fun openAuthSetup() {
         _showAuthSetup.value = true

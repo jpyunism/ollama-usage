@@ -58,12 +58,11 @@ import com.jpyunism.ollamacloudusage.UsageViewModel
 /** Setup inicial o cambio de acceso: elegir cómo autenticar (API key o cookie). */
 @Composable
 fun CookieSetup(vm: UsageViewModel, state: UiState) {
-    var source by remember { mutableStateOf(AuthSource.API_KEY) }
-    var apiKey by remember { mutableStateOf("") }
-    var cookie by remember { mutableStateOf("") }
-    var showApiKey by remember { mutableStateOf(false) }
-
     val isChangeAccess = vm.hasAuth()
+    var source by remember { mutableStateOf(if (isChangeAccess) vm.authSource.value else AuthSource.API_KEY) }
+    var apiKey by remember { mutableStateOf(vm.currentSecret(AuthSource.API_KEY)) }
+    var cookie by remember { mutableStateOf(vm.currentSecret(AuthSource.COOKIE)) }
+    var showApiKey by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier

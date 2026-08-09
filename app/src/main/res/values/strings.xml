@@ -96,10 +96,10 @@
 
     <!-- Worker alerts -->
     <string name="weekly_critical_title">¡Límite semanal casi agotado!</string>
-    <string name="weekly_alert_title">Consumo semanal al %1$d%%</string>
-    <string name="weekly_alert_message">Ollama Cloud está al %1$d%% del plan semanal. Considera pausar modelos pesados.</string>
-    <string name="session_alert_title">Sesión al %1$d%%</string>
-    <string name="session_alert_message">La sesión de Ollama Cloud está al %1$d%%. Se resetea pronto.</string>
+    <string name="weekly_alert_title">Consumo semanal al %1$s%%</string>
+    <string name="weekly_alert_message">Ollama Cloud está al %1$s%% del plan semanal. Considera pausar modelos pesados.</string>
+    <string name="session_alert_title">Sesión al %1$s%%</string>
+    <string name="session_alert_message">La sesión de Ollama Cloud está al %1$s%%. Se resetea pronto.</string>
 
     <!-- Errors -->
     <string name="cookie_expired">Cookie expirada</string>

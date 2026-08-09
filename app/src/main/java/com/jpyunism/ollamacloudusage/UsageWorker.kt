@@ -69,9 +69,9 @@ class UsageWorker(
                 if (level == CRITICAL) {
                     appContext.getString(R.string.weekly_critical_title)
                 } else {
-                    appContext.getString(R.string.weekly_alert_title, pct)
+                    appContext.getString(R.string.weekly_alert_title, formatPercent(pct))
                 },
-                appContext.getString(R.string.weekly_alert_message, pct),
+                appContext.getString(R.string.weekly_alert_message, formatPercent(pct)),
             )
         }
 
@@ -84,8 +84,8 @@ class UsageWorker(
         ) { pct, _ ->
             UsageNotifier.notifyLimit(
                 appContext,
-                appContext.getString(R.string.session_alert_title, pct),
-                appContext.getString(R.string.session_alert_message, pct),
+                appContext.getString(R.string.session_alert_title, formatPercent(pct)),
+                appContext.getString(R.string.session_alert_message, formatPercent(pct)),
             )
         }
 
@@ -102,18 +102,18 @@ class UsageWorker(
         alert: Int,
         critical: Int,
         lastKey: String,
-        notify: (Int, Int) -> Unit,
+        notify: (Double, Int) -> Unit,
     ) {
         val lastNotified = prefs.getInt(lastKey, -1)
         val pct = percent.toInt()
 
         when (nextLevel(pct, alert, critical, lastNotified)) {
             CRITICAL -> {
-                notify(pct, CRITICAL)
+                notify(percent, CRITICAL)
                 prefs.edit().putInt(lastKey, critical).apply()
             }
             ALERT -> {
-                notify(pct, ALERT)
+                notify(percent, ALERT)
                 prefs.edit().putInt(lastKey, alert).apply()
             }
             else -> {

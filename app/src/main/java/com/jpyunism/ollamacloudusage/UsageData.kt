@@ -5,6 +5,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.roundToLong
 
 data class ModelUsage(
     val model: String,
@@ -23,6 +24,19 @@ data class UsageData(
 ) {
     val sessionUsed: Boolean get() = sessionPercent > 0.0
     val weeklyUsed: Boolean get() = weeklyPercent > 0.0
+}
+
+/**
+ * Formatea un porcentaje a un decimal: 96.08 → "96.1".
+ * Los valores enteros se muestran sin decimales (100.0 → "100").
+ */
+fun formatPercent(value: Double): String {
+    val rounded = (value * 10).roundToLong() / 10.0
+    return if (rounded == rounded.toLong().toDouble()) {
+        rounded.toLong().toString()
+    } else {
+        String.format(Locale.US, "%.1f", rounded)
+    }
 }
 
 /** Cómo mostrar el reset de cuota en la notificación y la UI. */
