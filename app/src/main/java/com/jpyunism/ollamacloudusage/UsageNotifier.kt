@@ -80,8 +80,11 @@ object UsageNotifier {
             val time = Instant.ofEpochMilli(System.currentTimeMillis())
                 .atZone(ZoneId.systemDefault())
                 .format(DateTimeFormatter.ofPattern("HH:mm"))
+            val mode = resetDisplayMode(context)
             buildString {
                 append("Semana: ${data.weeklyPercent}% · Sesión: ${data.sessionPercent}%\n")
+                formatReset(data.weeklyResetAt, mode)?.let { append("Semana $it\n") }
+                formatReset(data.sessionResetAt, mode)?.let { append("Sesión $it\n") }
                 append("Plan ${data.plan} · Actualizado $time")
             }
         } else {
@@ -140,4 +143,11 @@ object UsageNotifier {
         Build.VERSION.SDK_INT < 33 ||
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
+
+    /** Modo de visualización del reset configurado por el usuario. */
+    private fun resetDisplayMode(context: Context): ResetDisplayMode =
+        runCatching {
+            SecurePrefs.get(context).getString(UsageViewModel.KEY_RESET_DISPLAY, null)
+                ?.let { name -> ResetDisplayMode.entries.firstOrNull { it.name == name } }
+        }.getOrNull() ?: ResetDisplayMode.COUNTDOWN
 }

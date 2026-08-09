@@ -34,17 +34,38 @@ class OllamaUsageScraper : UsageScraper {
         val session = parseMeter(doc.selectFirst("[data-usage-track][aria-label*='Session']"))
         val weekly = parseMeter(doc.selectFirst("[data-usage-track][aria-label*='Weekly']"))
 
-        val sessionReset = doc.selectFirst("[data-time]")?.attr("data-time")
-            ?.let { runCatching { Instant.parse(it) }.getOrNull() }
+        // Cada meter tiene su propio "Resets in …" con data-time (ISO 8601).
+        val sessionReset = parseResetTime(doc.selectFirst("[data-usage-track][aria-label*='Session']"))
+        val weeklyReset = parseResetTime(doc.selectFirst("[data-usage-track][aria-label*='Weekly']"))
 
         return UsageData(
             sessionPercent = session.percent,
             weeklyPercent = weekly.percent,
             sessionResetAt = sessionReset,
+            weeklyResetAt = weeklyReset,
             sessionModels = session.models,
             weeklyModels = weekly.models,
             plan = plan,
         )
+    }
+
+    /**
+     * Busca el [data-time] (ISO 8601) del meter indicado. El elemento de reset
+     * es hermano del bloque del meter dentro de su tarjeta: se sube por los
+     * ancestros y se revisan solo los hijos directos, para no filtrar el
+     * data-time de la sesión hacia el weekly (ni viceversa).
+     */
+    private fun parseResetTime(track: Element?): Instant? {
+        if (track == null) return null
+        var current: Element? = track
+        while (current != null) {
+            val time = current.children().firstOrNull { it.hasAttr("data-time") }
+                ?.attr("data-time")
+                ?.let { runCatching { Instant.parse(it) }.getOrNull() }
+            if (time != null) return time
+            current = current.parent()
+        }
+        return null
     }
 
     /** true si el documento es la página de login (cookie inválida/expirada). */

@@ -38,6 +38,7 @@ class UsageViewModelTest {
         every { prefs.getInt(UsageViewModel.KEY_SESSION_ALERT, 80) } returns 80
         every { prefs.getInt(UsageViewModel.KEY_SESSION_CRITICAL, 95) } returns 95
         every { prefs.getInt(UsageViewModel.KEY_REFRESH_INTERVAL, 60) } returns 60
+        every { prefs.getString(UsageViewModel.KEY_RESET_DISPLAY, null) } returns null
         every { prefs.edit() } returns mockk(relaxed = true)
         return prefs
     }
@@ -150,6 +151,7 @@ class UsageViewModelTest {
         assertTrue(s.notificationsEnabled)
         assertTrue(s.persistentEnabled)
         assertEquals(60, s.refreshIntervalMinutes)
+        assertEquals(ResetDisplayMode.COUNTDOWN, s.resetDisplayMode)
     }
 
     @Test
@@ -171,6 +173,7 @@ class UsageViewModelTest {
                 sessionCritical = 85,
                 persistentEnabled = false,
                 refreshIntervalMinutes = 30,
+                resetDisplayMode = ResetDisplayMode.DATE,
             )
         )
 
@@ -182,6 +185,7 @@ class UsageViewModelTest {
         assertEquals(85, s.sessionCritical)
         assertFalse(s.persistentEnabled)
         assertEquals(30, s.refreshIntervalMinutes)
+        assertEquals(ResetDisplayMode.DATE, s.resetDisplayMode)
 
         verify { editor.putBoolean(UsageViewModel.KEY_NOTIF_ENABLED, false) }
         verify { editor.putInt(UsageViewModel.KEY_WEEKLY_ALERT, 70) }
@@ -190,6 +194,7 @@ class UsageViewModelTest {
         verify { editor.putInt(UsageViewModel.KEY_SESSION_CRITICAL, 85) }
         verify { editor.putBoolean(UsageViewModel.KEY_PERSISTENT_ENABLED, false) }
         verify { editor.putInt(UsageViewModel.KEY_REFRESH_INTERVAL, 30) }
+        verify { editor.putString(UsageViewModel.KEY_RESET_DISPLAY, "DATE") }
     }
 
     @Test
@@ -223,6 +228,24 @@ class UsageViewModelTest {
         assertEquals(88, s.weeklyCritical)
         assertEquals(55, s.sessionAlert)
         assertEquals(82, s.sessionCritical)
+    }
+
+    @Test
+    fun `modo de reset guardado se carga al iniciar`() = runTest {
+        val prefs = fakePrefs()
+        every { prefs.getString(UsageViewModel.KEY_RESET_DISPLAY, null) } returns "DATE"
+
+        val vm = buildVm(prefs, mockk(relaxed = true))
+        assertEquals(ResetDisplayMode.DATE, vm.settings.value.resetDisplayMode)
+    }
+
+    @Test
+    fun `modo de reset invalido cae a COUNTDOWN`() = runTest {
+        val prefs = fakePrefs()
+        every { prefs.getString(UsageViewModel.KEY_RESET_DISPLAY, null) } returns "NoExiste"
+
+        val vm = buildVm(prefs, mockk(relaxed = true))
+        assertEquals(ResetDisplayMode.COUNTDOWN, vm.settings.value.resetDisplayMode)
     }
 
     // ─────────── Temas ───────────

@@ -32,6 +32,7 @@ data class AlertSettings(
     val sessionCritical: Int = 95,
     val persistentEnabled: Boolean = true,
     val refreshIntervalMinutes: Int = 60,
+    val resetDisplayMode: ResetDisplayMode = ResetDisplayMode.COUNTDOWN,
 ) {
     companion object {
         const val MIN_THRESHOLD = 50
@@ -82,6 +83,7 @@ class UsageViewModel(
             .putInt(KEY_SESSION_CRITICAL, s.sessionCritical)
             .putBoolean(KEY_PERSISTENT_ENABLED, s.persistentEnabled)
             .putInt(KEY_REFRESH_INTERVAL, s.refreshIntervalMinutes)
+            .putString(KEY_RESET_DISPLAY, s.resetDisplayMode.name)
             .apply()
         // Si cambió la frecuencia, reprograma el worker en segundo plano.
         if (s.refreshIntervalMinutes != previous.refreshIntervalMinutes) {
@@ -129,6 +131,9 @@ class UsageViewModel(
         sessionCritical = prefs.getInt(KEY_SESSION_CRITICAL, 95),
         persistentEnabled = prefs.getBoolean(KEY_PERSISTENT_ENABLED, true),
         refreshIntervalMinutes = prefs.getInt(KEY_REFRESH_INTERVAL, DEFAULT_REFRESH_MINUTES),
+        resetDisplayMode = prefs.getString(KEY_RESET_DISPLAY, null)
+            ?.let { name -> ResetDisplayMode.entries.firstOrNull { it.name == name } }
+            ?: ResetDisplayMode.COUNTDOWN,
     )
 
     private fun loadTheme(): AppTheme =
@@ -147,6 +152,7 @@ class UsageViewModel(
         const val KEY_THEME = "theme"
         const val KEY_PERSISTENT_ENABLED = "persistent_enabled"
         const val KEY_REFRESH_INTERVAL = "refresh_interval"
+        const val KEY_RESET_DISPLAY = "reset_display"
         const val DEFAULT_REFRESH_MINUTES = 60
 
         fun factory(context: Context): ViewModelProvider.Factory =

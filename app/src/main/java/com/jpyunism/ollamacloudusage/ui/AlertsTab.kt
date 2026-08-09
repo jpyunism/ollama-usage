@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -42,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.jpyunism.ollamacloudusage.AlertSettings
+import com.jpyunism.ollamacloudusage.ResetDisplayMode
 import com.jpyunism.ollamacloudusage.UsageScheduler
 import com.jpyunism.ollamacloudusage.UsageViewModel
 
@@ -54,6 +56,7 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
     var sessionCritical by remember { mutableIntStateOf(settings.sessionCritical) }
     var persistentEnabled by remember { mutableStateOf(settings.persistentEnabled) }
     var refreshInterval by remember { mutableIntStateOf(settings.refreshIntervalMinutes) }
+    var resetMode by remember { mutableStateOf(settings.resetDisplayMode) }
 
     Column(
         modifier = Modifier
@@ -158,6 +161,41 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
             }
         }
 
+        // ── Reset de cuota ──
+        Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+            Column(Modifier.padding(16.dp)) {
+                Text("Reset de cuota", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Cómo mostrar el reinicio de la cuota en la notificación y en la app.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ResetModeChip(
+                        label = "Tiempo restante",
+                        selected = resetMode == ResetDisplayMode.COUNTDOWN,
+                        onClick = { resetMode = ResetDisplayMode.COUNTDOWN },
+                    )
+                    ResetModeChip(
+                        label = "Fecha",
+                        selected = resetMode == ResetDisplayMode.DATE,
+                        onClick = { resetMode = ResetDisplayMode.DATE },
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    if (resetMode == ResetDisplayMode.COUNTDOWN) {
+                        "Ejemplo: \"Sesión resetea en 36 min\""
+                    } else {
+                        "Ejemplo: \"Sesión resetea el 8 ago, 18:00\""
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
         // ── Frecuencia de refresco ──
         Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(16.dp)) {
@@ -209,6 +247,7 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
                         sessionCritical = sessionCritical,
                         persistentEnabled = persistentEnabled,
                         refreshIntervalMinutes = refreshInterval,
+                        resetDisplayMode = resetMode,
                     )
                 )
             },
@@ -217,6 +256,19 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
             Text("Guardar configuración")
         }
     }
+}
+
+@Composable
+private fun ResetModeChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+    )
 }
 
 private fun formatInterval(minutes: Int): String = when {

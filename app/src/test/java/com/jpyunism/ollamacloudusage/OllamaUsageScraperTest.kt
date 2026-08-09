@@ -80,6 +80,26 @@ class OllamaUsageScraperTest {
     }
 
     @Test
+    fun `parsea fecha de reset de weekly independiente de la sesion`() {
+        // El weekly tiene su propio data-time; la sesión el suyo.
+        val htmlWithWeeklyReset = html.replace(
+            "</body></html>",
+            """<div class="text-xs text-neutral-500 mt-1 local-time" data-time="2026-08-11T18:00:00Z">Resets in 3 days.</div></body></html>""",
+        )
+        val data = parseHtml(htmlWithWeeklyReset)
+        assertEquals("2026-08-08T18:00:00Z", data.sessionResetAt.toString())
+        assertEquals("2026-08-11T18:00:00Z", data.weeklyResetAt.toString())
+    }
+
+    @Test
+    fun `sin data-time el reset queda null`() {
+        val noReset = html.replace("data-time=\"2026-08-08T18:00:00Z\"", "")
+        val data = parseHtml(noReset)
+        assertNull(data.sessionResetAt)
+        assertNull(data.weeklyResetAt)
+    }
+
+    @Test
     fun `modelos con 0 porciento no rompen la barra`() {
         val data = parseHtml()
         assertTrue(data.weeklyModels.any { it.percent == 0.0 })
@@ -133,12 +153,6 @@ class OllamaUsageScraperTest {
     fun `pagina normal no se confunde con login`() {
         assertFalse(scraper.isLoginPage(org.jsoup.Jsoup.parse(html)))
         assertTrue(scraper.isLoginPage(org.jsoup.Jsoup.parse("<title>Sign in</title><input type='password'>")))
-    }
-
-    @Test
-    fun `sin data-time el reset queda null`() {
-        val noReset = html.replace("data-time=\"2026-08-08T18:00:00Z\"", "")
-        assertNull(parseHtml(noReset).sessionResetAt)
     }
 
     @Test

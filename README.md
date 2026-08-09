@@ -8,6 +8,7 @@ App Android para ver el consumo del plan de **Ollama Cloud** (session usage, wee
 
 - **Session usage** (%) con hora de reset
 - **Weekly usage** (%) con desglose por modelo (requests y %)
+- **Reset de cuota en la notificación**: muestra cuándo se reinicia la cuota semanal y de sesión (tiempo restante o fecha, configurable)
 - **Alertas configurables por %**: umbral de alerta y crítico independientes para semana y sesión (sliders 50–99%), con switch maestro de notificaciones
 - **Consumo en pantalla de bloqueo**: notificación permanente (ongoing) con semana/sesión/plan, visible sin desbloquear; incluye extras de **Samsung Live Notifications / Now Bar** (estilo estándar + progreso + chip)
 - **Frecuencia de refresco configurable**: slider de **1 min a 12 h** — de 1 a 14 min usa un servicio en primer plano (preciso), de 15 min en adelante usa WorkManager

@@ -34,9 +34,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jpyunism.ollamacloudusage.ModelUsage
+import com.jpyunism.ollamacloudusage.ResetDisplayMode
 import com.jpyunism.ollamacloudusage.UiState
 import com.jpyunism.ollamacloudusage.UsageData
 import com.jpyunism.ollamacloudusage.UsageViewModel
+import com.jpyunism.ollamacloudusage.formatReset
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -56,7 +58,7 @@ fun UsageTab(vm: UsageViewModel, state: UiState) {
                 val data = state.data
                 Header(data, state.lastUpdated)
                 UsageMeterCard("Session usage", data.sessionPercent, data.sessionModels, data.sessionResetAt)
-                UsageMeterCard("Weekly usage", data.weeklyPercent, data.weeklyModels, null)
+                UsageMeterCard("Weekly usage", data.weeklyPercent, data.weeklyModels, data.weeklyResetAt)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { vm.refresh() }, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -134,7 +136,8 @@ private fun UsageMeterCard(
             if (resetAt != null) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Resets: ${resetAt.atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))}",
+                    formatReset(resetAt, ResetDisplayMode.COUNTDOWN)?.replaceFirstChar { it.uppercase() }
+                        ?: "Resets: ${resetAt.atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
