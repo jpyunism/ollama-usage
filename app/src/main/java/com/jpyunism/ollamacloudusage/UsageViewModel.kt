@@ -111,6 +111,8 @@ class UsageViewModel(
                 onSuccess = {
                     val now = System.currentTimeMillis()
                     prefs.edit().putLong(KEY_LAST_UPDATED, now).apply()
+                    // Widget del home screen: refleja el refresh manual.
+                    context?.let { ctx -> UsageWidgetProvider.saveData(ctx, it) }
                     UiState.Success(it, cookieStored = true, lastUpdated = now)
                 },
                 onFailure = { e ->

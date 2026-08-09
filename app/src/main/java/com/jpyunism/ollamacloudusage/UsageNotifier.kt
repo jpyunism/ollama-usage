@@ -3,7 +3,9 @@ package com.jpyunism.ollamacloudusage
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.Manifest
 import android.annotation.SuppressLint
@@ -57,6 +59,7 @@ object UsageNotifier {
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
+            .setContentIntent(openApp(context))
             .build()
 
         runCatching {
@@ -122,9 +125,19 @@ object UsageNotifier {
             .setOnlyAlertOnce(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setContentIntent(openApp(context))
             .setExtras(extras)
             .build()
     }
+
+    /** Tap en la notificación abre la app. */
+    private fun openApp(context: Context): PendingIntent =
+        PendingIntent.getActivity(
+            context,
+            0,
+            Intent(context, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
 
     /** Notificación permanente (ongoing) con el consumo actual, visible en pantalla de bloqueo. */
     @SuppressLint("MissingPermission") // canNotify() verifica el permiso antes

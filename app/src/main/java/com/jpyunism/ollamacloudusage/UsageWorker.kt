@@ -25,6 +25,10 @@ class UsageWorker(
             runCatching { OllamaUsageScraper().fetchUsage(cookie) }.getOrNull()
         } ?: return Result.retry()
 
+        // Widget del home screen: guarda el último consumo y lo re-renderiza.
+        UsageWidgetProvider.saveData(appContext, data)
+        UsageWidgetProvider.updateAll(appContext)
+
         // Notificación permanente (pantalla de bloqueo) — independiente de las alertas.
         if (prefs.getBoolean(UsageViewModel.KEY_PERSISTENT_ENABLED, true)) {
             UsageNotifier.showPersistent(appContext, data)

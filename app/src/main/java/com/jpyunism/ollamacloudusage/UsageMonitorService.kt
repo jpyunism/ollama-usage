@@ -59,6 +59,9 @@ class UsageMonitorService : Service() {
     private suspend fun refreshOnce(): Boolean {
         val cookie = prefs().getString(UsageViewModel.KEY_COOKIE, null) ?: return false
         val data = runCatching { OllamaUsageScraper().fetchUsage(cookie) }.getOrNull() ?: return false
+        // Widget del home screen: guarda el último consumo y lo re-renderiza.
+        UsageWidgetProvider.saveData(this, data)
+        UsageWidgetProvider.updateAll(this)
         UsageNotifier.showPersistent(this, data)
         return true
     }
