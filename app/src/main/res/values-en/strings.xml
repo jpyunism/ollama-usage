@@ -11,7 +11,6 @@
     <string name="session_usage">Session usage</string>
     <string name="weekly_usage">Weekly usage</string>
     <string name="refresh">Refresh</string>
-    <string name="change_cookie">Change cookie</string>
     <string name="loading">Checking ollama.com…</string>
     <string name="plan_format">Plan: %1$s</string>
     <string name="updated_at">Updated %1$s</string>
@@ -109,4 +108,13 @@
     <string name="widget_week">Week: %1$s%%</string>
     <string name="widget_session">Session: %1$s%%</string>
     <string name="widget_plan">Plan %1$s</string>
+
+    <!-- Updates -->
+    <string name="update_available">New version %1$s available</string>
+    <string name="update_install">Update</string>
+    <string name="channel_updates_name">Updates</string>
+    <string name="channel_updates_description">Download of new app versions</string>
+    <string name="update_downloading">Downloading update…</string>
+    <string name="update_download_progress">%1$d%%</string>
+    <string name="update_failed">Update failed</string>
 </resources>

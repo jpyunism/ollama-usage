@@ -61,8 +61,15 @@ class UsageViewModel(
     private val _theme = MutableStateFlow(loadTheme())
     val theme: StateFlow<AppTheme> = _theme
 
+    private val _update = MutableStateFlow<UpdateInfo?>(null)
+    val update: StateFlow<UpdateInfo?> = _update
+
+    private val _download = MutableStateFlow<DownloadState>(DownloadState.Idle)
+    val download: StateFlow<DownloadState> = _download
+
     init {
         if (hasAuth()) refresh()
+        checkForUpdate()
     }
 
     /** Guarda la cookie de sesión como método de autenticación. */
@@ -157,6 +164,40 @@ class UsageViewModel(
     fun updateTheme(theme: AppTheme) {
         _theme.value = theme
         prefs.edit().putString(KEY_THEME, theme.name).apply()
+    }
+
+    /**
+     * Chequea una vez por día si hay release más nuevo en GitHub.
+     * Silencioso: si no hay update o falla la red, no molesta.
+     */
+    fun checkForUpdate() {
+        val ctx = context ?: return
+        if (!UpdateChecker.shouldCheck(ctx)) return
+        viewModelScope.launch {
+            val info = withContext(ioDispatcher) {
+                runCatching { UpdateChecker.check(ctx) }.getOrNull()
+            }
+            UpdateChecker.markChecked(ctx)
+            if (info != null) _update.value = info
+        }
+    }
+
+    /** Descarga e instala la actualización (servicio en primer plano con progreso). */
+    fun startUpdateDownload(info: UpdateInfo) {
+        val ctx = context ?: return
+        _download.value = DownloadState.Downloading(0)
+        UpdaterService.start(ctx, info.downloadUrl)
+    }
+
+    /** Revisa de nuevo aunque no haya pasado el intervalo (botón manual). */
+    fun checkForUpdateNow() {
+        val ctx = context ?: return
+        viewModelScope.launch {
+            val info = withContext(ioDispatcher) {
+                runCatching { UpdateChecker.check(ctx) }.getOrNull()
+            }
+            if (info != null) _update.value = info
+        }
     }
 
     private fun loadSettings(): AlertSettings = AlertSettings(

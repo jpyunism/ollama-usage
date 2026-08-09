@@ -23,6 +23,18 @@ class UsageWorker(
             runCatching { fetchCurrentUsage(prefs) }.getOrNull()
         } ?: return Result.retry()
 
+        // Check de nueva versión (una vez por día, silencioso si no hay).
+        if (UpdateChecker.shouldCheck(appContext)) {
+            val info = withContext(Dispatchers.IO) {
+                runCatching { UpdateChecker.check(appContext) }.getOrNull()
+            }
+            UpdateChecker.markChecked(appContext)
+            if (info != null) {
+                // Notifica al usuario que hay una versión nueva disponible.
+                UsageNotifier.notifyUpdateAvailable(appContext, info.versionName)
+            }
+        }
+
         // Widget del home screen: guarda el último consumo y lo re-renderiza.
         UsageWidgetProvider.saveData(appContext, data)
         UsageWidgetProvider.updateAll(appContext)

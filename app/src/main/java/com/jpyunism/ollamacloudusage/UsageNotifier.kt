@@ -139,6 +139,24 @@ object UsageNotifier {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
+    private const val UPDATE_NOTIFICATION_ID = 1003
+
+    /** Avisa que hay una versión nueva publicada; el tap abre la app. */
+    @SuppressLint("MissingPermission") // canNotify() verifica el permiso antes
+    fun notifyUpdateAvailable(context: Context, versionName: String) {
+        if (!canNotify(context)) return
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_sys_download_done)
+            .setContentTitle(context.getString(R.string.update_available, versionName))
+            .setContentText(context.getString(R.string.update_install))
+            .setContentIntent(openApp(context))
+            .setAutoCancel(true)
+            .build()
+        runCatching {
+            NotificationManagerCompat.from(context).notify(UPDATE_NOTIFICATION_ID, notification)
+        }
+    }
+
     /** Notificación permanente (ongoing) con el consumo actual, visible en pantalla de bloqueo. */
     @SuppressLint("MissingPermission") // canNotify() verifica el permiso antes
     fun showPersistent(context: Context, data: UsageData) {

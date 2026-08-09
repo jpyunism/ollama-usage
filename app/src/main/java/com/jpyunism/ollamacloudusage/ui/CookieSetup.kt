@@ -84,6 +84,12 @@ fun CookieSetup(vm: UsageViewModel, state: UiState) {
             modifier = Modifier.fillMaxWidth(),
             minLines = 3,
         )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            stringResource(R.string.cookie_instructions),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 
     Spacer(Modifier.height(8.dp))
