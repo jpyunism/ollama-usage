@@ -31,6 +31,9 @@
     <string name="cookie_label">Cookie (aid=...; __Secure-session=...)</string>
     <string name="save_and_check">Guardar y consultar</string>
     <string name="change_auth">Cambiar acceso</string>
+    <string name="change_auth_hint">Tu credencial actual se mantiene hasta que guardes una nueva. Elige el método y pega el valor.</string>
+    <string name="show_key">Mostrar clave</string>
+    <string name="hide_key">Ocultar clave</string>
 
     <!-- Alerts -->
     <string name="consumption_alerts">Alertas de consumo</string>
