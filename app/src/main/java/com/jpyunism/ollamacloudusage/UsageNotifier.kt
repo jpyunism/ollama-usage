@@ -28,20 +28,20 @@ object UsageNotifier {
 
         val alerts = NotificationChannel(
             CHANNEL_ID,
-            "Alertas de consumo",
+            context.getString(R.string.channel_alerts_name),
             NotificationManager.IMPORTANCE_HIGH,
         ).apply {
-            description = "Avisa cuando el plan de Ollama Cloud se acerca al límite"
+            description = context.getString(R.string.channel_alerts_description)
         }
         manager.createNotificationChannel(alerts)
 
         // Canal silencioso para el consumo permanente en pantalla de bloqueo.
         val persistent = NotificationChannel(
             CHANNEL_PERSISTENT_ID,
-            "Consumo en pantalla de bloqueo",
+            context.getString(R.string.channel_persistent_name),
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = "Muestra el consumo de Ollama Cloud siempre visible"
+            description = context.getString(R.string.channel_persistent_description)
             setShowBadge(false)
         }
         manager.createNotificationChannel(persistent)
@@ -67,14 +67,14 @@ object UsageNotifier {
     /** Construye la notificación permanente (ongoing) con el consumo actual. */
     fun buildPersistent(context: Context, data: UsageData?): Notification {
         val title = if (data != null) {
-            "Ollama Cloud — ${data.weeklyPercent}% semanal"
+            context.getString(R.string.persistent_title_weekly, data.weeklyPercent.toString())
         } else {
-            "Ollama Cloud — actualizando…"
+            context.getString(R.string.persistent_title_updating)
         }
         val text = if (data != null) {
-            "Sesión ${data.sessionPercent}% · Plan ${data.plan}"
+            context.getString(R.string.persistent_text_session, data.sessionPercent.toString(), data.plan)
         } else {
-            "Consultando consumo…"
+            context.getString(R.string.checking_usage)
         }
         val body = if (data != null) {
             val time = Instant.ofEpochMilli(System.currentTimeMillis())
@@ -82,13 +82,17 @@ object UsageNotifier {
                 .format(DateTimeFormatter.ofPattern("HH:mm"))
             val mode = resetDisplayMode(context)
             buildString {
-                append("Semana: ${data.weeklyPercent}% · Sesión: ${data.sessionPercent}%\n")
-                formatReset(data.weeklyResetAt, mode)?.let { append("Semana $it\n") }
-                formatReset(data.sessionResetAt, mode)?.let { append("Sesión $it\n") }
-                append("Plan ${data.plan} · Actualizado $time")
+                append(context.getString(R.string.persistent_body_week_session, data.weeklyPercent.toString(), data.sessionPercent.toString()))
+                formatReset(data.weeklyResetAt, mode, locale = context.resources.configuration.locales[0])?.let {
+                    append(context.getString(R.string.persistent_body_week_reset, it))
+                }
+                formatReset(data.sessionResetAt, mode, locale = context.resources.configuration.locales[0])?.let {
+                    append(context.getString(R.string.persistent_body_session_reset, it))
+                }
+                append(context.getString(R.string.persistent_body_plan_updated, data.plan, time))
             }
         } else {
-            "Consultando consumo…"
+            context.getString(R.string.checking_usage)
         }
 
         // Samsung Live Notifications / Now Bar (best-effort: requiere whitelist
@@ -99,13 +103,13 @@ object UsageNotifier {
             putString("android.ongoingActivityNoti.secondaryInfo", text)
             putString(
                 "android.ongoingActivityNoti.chipExpandedText",
-                if (data != null) "Ollama ${data.weeklyPercent}%" else "Ollama",
+                if (data != null) context.getString(R.string.chip_weekly, data.weeklyPercent.toString()) else "Ollama",
             )
             if (data != null) {
                 putInt("android.ongoingActivityNoti.progress", data.weeklyPercent.toInt().coerceIn(0, 100))
                 putInt("android.ongoingActivityNoti.progressMax", 100)
-                putString("android.ongoingActivityNoti.nowbarPrimaryInfo", "Ollama ${data.weeklyPercent}%")
-                putString("android.ongoingActivityNoti.nowbarSecondaryInfo", "Sesión ${data.sessionPercent}%")
+                putString("android.ongoingActivityNoti.nowbarPrimaryInfo", context.getString(R.string.chip_weekly, data.weeklyPercent.toString()))
+                putString("android.ongoingActivityNoti.nowbarSecondaryInfo", context.getString(R.string.nowbar_session, data.sessionPercent.toString()))
             }
         }
 

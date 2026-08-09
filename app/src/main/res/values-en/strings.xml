@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ollama Usage</string>
+
+    <!-- Tabs -->
+    <string name="tab_usage">Usage</string>
+    <string name="tab_alerts">Alerts</string>
+    <string name="tab_themes">Themes</string>
+
+    <!-- Usage screen -->
+    <string name="session_usage">Session usage</string>
+    <string name="weekly_usage">Weekly usage</string>
+    <string name="refresh">Refresh</string>
+    <string name="change_cookie">Change cookie</string>
+    <string name="loading">Checking ollama.com…</string>
+    <string name="plan_format">Plan: %1$s</string>
+    <string name="updated_at">Updated %1$s</string>
+    <string name="percent_used">%1$s%% used</string>
+    <string name="resets_at">Resets: %1$s</string>
+    <string name="requests_percent">%1$d req · %2$s%%</string>
+
+    <!-- Cookie setup -->
+    <string name="connect_account">Connect your account</string>
+    <string name="cookie_instructions">Paste your ollama.com session cookie. Open DevTools → Application → Cookies and copy the aid and __Secure-session values separated by ;</string>
+    <string name="cookie_label">Cookie (aid=...; __Secure-session=...)</string>
+    <string name="save_and_check">Save and check</string>
+
+    <!-- Alerts -->
+    <string name="consumption_alerts">Usage alerts</string>
+    <string name="alerts_description">The app checks your usage in the background and notifies you when you get close to your plan limit.</string>
+    <string name="notifications">Notifications</string>
+    <string name="enabled">Enabled</string>
+    <string name="disabled">Disabled</string>
+    <string name="weekly_limit">Weekly limit</string>
+    <string name="weekly_limit_subtitle">Alert when crossing the threshold.</string>
+    <string name="current_session">Current session</string>
+    <string name="session_subtitle">The session resets every ~24h.</string>
+    <string name="lock_screen">Lock screen</string>
+    <string name="always_visible">Usage always visible</string>
+    <string name="hidden">Hidden</string>
+    <string name="quota_reset">Quota reset</string>
+    <string name="quota_reset_description">How to show the quota reset in the notification and in the app.</string>
+    <string name="countdown">Time remaining</string>
+    <string name="date">Date</string>
+    <string name="countdown_example">Example: "Session resets in 36 min"</string>
+    <string name="date_example">Example: "Session resets on 8 Aug, 18:00"</string>
+    <string name="refresh_frequency">Refresh frequency</string>
+    <string name="refresh_frequency_description">How often usage is updated in the background. From 1 to 14 min it uses a foreground service; from 15 min on it uses WorkManager.</string>
+    <string name="min_1">1 min</string>
+    <string name="hours_12">12 h</string>
+    <string name="save_settings">Save settings</string>
+    <string name="alert">Alert</string>
+    <string name="critical">Critical</string>
+    <string name="interval_minutes">%1$d min</string>
+    <string name="interval_hours">%1$d h</string>
+    <string name="interval_hours_minutes">%1$d h %2$d min</string>
+
+    <!-- Themes -->
+    <string name="color_themes">Color themes</string>
+    <string name="themes_description">Choose the app\'s main color. It applies instantly and saves automatically. The System theme uses your wallpaper\'s dynamic colors (Android 12+).</string>
+    <string name="selected_theme">Selected</string>
+    <string name="theme_system">System</string>
+    <string name="theme_indigo">Indigo</string>
+    <string name="theme_emerald">Emerald</string>
+    <string name="theme_teal">Teal</string>
+    <string name="theme_ocean">Ocean</string>
+    <string name="theme_violet">Violet</string>
+    <string name="theme_rose">Rose</string>
+    <string name="theme_amber">Amber</string>
+
+    <!-- Notifications -->
+    <string name="channel_alerts_name">Usage alerts</string>
+    <string name="channel_alerts_description">Notifies when your Ollama Cloud plan is close to the limit</string>
+    <string name="channel_persistent_name">Lock screen usage</string>
+    <string name="channel_persistent_description">Shows your Ollama Cloud usage always visible</string>
+    <string name="persistent_title_weekly">Ollama Cloud — %1$s%% weekly</string>
+    <string name="persistent_title_updating">Ollama Cloud — updating…</string>
+    <string name="persistent_text_session">Session %1$s%% · Plan %2$s</string>
+    <string name="checking_usage">Checking usage…</string>
+    <string name="persistent_body_week_session">Week: %1$s%% · Session: %2$s%%\n</string>
+    <string name="persistent_body_week_reset">Week %1$s\n</string>
+    <string name="persistent_body_session_reset">Session %1$s\n</string>
+    <string name="persistent_body_plan_updated">Plan %1$s · Updated %2$s</string>
+    <string name="chip_weekly">Ollama %1$s%%</string>
+    <string name="nowbar_session">Session %1$s%%</string>
+
+    <!-- Worker alerts -->
+    <string name="weekly_critical_title">Weekly limit almost reached!</string>
+    <string name="weekly_alert_title">Weekly usage at %1$d%%</string>
+    <string name="weekly_alert_message">Ollama Cloud is at %1$d%% of the weekly plan. Consider pausing heavy models.</string>
+    <string name="session_alert_title">Session at %1$d%%</string>
+    <string name="session_alert_message">Your Ollama Cloud session is at %1$d%%. It resets soon.</string>
+
+    <!-- Errors -->
+    <string name="cookie_expired">Cookie expired</string>
+    <string name="network_error">Network error: %1$s</string>
+</resources>

@@ -31,9 +31,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jpyunism.ollamacloudusage.ModelUsage
+import com.jpyunism.ollamacloudusage.R
 import com.jpyunism.ollamacloudusage.ResetDisplayMode
 import com.jpyunism.ollamacloudusage.UiState
 import com.jpyunism.ollamacloudusage.UsageData
@@ -57,16 +59,16 @@ fun UsageTab(vm: UsageViewModel, state: UiState) {
             is UiState.Success -> {
                 val data = state.data
                 Header(data, state.lastUpdated)
-                UsageMeterCard("Session usage", data.sessionPercent, data.sessionModels, data.sessionResetAt)
-                UsageMeterCard("Weekly usage", data.weeklyPercent, data.weeklyModels, data.weeklyResetAt)
+                UsageMeterCard(stringResource(R.string.session_usage), data.sessionPercent, data.sessionModels, data.sessionResetAt)
+                UsageMeterCard(stringResource(R.string.weekly_usage), data.weeklyPercent, data.weeklyModels, data.weeklyResetAt)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { vm.refresh() }, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Actualizar")
+                        Text(stringResource(R.string.refresh))
                     }
                     OutlinedButton(onClick = { vm.clearCookie() }, modifier = Modifier.weight(1f)) {
-                        Text("Cambiar cookie")
+                        Text(stringResource(R.string.change_cookie))
                     }
                 }
             }
@@ -74,7 +76,7 @@ fun UsageTab(vm: UsageViewModel, state: UiState) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator()
                     Spacer(Modifier.height(12.dp))
-                    Text("Consultando ollama.com…", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.loading), style = MaterialTheme.typography.bodyMedium)
                 }
             }
             is UiState.Error -> CookieSetup(vm, state)
@@ -87,14 +89,14 @@ fun UsageTab(vm: UsageViewModel, state: UiState) {
 private fun Header(data: UsageData, lastUpdated: Long?) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Plan: ${data.plan}", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.plan_format, data.plan), style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.weight(1f))
             if (lastUpdated != null) {
                 val time = Instant.ofEpochMilli(lastUpdated)
                     .atZone(ZoneId.systemDefault())
                     .format(DateTimeFormatter.ofPattern("HH:mm"))
                 Text(
-                    "Actualizado $time",
+                    stringResource(R.string.updated_at, time),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -121,7 +123,7 @@ private fun UsageMeterCard(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(title, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "${percent}% used",
+                    stringResource(R.string.percent_used, "${percent}"),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = when {
@@ -137,7 +139,7 @@ private fun UsageMeterCard(
                 Spacer(Modifier.height(8.dp))
                 Text(
                     formatReset(resetAt, ResetDisplayMode.COUNTDOWN)?.replaceFirstChar { it.uppercase() }
-                        ?: "Resets: ${resetAt.atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))}",
+                        ?: stringResource(R.string.resets_at, resetAt.atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -153,7 +155,7 @@ private fun UsageMeterCard(
                     ) {
                         Text(m.model, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                         Text(
-                            "${m.requests} req · ${m.percent}%",
+                            stringResource(R.string.requests_percent, m.requests, "${m.percent}"),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

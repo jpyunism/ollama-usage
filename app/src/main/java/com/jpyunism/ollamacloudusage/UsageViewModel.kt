@@ -45,6 +45,7 @@ class UsageViewModel(
     private val scraper: UsageScraper,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val reschedule: (Int) -> Unit = {},
+    private val context: android.content.Context? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
@@ -114,8 +115,10 @@ class UsageViewModel(
                 },
                 onFailure = { e ->
                     val msg = when (e) {
-                        is CookieExpiredException -> e.message ?: "Cookie expirada"
-                        else -> "Error de red: ${e.message}"
+                        is CookieExpiredException ->
+                            context?.getString(R.string.cookie_expired) ?: (e.message ?: "Cookie expirada")
+                        else ->
+                            context?.getString(R.string.network_error, e.message) ?: "Error de red: ${e.message}"
                     }
                     UiState.Error(msg)
                 },
@@ -165,6 +168,7 @@ class UsageViewModel(
                         prefs,
                         OllamaUsageScraper(),
                         reschedule = { UsageScheduler.schedule(app, it) },
+                        context = app,
                     ) as T
                 }
             }

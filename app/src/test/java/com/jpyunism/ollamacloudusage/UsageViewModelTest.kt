@@ -206,7 +206,12 @@ class UsageViewModelTest {
         every { prefs.edit() } returns editor
 
         var rescheduled = -1
-        val vm = UsageViewModel(prefs, mockk(relaxed = true), ioDispatcher = StandardTestDispatcher(testScheduler)) { rescheduled = it }
+        val vm = UsageViewModel(
+            prefs,
+            mockk(relaxed = true),
+            ioDispatcher = StandardTestDispatcher(testScheduler),
+            reschedule = { rescheduled = it },
+        )
         vm.updateSettings(vm.settings.value.copy(refreshIntervalMinutes = 30))
 
         assertEquals(30, rescheduled)

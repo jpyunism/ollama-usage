@@ -1,4 +1,97 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Ollama Usage</string>
+
+    <!-- Tabs -->
+    <string name="tab_usage">Uso</string>
+    <string name="tab_alerts">Alertas</string>
+    <string name="tab_themes">Temas</string>
+
+    <!-- Usage screen -->
+    <string name="session_usage">Session usage</string>
+    <string name="weekly_usage">Weekly usage</string>
+    <string name="refresh">Actualizar</string>
+    <string name="change_cookie">Cambiar cookie</string>
+    <string name="loading">Consultando ollama.com…</string>
+    <string name="plan_format">Plan: %1$s</string>
+    <string name="updated_at">Actualizado %1$s</string>
+    <string name="percent_used">%1$s%% used</string>
+    <string name="resets_at">Resets: %1$s</string>
+    <string name="requests_percent">%1$d req · %2$s%%</string>
+
+    <!-- Cookie setup -->
+    <string name="connect_account">Conecta tu cuenta</string>
+    <string name="cookie_instructions">Pega la cookie de tu sesión de ollama.com. Abre DevTools → Application → Cookies y copia los valores de aid y __Secure-session separados por ;</string>
+    <string name="cookie_label">Cookie (aid=...; __Secure-session=...)</string>
+    <string name="save_and_check">Guardar y consultar</string>
+
+    <!-- Alerts -->
+    <string name="consumption_alerts">Alertas de consumo</string>
+    <string name="alerts_description">La app revisa tu consumo en segundo plano y te avisa cuando se acerca al límite de tu plan.</string>
+    <string name="notifications">Notificaciones</string>
+    <string name="enabled">Activadas</string>
+    <string name="disabled">Desactivadas</string>
+    <string name="weekly_limit">Límite semanal</string>
+    <string name="weekly_limit_subtitle">Alerta al cruzar el umbral.</string>
+    <string name="current_session">Sesión actual</string>
+    <string name="session_subtitle">La sesión se resetea cada ~24h.</string>
+    <string name="lock_screen">Pantalla de bloqueo</string>
+    <string name="always_visible">Consumo siempre visible</string>
+    <string name="hidden">Oculto</string>
+    <string name="quota_reset">Reset de cuota</string>
+    <string name="quota_reset_description">Cómo mostrar el reinicio de la cuota en la notificación y en la app.</string>
+    <string name="countdown">Tiempo restante</string>
+    <string name="date">Fecha</string>
+    <string name="countdown_example">Ejemplo: "Sesión resetea en 36 min"</string>
+    <string name="date_example">Ejemplo: "Sesión resetea el 8 ago, 18:00"</string>
+    <string name="refresh_frequency">Frecuencia de refresco</string>
+    <string name="refresh_frequency_description">Cada cuánto se actualiza el consumo en segundo plano. De 1 a 14 min usa un servicio en primer plano; de 15 min en adelante usa WorkManager.</string>
+    <string name="min_1">1 min</string>
+    <string name="hours_12">12 h</string>
+    <string name="save_settings">Guardar configuración</string>
+    <string name="alert">Alerta</string>
+    <string name="critical">Crítico</string>
+    <string name="interval_minutes">%1$d min</string>
+    <string name="interval_hours">%1$d h</string>
+    <string name="interval_hours_minutes">%1$d h %2$d min</string>
+
+    <!-- Themes -->
+    <string name="color_themes">Temas de color</string>
+    <string name="themes_description">Elige el color principal de la app. Se aplica al instante y se guarda automáticamente. El tema Sistema usa los colores dinámicos de tu wallpaper (Android 12+).</string>
+    <string name="selected_theme">Seleccionado</string>
+    <string name="theme_system">Sistema</string>
+    <string name="theme_indigo">Índigo</string>
+    <string name="theme_emerald">Esmeralda</string>
+    <string name="theme_teal">Teal</string>
+    <string name="theme_ocean">Océano</string>
+    <string name="theme_violet">Violeta</string>
+    <string name="theme_rose">Rosa</string>
+    <string name="theme_amber">Ámbar</string>
+
+    <!-- Notifications -->
+    <string name="channel_alerts_name">Alertas de consumo</string>
+    <string name="channel_alerts_description">Avisa cuando el plan de Ollama Cloud se acerca al límite</string>
+    <string name="channel_persistent_name">Consumo en pantalla de bloqueo</string>
+    <string name="channel_persistent_description">Muestra el consumo de Ollama Cloud siempre visible</string>
+    <string name="persistent_title_weekly">Ollama Cloud — %1$s%% semanal</string>
+    <string name="persistent_title_updating">Ollama Cloud — actualizando…</string>
+    <string name="persistent_text_session">Sesión %1$s%% · Plan %2$s</string>
+    <string name="checking_usage">Consultando consumo…</string>
+    <string name="persistent_body_week_session">Semana: %1$s%% · Sesión: %2$s%%\n</string>
+    <string name="persistent_body_week_reset">Semana %1$s\n</string>
+    <string name="persistent_body_session_reset">Sesión %1$s\n</string>
+    <string name="persistent_body_plan_updated">Plan %1$s · Actualizado %2$s</string>
+    <string name="chip_weekly">Ollama %1$s%%</string>
+    <string name="nowbar_session">Sesión %1$s%%</string>
+
+    <!-- Worker alerts -->
+    <string name="weekly_critical_title">¡Límite semanal casi agotado!</string>
+    <string name="weekly_alert_title">Consumo semanal al %1$d%%</string>
+    <string name="weekly_alert_message">Ollama Cloud está al %1$d%% del plan semanal. Considera pausar modelos pesados.</string>
+    <string name="session_alert_title">Sesión al %1$d%%</string>
+    <string name="session_alert_message">La sesión de Ollama Cloud está al %1$d%%. Se resetea pronto.</string>
+
+    <!-- Errors -->
+    <string name="cookie_expired">Cookie expirada</string>
+    <string name="network_error">Error de red: %1$s</string>
 </resources>

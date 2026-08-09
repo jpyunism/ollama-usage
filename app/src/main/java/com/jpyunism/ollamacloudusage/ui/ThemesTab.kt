@@ -27,9 +27,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jpyunism.ollamacloudusage.AppTheme
+import com.jpyunism.ollamacloudusage.R
 import com.jpyunism.ollamacloudusage.UsageViewModel
 
 @Composable
@@ -43,11 +45,9 @@ fun ThemesTab(vm: UsageViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Temas de color", style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.color_themes), style = MaterialTheme.typography.headlineSmall)
         Text(
-            "Elige el color principal de la app. Se aplica al instante y se guarda " +
-                "automáticamente. El tema Sistema usa los colores dinámicos de tu wallpaper " +
-                "(Android 12+).",
+            stringResource(R.string.themes_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -93,14 +93,14 @@ private fun ThemeRow(
             )
             Spacer(Modifier.width(12.dp))
             Text(
-                theme.label,
+                stringResource(theme.labelRes),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f),
             )
             if (selected) {
                 Icon(
                     Icons.Filled.Check,
-                    contentDescription = "Seleccionado",
+                    contentDescription = stringResource(R.string.selected_theme),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }

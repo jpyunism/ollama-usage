@@ -28,14 +28,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.jpyunism.ollamacloudusage.R
 import com.jpyunism.ollamacloudusage.UsageViewModel
 
-enum class Tab(val label: String, val icon: ImageVector, val selectedIcon: ImageVector) {
-    Usage("Uso", Icons.Outlined.Speed, Icons.Filled.Speed),
-    Alerts("Alertas", Icons.Outlined.Notifications, Icons.Filled.Notifications),
-    Themes("Temas", Icons.Outlined.Palette, Icons.Filled.Palette),
+enum class Tab(val labelRes: Int, val icon: ImageVector, val selectedIcon: ImageVector) {
+    Usage(R.string.tab_usage, Icons.Outlined.Speed, Icons.Filled.Speed),
+    Alerts(R.string.tab_alerts, Icons.Outlined.Notifications, Icons.Filled.Notifications),
+    Themes(R.string.tab_themes, Icons.Outlined.Palette, Icons.Filled.Palette),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,7 +51,7 @@ fun UsageScreen(vm: UsageViewModel) {
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Ollama Usage", fontWeight = FontWeight.SemiBold) },
+                title = { Text(stringResource(R.string.app_name), fontWeight = FontWeight.SemiBold) },
             )
         },
         bottomBar = {
@@ -61,10 +63,10 @@ fun UsageScreen(vm: UsageViewModel) {
                         icon = {
                             Icon(
                                 if (tab == t) t.selectedIcon else t.icon,
-                                contentDescription = t.label,
+                                contentDescription = stringResource(t.labelRes),
                             )
                         },
-                        label = { Text(t.label) },
+                        label = { Text(stringResource(t.labelRes)) },
                     )
                 }
             }

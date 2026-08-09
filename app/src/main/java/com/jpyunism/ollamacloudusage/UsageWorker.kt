@@ -49,13 +49,15 @@ class UsageWorker(
             alert = settings.weeklyAlert,
             critical = settings.weeklyCritical,
             lastKey = KEY_LAST_NOTIFIED_WEEKLY,
-            title = "Consumo semanal",
-            unit = "semana",
         ) { pct, level ->
             UsageNotifier.notifyLimit(
                 appContext,
-                if (level == CRITICAL) "¡Límite semanal casi agotado!" else "Consumo semanal al $pct%",
-                "Ollama Cloud está al $pct% del plan semanal. Considera pausar modelos pesados.",
+                if (level == CRITICAL) {
+                    appContext.getString(R.string.weekly_critical_title)
+                } else {
+                    appContext.getString(R.string.weekly_alert_title, pct)
+                },
+                appContext.getString(R.string.weekly_alert_message, pct),
             )
         }
 
@@ -65,13 +67,11 @@ class UsageWorker(
             alert = settings.sessionAlert,
             critical = settings.sessionCritical,
             lastKey = KEY_LAST_NOTIFIED_SESSION,
-            title = "Sesión al %",
-            unit = "sesión",
-        ) { pct, level ->
+        ) { pct, _ ->
             UsageNotifier.notifyLimit(
                 appContext,
-                if (level == CRITICAL) "Sesión al $pct%" else "Sesión al $pct%",
-                "La sesión de Ollama Cloud está al $pct%. Se resetea pronto.",
+                appContext.getString(R.string.session_alert_title, pct),
+                appContext.getString(R.string.session_alert_message, pct),
             )
         }
 
@@ -88,8 +88,6 @@ class UsageWorker(
         alert: Int,
         critical: Int,
         lastKey: String,
-        title: String,
-        unit: String,
         notify: (Int, Int) -> Unit,
     ) {
         val lastNotified = prefs.getInt(lastKey, -1)

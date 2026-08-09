@@ -39,10 +39,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.jpyunism.ollamacloudusage.AlertSettings
+import com.jpyunism.ollamacloudusage.R
 import com.jpyunism.ollamacloudusage.ResetDisplayMode
 import com.jpyunism.ollamacloudusage.UsageScheduler
 import com.jpyunism.ollamacloudusage.UsageViewModel
@@ -65,10 +67,9 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("Alertas de consumo", style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.consumption_alerts), style = MaterialTheme.typography.headlineSmall)
         Text(
-            "La app revisa tu consumo en segundo plano y te avisa cuando se acerca " +
-                "al límite de tu plan.",
+            stringResource(R.string.alerts_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -94,9 +95,9 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Notificaciones", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.notifications), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        if (enabled) "Activadas" else "Desactivadas",
+                        stringResource(if (enabled) R.string.enabled else R.string.disabled),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -109,8 +110,8 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
         }
 
         ThresholdCard(
-            title = "Límite semanal",
-            subtitle = "Alerta al cruzar el umbral.",
+            title = stringResource(R.string.weekly_limit),
+            subtitle = stringResource(R.string.weekly_limit_subtitle),
             alert = weeklyAlert,
             critical = weeklyCritical,
             onAlertChange = { weeklyAlert = it },
@@ -118,8 +119,8 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
         )
 
         ThresholdCard(
-            title = "Sesión actual",
-            subtitle = "La sesión se resetea cada ~24h.",
+            title = stringResource(R.string.current_session),
+            subtitle = stringResource(R.string.session_subtitle),
             alert = sessionAlert,
             critical = sessionCritical,
             onAlertChange = { sessionAlert = it },
@@ -147,9 +148,9 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Pantalla de bloqueo", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.lock_screen), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        if (persistentEnabled) "Consumo siempre visible" else "Oculto",
+                        stringResource(if (persistentEnabled) R.string.always_visible else R.string.hidden),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -164,32 +165,30 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
         // ── Reset de cuota ──
         Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(16.dp)) {
-                Text("Reset de cuota", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.quota_reset), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "Cómo mostrar el reinicio de la cuota en la notificación y en la app.",
+                    stringResource(R.string.quota_reset_description),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ResetModeChip(
-                        label = "Tiempo restante",
+                        label = stringResource(R.string.countdown),
                         selected = resetMode == ResetDisplayMode.COUNTDOWN,
                         onClick = { resetMode = ResetDisplayMode.COUNTDOWN },
                     )
                     ResetModeChip(
-                        label = "Fecha",
+                        label = stringResource(R.string.date),
                         selected = resetMode == ResetDisplayMode.DATE,
                         onClick = { resetMode = ResetDisplayMode.DATE },
                     )
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    if (resetMode == ResetDisplayMode.COUNTDOWN) {
-                        "Ejemplo: \"Sesión resetea en 36 min\""
-                    } else {
-                        "Ejemplo: \"Sesión resetea el 8 ago, 18:00\""
-                    },
+                    stringResource(
+                        if (resetMode == ResetDisplayMode.COUNTDOWN) R.string.countdown_example else R.string.date_example
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -199,11 +198,9 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
         // ── Frecuencia de refresco ──
         Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(16.dp)) {
-                Text("Frecuencia de refresco", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.refresh_frequency), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "Cada cuánto se actualiza el consumo en segundo plano. " +
-                        "De 1 a 14 min usa un servicio en primer plano; " +
-                        "de 15 min en adelante usa WorkManager.",
+                    stringResource(R.string.refresh_frequency_description),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -224,14 +221,14 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("1 min", style = MaterialTheme.typography.labelSmall)
+                    Text(stringResource(R.string.min_1), style = MaterialTheme.typography.labelSmall)
                     Text(
                         formatInterval(refreshInterval),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
                     )
-                    Text("12 h", style = MaterialTheme.typography.labelSmall)
+                    Text(stringResource(R.string.hours_12), style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
@@ -253,7 +250,7 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
             },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Guardar configuración")
+            Text(stringResource(R.string.save_settings))
         }
     }
 }
@@ -271,10 +268,11 @@ private fun ResetModeChip(
     )
 }
 
+@Composable
 private fun formatInterval(minutes: Int): String = when {
-    minutes < 60 -> "$minutes min"
-    minutes % 60 == 0 -> "${minutes / 60} h"
-    else -> "${minutes / 60} h ${minutes % 60} min"
+    minutes < 60 -> stringResource(R.string.interval_minutes, minutes)
+    minutes % 60 == 0 -> stringResource(R.string.interval_hours, minutes / 60)
+    else -> stringResource(R.string.interval_hours_minutes, minutes / 60, minutes % 60)
 }
 
 @Composable
@@ -297,14 +295,14 @@ private fun ThresholdCard(
             Spacer(Modifier.height(12.dp))
 
             ThresholdSlider(
-                label = "Alerta",
+                label = stringResource(R.string.alert),
                 value = alert,
                 max = critical - 1,
                 onValueChange = onAlertChange,
                 color = MaterialTheme.colorScheme.secondary,
             )
             ThresholdSlider(
-                label = "Crítico",
+                label = stringResource(R.string.critical),
                 value = critical,
                 min = alert + 1,
                 onValueChange = onCriticalChange,

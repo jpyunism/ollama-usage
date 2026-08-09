@@ -39,20 +39,25 @@ fun formatReset(
     mode: ResetDisplayMode,
     now: Instant = Instant.now(),
     zone: ZoneId = ZoneId.systemDefault(),
+    locale: Locale = Locale.getDefault(),
 ): String? {
     if (resetAt == null) return null
+    val es = locale.language == "es"
     return when (mode) {
-        ResetDisplayMode.DATE ->
-            "resetea el ${resetAt.atZone(zone).format(DateTimeFormatter.ofPattern("d MMM, HH:mm", Locale.forLanguageTag("es")))}"
+        ResetDisplayMode.DATE -> {
+            val date = resetAt.atZone(zone).format(DateTimeFormatter.ofPattern("d MMM, HH:mm", locale))
+            if (es) "resetea el $date" else "resets on $date"
+        }
 
         ResetDisplayMode.COUNTDOWN -> {
             val diff = Duration.between(now, resetAt)
+            val verb = if (es) "resetea en" else "resets in"
             when {
-                diff.isNegative || diff.isZero -> "resetea pronto"
-                diff.toMinutes() < 1 -> "resetea en <1 min"
-                diff.toHours() < 1 -> "resetea en ${diff.toMinutes()} min"
-                diff.toHours() < 24 -> "resetea en ${diff.toHours()} h ${diff.toMinutes() % 60} min"
-                else -> "resetea en ${diff.toDays()} d ${diff.toHours() % 24} h"
+                diff.isNegative || diff.isZero -> if (es) "resetea pronto" else "resets soon"
+                diff.toMinutes() < 1 -> "$verb <1 min"
+                diff.toHours() < 1 -> "$verb ${diff.toMinutes()} min"
+                diff.toHours() < 24 -> "$verb ${diff.toHours()} h ${diff.toMinutes() % 60} min"
+                else -> "$verb ${diff.toDays()} d ${diff.toHours() % 24} h"
             }
         }
     }
