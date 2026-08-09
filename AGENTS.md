@@ -23,3 +23,7 @@ Toda la interfaz debe usar **exclusivamente componentes Material 3** (`androidx.
 - Iconos: `androidx.compose.material.icons` (Icons.Filled / Icons.Outlined).
 
 La app ya usa `androidx.compose.material3:material3` y Material You (temas por color semilla); cualquier UI nueva debe seguir ese patrón. Si algo no existe en M3, justificar en el PR/commit por qué no se puede usar M3 en ese caso concreto.
+
+### Única excepción: el widget de home screen
+
+`UsageWidgetProvider` + `res/layout/widget_usage.xml` usan vistas clásicas (`LinearLayout`, `TextView`, `ProgressBar`) vía `RemoteViews`. Es obligatorio por el framework: los AppWidgets de Android solo aceptan `RemoteViews`, que no soporta Compose. No convertir el widget a Compose ni reemplazar el layout por uno Compose. Todo lo demás (actividad, pantallas, diálogos, notificaciones) debe ser Material 3.
