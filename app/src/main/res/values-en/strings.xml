@@ -127,6 +127,9 @@
     <string name="update_download_progress">%1$d%%</string>
     <string name="update_download_failed">Download failed: %1$s</string>
     <string name="update_failed">Update failed</string>
+    <string name="update_needs_permission_title">Install permission required</string>
+    <string name="update_needs_permission_message">Enable "Install unknown apps" for Ollama Usage and try again.</string>
+    <string name="update_install_permission">Enable installation</string>
     <string name="section_update">Update</string>
     <string name="update_section_description">Manually check for a new published version.</string>
     <string name="version_current">Version %1$s</string>

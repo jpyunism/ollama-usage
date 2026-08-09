@@ -27,6 +27,8 @@ sealed interface DownloadState {
     data class Downloading(val progress: Int) : DownloadState
     data class Ready(val file: java.io.File) : DownloadState
     data class Failed(val message: String) : DownloadState
+    /** Falta el permiso "Instalar apps desconocidas" para este paquete. */
+    data object NeedsPermission : DownloadState
 }
 
 /**

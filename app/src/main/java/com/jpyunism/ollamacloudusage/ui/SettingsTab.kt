@@ -60,6 +60,7 @@ import com.jpyunism.ollamacloudusage.R
 import com.jpyunism.ollamacloudusage.ResetDisplayMode
 import com.jpyunism.ollamacloudusage.UpdateCheckOutcome
 import com.jpyunism.ollamacloudusage.UpdateInfo
+import com.jpyunism.ollamacloudusage.UpdaterService
 import com.jpyunism.ollamacloudusage.UsageScheduler
 import com.jpyunism.ollamacloudusage.UsageViewModel
 
@@ -405,6 +406,22 @@ private fun UpdateCard(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error,
                     )
+                }
+
+                download is DownloadState.NeedsPermission -> {
+                    Text(
+                        stringResource(R.string.update_needs_permission_message),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    val context = LocalContext.current
+                    FilledTonalButton(
+                        onClick = { UpdaterService.openInstallPermissionSettings(context) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.update_install_permission))
+                    }
                 }
 
                 update != null -> {

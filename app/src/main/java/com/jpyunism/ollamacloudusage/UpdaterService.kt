@@ -9,6 +9,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.IBinder
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -39,6 +40,15 @@ class UpdaterService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val url = intent?.getStringExtra(EXTRA_URL) ?: run {
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        // Sin el permiso "Instalar apps desconocidas" el instalador del sistema
+        // rechaza el APK; avisamos antes de descargar.
+        if (!canRequestPackageInstalls(this)) {
+            state.value = DownloadState.NeedsPermission
+            notifyNeedsPermission(this)
+            stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
         }
@@ -161,6 +171,30 @@ class UpdaterService : Service() {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
+        }
+
+        /** true si el usuario habilitó "Instalar apps desconocidas" para este paquete. */
+        fun canRequestPackageInstalls(context: Context): Boolean =
+            context.packageManager.canRequestPackageInstalls()
+
+        /** Abre la pantalla del sistema para habilitar la instalación de apps. */
+        fun openInstallPermissionSettings(context: Context) {
+            val intent = Intent(
+                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                Uri.parse("package:${context.packageName}"),
+            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            runCatching { context.startActivity(intent) }
+        }
+
+        private fun notifyNeedsPermission(context: Context) {
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                .setContentTitle(context.getString(R.string.update_needs_permission_title))
+                .setContentText(context.getString(R.string.update_needs_permission_message))
+                .setAutoCancel(true)
+                .build()
+            runCatching { manager.notify(NOTIFICATION_ID, notification) }
         }
 
         private fun notifyError(context: Context, message: String) {
