@@ -214,6 +214,15 @@ class UsageViewModel(
         val ctx = context ?: return
         _download.value = DownloadState.Downloading(0)
         UpdaterService.start(ctx, info.downloadUrl)
+        viewModelScope.launch {
+            UpdaterService.state.collect { state ->
+                _download.value = state
+                if (state is DownloadState.Ready || state is DownloadState.Failed) {
+                    // El servicio se detiene solo; el estado Ready/Failed queda visible
+                    // hasta que el usuario vuelva a la app o se reinicie el flujo.
+                }
+            }
+        }
     }
 
     /** Revisa de nuevo aunque no haya pasado el intervalo (botón manual). */

@@ -120,6 +120,7 @@
     <string name="channel_updates_description">Descarga de nuevas versiones de la app</string>
     <string name="update_downloading">Descargando actualización…</string>
     <string name="update_download_progress">%1$d%%</string>
+    <string name="update_download_failed">No se pudo descargar: %1$s</string>
     <string name="update_failed">Error al actualizar</string>
     <string name="section_update">Actualización</string>
     <string name="update_section_description">Revisa manualmente si hay una versión nueva publicada.</string>

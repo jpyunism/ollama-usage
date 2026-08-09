@@ -120,6 +120,7 @@
     <string name="channel_updates_description">Download of new app versions</string>
     <string name="update_downloading">Downloading update…</string>
     <string name="update_download_progress">%1$d%%</string>
+    <string name="update_download_failed">Download failed: %1$s</string>
     <string name="update_failed">Update failed</string>
     <string name="section_update">Update</string>
     <string name="update_section_description">Manually check for a new published version.</string>

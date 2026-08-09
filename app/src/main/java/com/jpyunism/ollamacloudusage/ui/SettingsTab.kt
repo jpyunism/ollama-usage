@@ -369,6 +369,14 @@ private fun UpdateCard(
                     )
                 }
 
+                download is DownloadState.Failed -> {
+                    Text(
+                        stringResource(R.string.update_download_failed, download.message),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+
                 update != null -> {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(

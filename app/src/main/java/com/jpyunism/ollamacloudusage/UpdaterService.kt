@@ -16,6 +16,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -41,6 +42,7 @@ class UpdaterService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        state.value = DownloadState.Idle
         startForeground(NOTIFICATION_ID, buildProgress(this, 0))
         scope.launch { downloadAndInstall(url) }
         return START_NOT_STICKY
@@ -52,11 +54,13 @@ class UpdaterService : Service() {
         }
         result.fold(
             onSuccess = { file ->
+                state.value = DownloadState.Ready(file)
                 install(this, file)
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             },
             onFailure = { e ->
+                state.value = DownloadState.Failed(e.message ?: "Error")
                 notifyError(this, e.message ?: "Error")
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
@@ -80,12 +84,17 @@ class UpdaterService : Service() {
                 val buf = ByteArray(8192)
                 var read: Int
                 var done = 0L
+                var lastPct = -1
                 while (input.read(buf).also { read = it } != -1) {
                     output.write(buf, 0, read)
                     done += read
                     if (total > 0) {
                         val pct = ((done * 100) / total).toInt().coerceIn(0, 100)
-                        updateNotification(this, pct)
+                        if (pct != lastPct) {
+                            lastPct = pct
+                            updateNotification(this, pct)
+                            state.value = DownloadState.Downloading(pct)
+                        }
                     }
                 }
             }
@@ -102,6 +111,9 @@ class UpdaterService : Service() {
         private const val EXTRA_URL = "update_url"
         private const val NOTIFICATION_ID = 2001
         const val CHANNEL_ID = "updates"
+
+        /** Progreso de la descarga, observable desde la UI (SettingsTab). */
+        val state = MutableStateFlow<DownloadState>(DownloadState.Idle)
 
         fun start(context: Context, url: String) {
             val intent = Intent(context, UpdaterService::class.java)
