@@ -78,24 +78,27 @@ class UsageWidgetProvider : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.widget_root, openApp)
 
             if (data == null) {
-                views.setTextViewText(R.id.widget_week, context.getString(R.string.checking_usage))
+                views.setTextViewText(R.id.widget_session, context.getString(R.string.checking_usage))
                 views.setTextViewText(R.id.widget_plan, "")
-                views.setTextViewText(R.id.widget_session, "")
+                views.setTextViewText(R.id.widget_week, "")
+                views.setTextViewText(R.id.widget_session_reset, "")
                 views.setViewVisibility(R.id.widget_progress, View.GONE)
             } else {
-                views.setTextViewText(
-                    R.id.widget_week,
-                    context.getString(R.string.widget_week, formatPercent(data.weeklyPercent)),
-                )
                 views.setTextViewText(
                     R.id.widget_session,
                     context.getString(R.string.widget_session, formatPercent(data.sessionPercent)),
                 )
+                views.setTextViewText(
+                    R.id.widget_week,
+                    context.getString(R.string.widget_week, formatPercent(data.weeklyPercent)),
+                )
                 views.setTextViewText(R.id.widget_plan, context.getString(R.string.widget_plan, data.plan))
+                val reset = data.sessionResetAt?.let { formatReset(it, ResetDisplayMode.COUNTDOWN) }
+                views.setTextViewText(R.id.widget_session_reset, reset ?: "")
                 views.setProgressBar(
                     R.id.widget_progress,
                     100,
-                    data.weeklyPercent.roundToInt().coerceIn(0, 100),
+                    data.sessionPercent.roundToInt().coerceIn(0, 100),
                     false,
                 )
                 views.setViewVisibility(R.id.widget_progress, View.VISIBLE)

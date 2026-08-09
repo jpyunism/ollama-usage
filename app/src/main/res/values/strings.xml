@@ -109,7 +109,8 @@
     <string name="widget_description">Consumo actual de Ollama Cloud</string>
     <string name="widget_title">Ollama Cloud</string>
     <string name="widget_week">Semana: %1$s%%</string>
-    <string name="widget_session">Sesión: %1$s%%</string>
+    <string name="widget_session">%1$s%%</string>
+    <string name="widget_session_label">Sesión</string>
     <string name="widget_plan">Plan %1$s</string>
 
     <!-- Updates -->
