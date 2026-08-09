@@ -14,6 +14,13 @@ data class UpdateInfo(
     val sha256: String?,
 )
 
+/** Resultado de un chequeo manual de actualización. */
+sealed interface UpdateCheckOutcome {
+    data class Available(val info: UpdateInfo) : UpdateCheckOutcome
+    data object UpToDate : UpdateCheckOutcome
+    data object Failed : UpdateCheckOutcome
+}
+
 /** Estado de la descarga de la actualización. */
 sealed interface DownloadState {
     data object Idle : DownloadState

@@ -4,8 +4,7 @@
 
     <!-- Tabs -->
     <string name="tab_usage">Usage</string>
-    <string name="tab_alerts">Alerts</string>
-    <string name="tab_themes">Themes</string>
+    <string name="tab_settings">Settings</string>
 
     <!-- Usage screen -->
     <string name="session_usage">Session usage</string>
@@ -121,4 +120,13 @@
     <string name="update_downloading">Downloading update…</string>
     <string name="update_download_progress">%1$d%%</string>
     <string name="update_failed">Update failed</string>
+    <string name="section_update">Update</string>
+    <string name="update_section_description">Manually check for a new published version.</string>
+    <string name="version_current">Version %1$s</string>
+    <string name="update_auto_hint">The app checks automatically once a day.</string>
+    <string name="update_up_to_date">You are up to date (v%1$s)</string>
+    <string name="update_check_failed">Could not check. Verify your connection and try again.</string>
+    <string name="update_checking">Checking…</string>
+    <string name="update_check_hint">Tap the button to look for updates.</string>
+    <string name="update_check">Check for updates</string>
 </resources>

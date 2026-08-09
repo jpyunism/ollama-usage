@@ -64,6 +64,12 @@ class UsageViewModel(
     private val _update = MutableStateFlow<UpdateInfo?>(null)
     val update: StateFlow<UpdateInfo?> = _update
 
+    private val _checkingUpdate = MutableStateFlow(false)
+    val checkingUpdate: StateFlow<Boolean> = _checkingUpdate
+
+    private val _checkResult = MutableStateFlow<UpdateCheckOutcome?>(null)
+    val checkResult: StateFlow<UpdateCheckOutcome?> = _checkResult
+
     private val _download = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val download: StateFlow<DownloadState> = _download
 
@@ -212,12 +218,24 @@ class UsageViewModel(
 
     /** Revisa de nuevo aunque no haya pasado el intervalo (botón manual). */
     fun checkForUpdateNow() {
-        val ctx = context ?: return
+        val ctx = context ?: run {
+            _checkResult.value = UpdateCheckOutcome.Failed
+            return
+        }
+        if (_checkingUpdate.value) return
+        _checkingUpdate.value = true
+        _checkResult.value = null
         viewModelScope.launch {
             val info = withContext(ioDispatcher) {
                 runCatching { UpdateChecker.check(ctx) }.getOrNull()
             }
-            if (info != null) _update.value = info
+            _checkingUpdate.value = false
+            _checkResult.value = if (info != null) {
+                _update.value = info
+                UpdateCheckOutcome.Available(info)
+            } else {
+                UpdateCheckOutcome.UpToDate
+            }
         }
     }
 
@@ -243,6 +261,10 @@ class UsageViewModel(
         prefs.getString(KEY_AUTH_SOURCE, null)
             ?.let { name -> AuthSource.entries.firstOrNull { it.name == name } }
             ?: AuthSource.COOKIE
+
+    /** Versión instalada de la app (para mostrarla en Configuración). */
+    val appVersion: String
+        get() = context?.let(UpdateChecker::currentVersion) ?: ""
 
     companion object {
         const val KEY_COOKIE = "session_cookie"

@@ -13,11 +13,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -48,8 +51,7 @@ import com.jpyunism.ollamacloudusage.DownloadState
 
 enum class Tab(val labelRes: Int, val icon: ImageVector, val selectedIcon: ImageVector) {
     Usage(R.string.tab_usage, Icons.Outlined.Speed, Icons.Filled.Speed),
-    Alerts(R.string.tab_alerts, Icons.Outlined.Notifications, Icons.Filled.Notifications),
-    Themes(R.string.tab_themes, Icons.Outlined.Palette, Icons.Filled.Palette),
+    Settings(R.string.tab_settings, Icons.Outlined.Settings, Icons.Filled.Settings),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -103,8 +105,7 @@ fun UsageScreen(vm: UsageViewModel) {
                 Box(Modifier.fillMaxSize()) {
                     when (tab) {
                         Tab.Usage -> UsageTab(vm, state)
-                        Tab.Alerts -> AlertsTab(vm, settings)
-                        Tab.Themes -> ThemesTab(vm)
+                        Tab.Settings -> SettingsTab(vm, settings)
                     }
                 }
             }

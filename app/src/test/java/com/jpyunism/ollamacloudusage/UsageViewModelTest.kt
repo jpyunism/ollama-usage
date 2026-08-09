@@ -188,6 +188,14 @@ class UsageViewModelTest {
         assertEquals("", vm.currentSecret(AuthSource.COOKIE))
     }
 
+    @Test
+    fun `checkForUpdateNow sin contexto falla con Failed`() = runTest {
+        val vm = buildVm(fakePrefs(), mockk(relaxed = true))
+        vm.checkForUpdateNow()
+        testScheduler.advanceUntilIdle()
+        assertEquals(UpdateCheckOutcome.Failed, vm.checkResult.value)
+    }
+
     // ─────────── Configuración de alertas ───────────
 
     @Test

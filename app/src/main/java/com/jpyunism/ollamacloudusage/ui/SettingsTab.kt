@@ -17,14 +17,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.SystemUpdate
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
@@ -43,14 +50,24 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jpyunism.ollamacloudusage.AlertSettings
+import com.jpyunism.ollamacloudusage.AppTheme
+import com.jpyunism.ollamacloudusage.DownloadState
 import com.jpyunism.ollamacloudusage.R
 import com.jpyunism.ollamacloudusage.ResetDisplayMode
+import com.jpyunism.ollamacloudusage.UpdateCheckOutcome
+import com.jpyunism.ollamacloudusage.UpdateInfo
 import com.jpyunism.ollamacloudusage.UsageScheduler
 import com.jpyunism.ollamacloudusage.UsageViewModel
 
+/**
+ * Configuración unificada: alertas de consumo, pantalla de bloqueo, reset de
+ * cuota, frecuencia de refresco, apariencia (temas) y actualizaciones.
+ */
 @Composable
-fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
+fun SettingsTab(vm: UsageViewModel, settings: AlertSettings) {
+    // ── Estado local de alertas ──
     var enabled by remember { mutableStateOf(settings.notificationsEnabled) }
     var weeklyAlert by remember { mutableIntStateOf(settings.weeklyAlert) }
     var weeklyCritical by remember { mutableIntStateOf(settings.weeklyCritical) }
@@ -60,6 +77,13 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
     var refreshInterval by remember { mutableIntStateOf(settings.refreshIntervalMinutes) }
     var resetMode by remember { mutableStateOf(settings.resetDisplayMode) }
 
+    // ── Estado del ViewModel ──
+    val currentTheme by vm.theme.collectAsStateWithLifecycle()
+    val update by vm.update.collectAsStateWithLifecycle()
+    val checkingUpdate by vm.checkingUpdate.collectAsStateWithLifecycle()
+    val checkResult by vm.checkResult.collectAsStateWithLifecycle()
+    val download by vm.download.collectAsStateWithLifecycle()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -67,11 +91,10 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(stringResource(R.string.consumption_alerts), style = MaterialTheme.typography.headlineSmall)
-        Text(
-            stringResource(R.string.alerts_description),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        // ════ Alertas ════
+        SectionHeader(
+            title = stringResource(R.string.consumption_alerts),
+            subtitle = stringResource(R.string.alerts_description),
         )
 
         // Master switch
@@ -80,19 +103,7 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
                 Modifier.padding(16.dp).fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(
-                    Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Filled.Notifications,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
+                IconBox(Icons.Filled.Notifications)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.notifications), style = MaterialTheme.typography.titleMedium)
@@ -127,25 +138,13 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
             onCriticalChange = { sessionCritical = it },
         )
 
-        // ── Pantalla de bloqueo ──
+        // Pantalla de bloqueo
         Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
             Row(
                 Modifier.padding(16.dp).fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(
-                    Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Filled.Lock,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
+                IconBox(Icons.Filled.Lock)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.lock_screen), style = MaterialTheme.typography.titleMedium)
@@ -162,7 +161,7 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
             }
         }
 
-        // ── Reset de cuota ──
+        // Reset de cuota
         Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(16.dp)) {
                 Text(stringResource(R.string.quota_reset), style = MaterialTheme.typography.titleMedium)
@@ -195,7 +194,7 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
             }
         }
 
-        // ── Frecuencia de refresco ──
+        // Frecuencia de refresco
         Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(16.dp)) {
                 Text(stringResource(R.string.refresh_frequency), style = MaterialTheme.typography.titleMedium)
@@ -251,6 +250,201 @@ fun AlertsTab(vm: UsageViewModel, settings: AlertSettings) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(stringResource(R.string.save_settings))
+        }
+
+        // ════ Apariencia ════
+        SectionHeader(
+            title = stringResource(R.string.color_themes),
+            subtitle = stringResource(R.string.themes_description),
+        )
+
+        AppTheme.entries.forEach { theme ->
+            ThemeRow(
+                theme = theme,
+                selected = theme == currentTheme,
+                onClick = { vm.updateTheme(theme) },
+            )
+        }
+
+        // ════ Actualización ════
+        SectionHeader(
+            title = stringResource(R.string.section_update),
+            subtitle = stringResource(R.string.update_section_description),
+        )
+
+        UpdateCard(
+            currentVersion = vm.appVersion,
+            update = update,
+            checking = checkingUpdate,
+            result = checkResult,
+            download = download,
+            onCheck = { vm.checkForUpdateNow() },
+            onDownload = { vm.startUpdateDownload(it) },
+        )
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String, subtitle: String) {
+    Column {
+        Text(title, style = MaterialTheme.typography.headlineSmall)
+        Text(
+            subtitle,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun IconBox(icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Box(
+        Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.primaryContainer),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+    }
+}
+
+/** Tarjeta de actualización: versión actual, chequeo manual y descarga. */
+@Composable
+private fun UpdateCard(
+    currentVersion: String,
+    update: UpdateInfo?,
+    checking: Boolean,
+    result: UpdateCheckOutcome?,
+    download: DownloadState,
+    onCheck: () -> Unit,
+    onDownload: (UpdateInfo) -> Unit,
+) {
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Outlined.SystemUpdate,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.version_current, currentVersion),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        stringResource(R.string.update_auto_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+
+            when {
+                download is DownloadState.Downloading -> {
+                    LinearProgressIndicator(
+                        progress = { download.progress / 100f },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        stringResource(R.string.update_downloading),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                update != null -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            stringResource(R.string.update_available, update.versionName),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Button(onClick = { onDownload(update) }) {
+                            Text(stringResource(R.string.update_install))
+                        }
+                    }
+                }
+
+                result is UpdateCheckOutcome.UpToDate -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Filled.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            stringResource(R.string.update_up_to_date, currentVersion),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                result is UpdateCheckOutcome.Failed -> {
+                    Text(
+                        stringResource(R.string.update_check_failed),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+
+                checking -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            stringResource(R.string.update_checking),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                else -> {
+                    Text(
+                        stringResource(R.string.update_check_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = onCheck,
+                enabled = !checking && download !is DownloadState.Downloading,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(
+                    Icons.Outlined.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.update_check))
+            }
         }
     }
 }
@@ -346,5 +540,51 @@ private fun ThresholdSlider(
             modifier = Modifier.width(48.dp),
             textAlign = TextAlign.End,
         )
+    }
+}
+
+@Composable
+private fun ThemeRow(
+    theme: AppTheme,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            },
+        ),
+    ) {
+        Row(
+            Modifier.padding(16.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Círculo con el color semilla del tema
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(theme.seed),
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                stringResource(theme.labelRes),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
+            )
+            if (selected) {
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = stringResource(R.string.selected_theme),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+        }
     }
 }
