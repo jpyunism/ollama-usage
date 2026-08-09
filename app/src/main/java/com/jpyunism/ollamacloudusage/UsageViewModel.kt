@@ -67,6 +67,9 @@ class UsageViewModel(
     private val _download = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val download: StateFlow<DownloadState> = _download
 
+    private val _showAuthSetup = MutableStateFlow(false)
+    val showAuthSetup: StateFlow<Boolean> = _showAuthSetup
+
     init {
         if (hasAuth()) refresh()
         checkForUpdate()
@@ -79,6 +82,7 @@ class UsageViewModel(
             .putString(KEY_AUTH_SOURCE, AuthSource.COOKIE.name)
             .apply()
         _authSource.value = AuthSource.COOKIE
+        _showAuthSetup.value = false
         refresh()
     }
 
@@ -89,7 +93,18 @@ class UsageViewModel(
             .putString(KEY_AUTH_SOURCE, AuthSource.API_KEY.name)
             .apply()
         _authSource.value = AuthSource.API_KEY
+        _showAuthSetup.value = false
         refresh()
+    }
+
+    /** Abre la pantalla de cambio de acceso sin tocar las credenciales guardadas. */
+    fun openAuthSetup() {
+        _showAuthSetup.value = true
+    }
+
+    /** Vuelve al estado anterior sin guardar nada. */
+    fun closeAuthSetup() {
+        _showAuthSetup.value = false
     }
 
     fun clearAuth() {

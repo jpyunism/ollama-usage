@@ -5,7 +5,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -30,6 +34,16 @@ fun CookieSetup(vm: UsageViewModel, state: UiState) {
     var source by remember { mutableStateOf(AuthSource.API_KEY) }
     var apiKey by remember { mutableStateOf("") }
     var cookie by remember { mutableStateOf("") }
+
+    val isChangeAccess = vm.hasAuth()
+    if (isChangeAccess) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { vm.closeAuthSetup() }) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+            }
+            Text(stringResource(R.string.change_auth), style = MaterialTheme.typography.titleLarge)
+        }
+    }
 
     Text(stringResource(R.string.connect_account), style = MaterialTheme.typography.headlineSmall)
     Text(

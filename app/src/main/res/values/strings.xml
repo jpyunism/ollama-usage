@@ -11,6 +11,7 @@
     <string name="session_usage">Session usage</string>
     <string name="weekly_usage">Weekly usage</string>
     <string name="refresh">Actualizar</string>
+    <string name="back">Volver</string>
     <string name="loading">Consultando ollama.com…</string>
     <string name="plan_format">Plan: %1$s</string>
     <string name="updated_at">Actualizado %1$s</string>
