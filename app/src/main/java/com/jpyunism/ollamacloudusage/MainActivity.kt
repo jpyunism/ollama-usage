@@ -22,6 +22,16 @@ class MainActivity : ComponentActivity() {
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* ignora */ }
 
+    /** Aplica el idioma guardado antes de inflar la UI (arranque en frío). */
+    override fun attachBaseContext(newBase: android.content.Context) {
+        val prefs = SecurePrefs.get(newBase)
+        val language = prefs.getString(UsageViewModel.KEY_LANGUAGE, null)
+            ?.let { name -> AppLanguage.entries.firstOrNull { it.name == name } }
+            ?: AppLanguage.System
+        LocaleHelper.apply(newBase, language)
+        super.attachBaseContext(newBase)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

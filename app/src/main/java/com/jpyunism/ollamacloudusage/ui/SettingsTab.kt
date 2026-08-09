@@ -46,12 +46,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jpyunism.ollamacloudusage.AlertSettings
+import com.jpyunism.ollamacloudusage.AppLanguage
 import com.jpyunism.ollamacloudusage.AppTheme
 import com.jpyunism.ollamacloudusage.DownloadState
 import com.jpyunism.ollamacloudusage.R
@@ -79,6 +81,7 @@ fun SettingsTab(vm: UsageViewModel, settings: AlertSettings) {
 
     // ── Estado del ViewModel ──
     val currentTheme by vm.theme.collectAsStateWithLifecycle()
+    val currentLanguage by vm.language.collectAsStateWithLifecycle()
     val update by vm.update.collectAsStateWithLifecycle()
     val checkingUpdate by vm.checkingUpdate.collectAsStateWithLifecycle()
     val checkResult by vm.checkResult.collectAsStateWithLifecycle()
@@ -250,6 +253,33 @@ fun SettingsTab(vm: UsageViewModel, settings: AlertSettings) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(stringResource(R.string.save_settings))
+        }
+
+        // ════ Idioma ════
+        SectionHeader(
+            title = stringResource(R.string.language),
+            subtitle = stringResource(R.string.language_description),
+        )
+
+        Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+            Column(Modifier.padding(16.dp)) {
+                val activity = LocalContext.current as? android.app.Activity
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AppLanguage.entries.forEach { language ->
+                        val label = stringResource(language.labelRes)
+                        ResetModeChip(
+                            label = label,
+                            selected = language == currentLanguage,
+                            onClick = {
+                                vm.updateLanguage(language)
+                                // Recrea la activity para que todos los strings se recarguen
+                                // con el nuevo locale al instante.
+                                activity?.recreate()
+                            },
+                        )
+                    }
+                }
+            }
         }
 
         // ════ Apariencia ════

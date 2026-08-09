@@ -68,6 +68,11 @@
     <string name="color_themes">Color themes</string>
     <string name="themes_description">Choose the app\'s main color. It applies instantly and saves automatically. The System theme uses your wallpaper\'s dynamic colors (Android 12+).</string>
     <string name="selected_theme">Selected</string>
+    <string name="language">Language</string>
+    <string name="language_description">Choose the app language. System uses your phone\'s language.</string>
+    <string name="language_system">System</string>
+    <string name="language_es">Español</string>
+    <string name="language_en">English</string>
     <string name="theme_system">System</string>
     <string name="theme_indigo">Indigo</string>
     <string name="theme_emerald">Emerald</string>

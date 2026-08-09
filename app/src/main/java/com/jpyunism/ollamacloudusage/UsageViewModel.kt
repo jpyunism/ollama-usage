@@ -61,6 +61,9 @@ class UsageViewModel(
     private val _theme = MutableStateFlow(loadTheme())
     val theme: StateFlow<AppTheme> = _theme
 
+    private val _language = MutableStateFlow(loadLanguage())
+    val language: StateFlow<AppLanguage> = _language
+
     private val _update = MutableStateFlow<UpdateInfo?>(null)
     val update: StateFlow<UpdateInfo?> = _update
 
@@ -193,6 +196,13 @@ class UsageViewModel(
         prefs.edit().putString(KEY_THEME, theme.name).apply()
     }
 
+    /** Cambia el idioma de la UI: aplica al instante y lo guarda. */
+    fun updateLanguage(language: AppLanguage) {
+        _language.value = language
+        prefs.edit().putString(KEY_LANGUAGE, language.name).apply()
+        context?.let { LocaleHelper.apply(it, language) }
+    }
+
     /**
      * Chequea una vez por día si hay release más nuevo en GitHub.
      * Silencioso: si no hay update o falla la red, no molesta.
@@ -266,6 +276,11 @@ class UsageViewModel(
             ?.let { name -> AppTheme.entries.firstOrNull { it.name == name } }
             ?: AppTheme.System
 
+    private fun loadLanguage(): AppLanguage =
+        prefs.getString(KEY_LANGUAGE, null)
+            ?.let { name -> AppLanguage.entries.firstOrNull { it.name == name } }
+            ?: AppLanguage.System
+
     private fun loadAuthSource(): AuthSource =
         prefs.getString(KEY_AUTH_SOURCE, null)
             ?.let { name -> AuthSource.entries.firstOrNull { it.name == name } }
@@ -286,6 +301,7 @@ class UsageViewModel(
         const val KEY_SESSION_ALERT = "session_alert"
         const val KEY_SESSION_CRITICAL = "session_critical"
         const val KEY_THEME = "theme"
+        const val KEY_LANGUAGE = "language"
         const val KEY_PERSISTENT_ENABLED = "persistent_enabled"
         const val KEY_REFRESH_INTERVAL = "refresh_interval"
         const val KEY_RESET_DISPLAY = "reset_display"

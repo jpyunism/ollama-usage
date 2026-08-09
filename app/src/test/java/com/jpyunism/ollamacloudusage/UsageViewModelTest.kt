@@ -350,4 +350,33 @@ class UsageViewModelTest {
         val vm = buildVm(prefs, mockk(relaxed = true))
         assertEquals(AppTheme.System, vm.theme.value)
     }
+
+    @Test
+    fun `idioma por defecto es Sistema`() = runTest {
+        val vm = buildVm(fakePrefs(), mockk(relaxed = true))
+        assertEquals(AppLanguage.System, vm.language.value)
+    }
+
+    @Test
+    fun `updateLanguage persiste y actualiza`() = runTest {
+        val prefs = fakePrefs()
+        val editor = mockk<SharedPreferences.Editor>(relaxed = true)
+        every { editor.putString(any(), any()) } returns editor
+        every { prefs.edit() } returns editor
+
+        val vm = buildVm(prefs, mockk(relaxed = true))
+        vm.updateLanguage(AppLanguage.English)
+
+        assertEquals(AppLanguage.English, vm.language.value)
+        verify { editor.putString(UsageViewModel.KEY_LANGUAGE, "English") }
+    }
+
+    @Test
+    fun `idioma guardado se carga al iniciar`() = runTest {
+        val prefs = fakePrefs()
+        every { prefs.getString(UsageViewModel.KEY_LANGUAGE, null) } returns "Spanish"
+
+        val vm = buildVm(prefs, mockk(relaxed = true))
+        assertEquals(AppLanguage.Spanish, vm.language.value)
+    }
 }
