@@ -1,8 +1,20 @@
 package com.jpyunism.ollamacloudusage
 
 import android.app.Application
+import android.content.Context
 
 class OllamaUsageApp : Application() {
+
+    /**
+     * Instala el CrashReporter lo antes posible (antes de onCreate), para
+     * capturar cualquier excepción del arranque — incluidas las de
+     * EncryptedSharedPreferences/Keystore — y mostrarla en CrashActivity en
+     * vez de cerrar la app en silencio.
+     */
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(base)
+        CrashReporter.install(this)
+    }
 
     override fun onCreate() {
         super.onCreate()

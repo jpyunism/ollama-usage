@@ -24,6 +24,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".CrashActivity"
+            android:exported="false"
+            android:theme="@style/Theme.OllamaUsage" />
+
         <service
             android:name=".UsageMonitorService"
             android:exported="false"
