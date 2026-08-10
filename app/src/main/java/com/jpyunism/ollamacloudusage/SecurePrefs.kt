@@ -16,43 +16,83 @@ import java.security.KeyStore
  * como los valores (AES256_GCM) con una clave maestra protegida por Android
  * Keystore.
  *
- * Se usa un archivo nuevo ([NAME]) a propósito: el archivo legacy
- * "ollama_usage" contenía la cookie en claro y no es legible por
- * EncryptedSharedPreferences (migrar en caliente crashearía). [purgeLegacy]
- * borra ese archivo del disco en el primer arranque.
- *
- * Tolerancia a fallos del Keystore: en algunos OEM (Honor/Huawei y tras
- * actualizaciones de firmware) el Keystore puede quedar corrupto y
- * EncryptedSharedPreferences lanza al arrancar, crasheando la app antes de
- * mostrar nada. [get] no lanza: intenta recuperar la clave (borrándola y
- * regenerándola, perdiendo datos locales) y, si el Keystore sigue fallando,
- * degrada a [InMemoryPrefs]: la app funciona, pero nada se persiste (la
- * cookie vuelve a pedirse). Nunca se escribe un secreto en claro.
+ * Arranque a prueba de cuelgues: en algunos OEM (Honor/Huawei y firmwares
+ * con el TEE/Keystore dañado) las operaciones del Keystore pueden lanzar o
+ * colgarse indefinidamente — un try/catch no alcanza porque un cuelgue no
+ * es una excepción. Por eso la inicialización corre en un hilo de fondo
+ * ([startInit]) y [get] solo espera un tiempo acotado ([INIT_WAIT_MS]).
+ * Si el Keystore no responde a tiempo, la app degrada a [InMemoryPrefs]
+ * (nada se persiste; la cookie se vuelve a pedir) pero abre igual. Nunca se
+ * escribe un secreto en claro.
  */
 object SecurePrefs {
 
     const val NAME = "ollama_usage_secure"
     private const val LEGACY_NAME = "ollama_usage"
     private const val TAG = "SecurePrefs"
+    private const val INIT_WAIT_MS = 3_000L
+
+    @Volatile
+    private var ready: SharedPreferences? = null
 
     @Volatile
     private var degraded = false
 
-    fun get(context: Context): SharedPreferences {
-        if (degraded) return InMemoryPrefs
-        return try {
-            encrypted(context)
-        } catch (e: Exception) {
-            Log.w(TAG, "Keystore falló (${e.javaClass.simpleName}: ${e.message}); regenerando clave")
+    @Volatile
+    private var initStarted = false
+
+    /** Inicia la inicialización en background (llamar lo antes posible). */
+    fun startInit(context: Context) {
+        if (initStarted) return
+        initStarted = true
+        val app = context.applicationContext
+        Thread {
             try {
-                resetKeystore(context)
-                encrypted(context)
-            } catch (e2: Exception) {
-                Log.w(TAG, "Keystore sigue fallando; usando modo degradado (sin persistencia)", e2)
-                degraded = true
-                InMemoryPrefs
+                ready = encrypted(app)
+                degraded = false
+                Log.i(TAG, "Preferencias cifradas listas")
+            } catch (e: Exception) {
+                Log.w(TAG, "Keystore falló (${e.javaClass.simpleName}: ${e.message}); regenerando clave")
+                try {
+                    resetKeystore(app)
+                    ready = encrypted(app)
+                    degraded = false
+                    Log.i(TAG, "Preferencias cifradas regeneradas")
+                } catch (e2: Exception) {
+                    Log.w(TAG, "Keystore sigue fallando; modo degradado (sin persistencia)", e2)
+                    degraded = true
+                }
+            }
+        }.apply {
+            name = "secure-prefs-init"
+            start()
+        }
+    }
+
+    /**
+     * Devuelve las preferencias cifradas si están listas; si el Keystore
+     * tarda o falla, espera a lo sumo [INIT_WAIT_MS] y degrada a
+     * [InMemoryPrefs]. Nunca bloquea el hilo principal sin límite.
+     */
+    fun get(context: Context): SharedPreferences {
+        ready?.let { return it }
+        if (degraded) return InMemoryPrefs
+        startInit(context) // por si nadie lo llamó antes
+        val deadline = System.currentTimeMillis() + INIT_WAIT_MS
+        while (System.currentTimeMillis() < deadline) {
+            ready?.let { return it }
+            if (degraded) return InMemoryPrefs
+            try {
+                Thread.sleep(25)
+            } catch (_: InterruptedException) {
+                break
             }
         }
+        // No bloquear más el hilo principal. Si el init en background
+        // termina después con éxito, ready queda disponible y los próximos
+        // get() lo usan; mientras tanto, todo vive en memoria.
+        degraded = true
+        return InMemoryPrefs
     }
 
     private fun encrypted(context: Context): SharedPreferences {
