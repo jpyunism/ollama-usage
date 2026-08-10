@@ -15,10 +15,6 @@ class OllamaUsageApp : Application() {
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(base)
         CrashReporter.install(this)
-        // Arranca la inicialización de preferencias cifradas en background:
-        // en OEMs con Keystore lento/roto, hacerlo en el hilo principal
-        // congela la app con el splash blanco. get() nunca bloquea >3s.
-        SecurePrefs.startInit(this)
     }
 
     override fun onCreate() {
@@ -29,10 +25,9 @@ class OllamaUsageApp : Application() {
             ?.let { name -> AppLanguage.entries.firstOrNull { it.name == name } }
             ?: AppLanguage.System
         LocaleHelper.apply(this, language)
-        // Elimina el archivo legacy con la cookie en claro (una sola vez).
+        // Elimina archivos de formatos anteriores (cookie en claro / prefs viejas).
         SecurePrefs.purgeLegacy(this)
-        // Crea los canales de notificación y programa el refresh de fondo
-        // sin bloquear: si las prefs aún no están listas, reintenta al rato.
+        // Crea los canales de notificación y programa el refresh de fondo.
         val interval = prefs.getInt(UsageViewModel.KEY_REFRESH_INTERVAL, UsageViewModel.DEFAULT_REFRESH_MINUTES)
         Handler(Looper.getMainLooper()).post {
             UsageNotifier.ensureChannels(this)
