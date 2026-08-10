@@ -29,7 +29,8 @@
     <string name="cookie_instructions">Paste your ollama.com session cookie. Open DevTools → Application → Cookies and copy the aid and __Secure-session values separated by ;</string>
     <string name="cookie_label">Cookie (aid=...; __Secure-session=...)</string>
     <string name="cookie_login_button">Sign in to ollama.com</string>
-    <string name="cookie_login_hint">Opens the official login; once you sign in, the app captures the cookie automatically and stores it encrypted.</string>
+    <string name="cookie_login_hint">Don\'t have the cookie handy? Sign in and we\'ll capture it automatically.</string>
+    <string name="or_separator">or</string>
     <string name="webview_close">Close</string>
     <string name="login_with_webview">Sign in to Ollama</string>
     <string name="webview_loading">Loading ollama.com…</string>
