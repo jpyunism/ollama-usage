@@ -170,6 +170,41 @@ class UsageViewModelTest {
         verify(exactly = 0) { editor.remove(UsageViewModel.KEY_API_KEY) }
     }
 
+    // ─────────── Captura de cookie vía WebView ───────────
+
+    @Test
+    fun `openCookieWebView activa el flag`() = runTest {
+        val vm = buildVm(fakePrefs(), mockk(relaxed = true))
+        assertFalse(vm.showCookieWebView.value)
+        vm.openCookieWebView()
+        assertTrue(vm.showCookieWebView.value)
+    }
+
+    @Test
+    fun `closeCookieWebView apaga el flag sin guardar`() = runTest {
+        val vm = buildVm(fakePrefs(), mockk(relaxed = true))
+        vm.openCookieWebView()
+        vm.closeCookieWebView()
+        assertFalse(vm.showCookieWebView.value)
+    }
+
+    @Test
+    fun `saveCookieFromWebView guarda y cierra el flujo`() = runTest {
+        val prefs = fakePrefs()
+        val editor = mockk<SharedPreferences.Editor>(relaxed = true)
+        every { editor.putString(any(), any()) } returns editor
+        every { prefs.edit() } returns editor
+
+        val vm = buildVm(prefs, mockk(relaxed = true))
+        vm.openCookieWebView()
+        vm.saveCookieFromWebView("aid=abc; __Secure-session=xyz")
+
+        assertFalse(vm.showCookieWebView.value)
+        assertFalse(vm.showAuthSetup.value)
+        verify { editor.putString(UsageViewModel.KEY_COOKIE, "aid=abc; __Secure-session=xyz") }
+        verify { editor.putString(UsageViewModel.KEY_AUTH_SOURCE, AuthSource.COOKIE.name) }
+    }
+
     @Test
     fun `currentSecret devuelve el secreto guardado del metodo indicado`() = runTest {
         val prefs = fakePrefs()

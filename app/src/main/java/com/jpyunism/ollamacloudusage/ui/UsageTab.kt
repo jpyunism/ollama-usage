@@ -54,6 +54,14 @@ import kotlin.math.abs
 @Composable
 fun UsageTab(vm: UsageViewModel, state: UiState) {
     val showAuthSetup by vm.showAuthSetup.collectAsStateWithLifecycle()
+    val showCookieWebView by vm.showCookieWebView.collectAsStateWithLifecycle()
+    if (showCookieWebView) {
+        CookieWebView(
+            onCookieCaptured = { vm.saveCookieFromWebView(it) },
+            onClose = { vm.closeCookieWebView() },
+        )
+        return
+    }
     if (showAuthSetup) {
         CookieSetup(vm, state)
         return

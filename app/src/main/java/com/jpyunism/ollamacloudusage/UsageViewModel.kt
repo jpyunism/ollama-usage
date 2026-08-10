@@ -79,6 +79,9 @@ class UsageViewModel(
     private val _showAuthSetup = MutableStateFlow(false)
     val showAuthSetup: StateFlow<Boolean> = _showAuthSetup
 
+    private val _showCookieWebView = MutableStateFlow(false)
+    val showCookieWebView: StateFlow<Boolean> = _showCookieWebView
+
     init {
         if (hasAuth()) refresh()
         checkForUpdate()
@@ -93,6 +96,22 @@ class UsageViewModel(
         _authSource.value = AuthSource.COOKIE
         _showAuthSetup.value = false
         refresh()
+    }
+
+    /** Abre el WebView de login de ollama.com para capturar la cookie. */
+    fun openCookieWebView() {
+        _showCookieWebView.value = true
+    }
+
+    /** Cierra el WebView sin guardar nada. */
+    fun closeCookieWebView() {
+        _showCookieWebView.value = false
+    }
+
+    /** Guarda la cookie capturada desde el WebView y cierra el flujo. */
+    fun saveCookieFromWebView(cookie: String) {
+        _showCookieWebView.value = false
+        saveCookie(cookie)
     }
 
     /** Guarda la API key de Ollama Cloud como método de autenticación. */

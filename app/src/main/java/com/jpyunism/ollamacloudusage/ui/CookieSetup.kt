@@ -24,11 +24,13 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Cookie
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -158,6 +160,20 @@ fun CookieSetup(vm: UsageViewModel, state: UiState) {
             Spacer(Modifier.height(4.dp))
             Text(
                 stringResource(R.string.cookie_instructions),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+            FilledTonalButton(
+                onClick = { vm.openCookieWebView() },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Outlined.Language, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.cookie_login_button))
+            }
+            Text(
+                stringResource(R.string.cookie_login_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

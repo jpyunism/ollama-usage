@@ -28,6 +28,14 @@
     <string name="api_key_label">API key (ollama.com/settings/keys)</string>
     <string name="cookie_instructions">Paste your ollama.com session cookie. Open DevTools → Application → Cookies and copy the aid and __Secure-session values separated by ;</string>
     <string name="cookie_label">Cookie (aid=...; __Secure-session=...)</string>
+    <string name="cookie_login_button">Sign in to ollama.com</string>
+    <string name="cookie_login_hint">Opens the official login; once you sign in, the app captures the cookie automatically and stores it encrypted.</string>
+    <string name="webview_close">Close</string>
+    <string name="login_with_webview">Sign in to Ollama</string>
+    <string name="webview_loading">Loading ollama.com…</string>
+    <string name="webview_waiting">Sign in with your account. The cookie will be captured automatically.</string>
+    <string name="webview_captured">Session captured! Saving…</string>
+    <string name="webview_error">Could not load ollama.com. Check your connection and try again.</string>
     <string name="save_and_check">Save and check</string>
     <string name="change_auth">Change access</string>
     <string name="change_auth_hint">Your current credential stays until you save a new one. Pick a method and paste the value.</string>
