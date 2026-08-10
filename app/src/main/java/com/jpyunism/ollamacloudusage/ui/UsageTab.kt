@@ -66,6 +66,31 @@ fun UsageTab(vm: UsageViewModel, state: UiState) {
         CookieSetup(vm, state)
         return
     }
+    when (state) {
+        // Loading va fuera de cualquier scrollable (evita anidar constraints).
+        is UiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator()
+                Spacer(Modifier.height(12.dp))
+                Text(stringResource(R.string.loading), style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+        // Idle/Error renderizan el setup de acceso (que ya es scrollable por
+        // sí mismo): anidarlo aquí dentro del Column.verticalScroll crasheaba
+        // con "infinity maximum height constraints" en algunos dispositivos.
+        is UiState.Error -> CookieSetup(vm, state)
+        UiState.Idle -> CookieSetup(vm, state)
+        is UiState.Success -> SuccessContent(state.data, state.lastUpdated, onRefresh = { vm.refresh() }, onChangeAuth = { vm.openAuthSetup() })
+    }
+}
+
+@Composable
+private fun SuccessContent(
+    data: UsageData,
+    lastUpdated: Long?,
+    onRefresh: () -> Unit,
+    onChangeAuth: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -73,32 +98,18 @@ fun UsageTab(vm: UsageViewModel, state: UiState) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        when (state) {
-            is UiState.Success -> {
-                val data = state.data
-                Header(data, state.lastUpdated)
-                UsageMeterCard(stringResource(R.string.session_usage), data.sessionPercent, data.sessionModels, data.sessionResetAt)
-                UsageMeterCard(stringResource(R.string.weekly_usage), data.weeklyPercent, data.weeklyModels, data.weeklyResetAt)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { vm.refresh() }, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.refresh))
-                    }
-                    OutlinedButton(onClick = { vm.openAuthSetup() }, modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.change_auth))
-                    }
-                }
+        Header(data, lastUpdated)
+        UsageMeterCard(stringResource(R.string.session_usage), data.sessionPercent, data.sessionModels, data.sessionResetAt)
+        UsageMeterCard(stringResource(R.string.weekly_usage), data.weeklyPercent, data.weeklyModels, data.weeklyResetAt)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onRefresh, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.refresh))
             }
-            is UiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator()
-                    Spacer(Modifier.height(12.dp))
-                    Text(stringResource(R.string.loading), style = MaterialTheme.typography.bodyMedium)
-                }
+            OutlinedButton(onClick = onChangeAuth, modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.change_auth))
             }
-            is UiState.Error -> CookieSetup(vm, state)
-            UiState.Idle -> CookieSetup(vm, state)
         }
     }
 }

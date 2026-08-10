@@ -71,8 +71,7 @@ fun CookieSetup(vm: UsageViewModel, state: UiState) {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp)
-            .animateContentSize(),
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // ── Cabecera ──
