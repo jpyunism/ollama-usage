@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
+import com.jpyunism.ollamacloudusage.AppDarkMode
 import com.jpyunism.ollamacloudusage.AppTheme
 
 /** Genera el esquema claro a partir del color semilla. */
@@ -49,10 +50,11 @@ private fun darkScheme(seed: Color): ColorScheme = darkColorScheme(
 @Composable
 fun OllamaUsageTheme(
     theme: AppTheme = AppTheme.System,
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkMode: AppDarkMode = AppDarkMode.System,
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
+    val darkTheme = AppDarkMode.resolveDarkMode(darkMode, isSystemInDarkTheme())
 
     // "Sistema" usa Material You (colores dinámicos) en Android 12+; fallback a Índigo.
     val colorScheme = when {

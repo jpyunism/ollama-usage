@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jpyunism.ollamacloudusage.AlertSettings
+import com.jpyunism.ollamacloudusage.AppDarkMode
 import com.jpyunism.ollamacloudusage.AppLanguage
 import com.jpyunism.ollamacloudusage.AppTheme
 import com.jpyunism.ollamacloudusage.DownloadState
@@ -82,6 +83,7 @@ fun SettingsTab(vm: UsageViewModel, settings: AlertSettings) {
 
     // ── Estado del ViewModel ──
     val currentTheme by vm.theme.collectAsStateWithLifecycle()
+    val currentDarkMode by vm.darkMode.collectAsStateWithLifecycle()
     val currentLanguage by vm.language.collectAsStateWithLifecycle()
     val update by vm.update.collectAsStateWithLifecycle()
     val checkingUpdate by vm.checkingUpdate.collectAsStateWithLifecycle()
@@ -285,9 +287,28 @@ fun SettingsTab(vm: UsageViewModel, settings: AlertSettings) {
 
         // ════ Apariencia ════
         SectionHeader(
-            title = stringResource(R.string.color_themes),
-            subtitle = stringResource(R.string.themes_description),
+            title = stringResource(R.string.appearance),
+            subtitle = stringResource(R.string.appearance_description),
         )
+
+        // Modo claro/oscuro
+        Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+            Column(Modifier.padding(16.dp)) {
+                Text(stringResource(R.string.dark_mode), style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AppDarkMode.entries.forEach { mode ->
+                        ResetModeChip(
+                            label = stringResource(mode.labelRes),
+                            selected = mode == currentDarkMode,
+                            onClick = { vm.updateDarkMode(mode) },
+                        )
+                    }
+                }
+            }
+        }
+
+        Text(stringResource(R.string.color_themes), style = MaterialTheme.typography.titleMedium)
 
         AppTheme.entries.forEach { theme ->
             ThemeRow(

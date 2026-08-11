@@ -61,6 +61,9 @@ class UsageViewModel(
     private val _theme = MutableStateFlow(loadTheme())
     val theme: StateFlow<AppTheme> = _theme
 
+    private val _darkMode = MutableStateFlow(loadDarkMode())
+    val darkMode: StateFlow<AppDarkMode> = _darkMode
+
     private val _language = MutableStateFlow(loadLanguage())
     val language: StateFlow<AppLanguage> = _language
 
@@ -215,6 +218,12 @@ class UsageViewModel(
         prefs.edit().putString(KEY_THEME, theme.name).apply()
     }
 
+    /** Cambia el modo claro/oscuro: aplica al instante y lo guarda. */
+    fun updateDarkMode(mode: AppDarkMode) {
+        _darkMode.value = mode
+        prefs.edit().putString(KEY_DARK_MODE, mode.name).apply()
+    }
+
     /** Cambia el idioma de la UI: aplica al instante y lo guarda. */
     fun updateLanguage(language: AppLanguage) {
         _language.value = language
@@ -295,6 +304,11 @@ class UsageViewModel(
             ?.let { name -> AppTheme.entries.firstOrNull { it.name == name } }
             ?: AppTheme.System
 
+    private fun loadDarkMode(): AppDarkMode =
+        prefs.getString(KEY_DARK_MODE, null)
+            ?.let { name -> AppDarkMode.entries.firstOrNull { it.name == name } }
+            ?: AppDarkMode.System
+
     private fun loadLanguage(): AppLanguage =
         prefs.getString(KEY_LANGUAGE, null)
             ?.let { name -> AppLanguage.entries.firstOrNull { it.name == name } }
@@ -320,6 +334,7 @@ class UsageViewModel(
         const val KEY_SESSION_ALERT = "session_alert"
         const val KEY_SESSION_CRITICAL = "session_critical"
         const val KEY_THEME = "theme"
+        const val KEY_DARK_MODE = "dark_mode"
         const val KEY_LANGUAGE = "language"
         const val KEY_PERSISTENT_ENABLED = "persistent_enabled"
         const val KEY_REFRESH_INTERVAL = "refresh_interval"

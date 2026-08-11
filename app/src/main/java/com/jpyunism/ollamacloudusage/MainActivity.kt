@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.jpyunism.ollamacloudusage.AppDarkMode
 import com.jpyunism.ollamacloudusage.ui.OllamaUsageTheme
 import com.jpyunism.ollamacloudusage.ui.UsageScreen
 
@@ -41,8 +42,9 @@ class MainActivity : ComponentActivity() {
                 factory = UsageViewModel.factory(applicationContext),
             )
             val theme by vm.theme.collectAsStateWithLifecycle()
+            val darkMode by vm.darkMode.collectAsStateWithLifecycle()
 
-            OllamaUsageTheme(theme = theme) {
+            OllamaUsageTheme(theme = theme, darkMode = darkMode) {
                 Surface(modifier = Modifier) {
                     UsageScreen(vm)
                 }

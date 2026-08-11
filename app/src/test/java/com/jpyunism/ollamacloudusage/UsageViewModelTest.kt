@@ -387,6 +387,44 @@ class UsageViewModelTest {
     }
 
     @Test
+    fun `modo oscuro por defecto es Sistema`() = runTest {
+        val vm = buildVm(fakePrefs(), mockk(relaxed = true))
+        assertEquals(AppDarkMode.System, vm.darkMode.value)
+    }
+
+    @Test
+    fun `updateDarkMode persiste y actualiza`() = runTest {
+        val prefs = fakePrefs()
+        val editor = mockk<SharedPreferences.Editor>(relaxed = true)
+        every { editor.putString(any(), any()) } returns editor
+        every { prefs.edit() } returns editor
+
+        val vm = buildVm(prefs, mockk(relaxed = true))
+        vm.updateDarkMode(AppDarkMode.Dark)
+
+        assertEquals(AppDarkMode.Dark, vm.darkMode.value)
+        verify { editor.putString(UsageViewModel.KEY_DARK_MODE, "Dark") }
+    }
+
+    @Test
+    fun `modo oscuro guardado se carga al iniciar`() = runTest {
+        val prefs = fakePrefs()
+        every { prefs.getString(UsageViewModel.KEY_DARK_MODE, null) } returns "Light"
+
+        val vm = buildVm(prefs, mockk(relaxed = true))
+        assertEquals(AppDarkMode.Light, vm.darkMode.value)
+    }
+
+    @Test
+    fun `modo oscuro invalido en prefs cae a Sistema`() = runTest {
+        val prefs = fakePrefs()
+        every { prefs.getString(UsageViewModel.KEY_DARK_MODE, null) } returns "NoExiste"
+
+        val vm = buildVm(prefs, mockk(relaxed = true))
+        assertEquals(AppDarkMode.System, vm.darkMode.value)
+    }
+
+    @Test
     fun `idioma por defecto es Sistema`() = runTest {
         val vm = buildVm(fakePrefs(), mockk(relaxed = true))
         assertEquals(AppLanguage.System, vm.language.value)

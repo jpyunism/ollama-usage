@@ -74,8 +74,13 @@
     <string name="interval_hours_minutes">%1$d h %2$d min</string>
 
     <!-- Themes -->
+    <string name="appearance">Appearance</string>
+    <string name="appearance_description">Light/dark mode and the app\'s main color. They apply instantly and save automatically. The System theme uses your wallpaper\'s dynamic colors (Android 12+).</string>
+    <string name="dark_mode">Mode</string>
+    <string name="dark_mode_system">System</string>
+    <string name="dark_mode_light">Light</string>
+    <string name="dark_mode_dark">Dark</string>
     <string name="color_themes">Color themes</string>
-    <string name="themes_description">Choose the app\'s main color. It applies instantly and saves automatically. The System theme uses your wallpaper\'s dynamic colors (Android 12+).</string>
     <string name="selected_theme">Selected</string>
     <string name="language">Language</string>
     <string name="language_description">Choose the app language. System uses your phone\'s language.</string>
