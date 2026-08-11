@@ -17,7 +17,7 @@
   - Acceptance: tema de ventana oscuro en modo noche (parent Material.NoActionBar)
   - Verify: build + inspección del resource
   - Files: `app/src/main/res/values-night/themes.xml` (nuevo)
-- [ ] Task 4: Release v0.16.0
+- [x] Task 4: Release v0.16.0
   - Acceptance: versionCode 23, versionName 0.16.0, suite verde, tag v0.16.0,
     GitHub release con APK firmado, APK enviado por Telegram (15710279)
   - Verify: `./gradlew testDebugUnitTest lintDebug assembleRelease`
