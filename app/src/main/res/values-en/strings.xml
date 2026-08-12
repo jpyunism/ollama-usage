@@ -4,6 +4,7 @@
 
     <!-- Tabs -->
     <string name="tab_usage">Usage</string>
+    <string name="tab_stats">Stats</string>
     <string name="tab_settings">Settings</string>
 
     <!-- Usage screen -->
@@ -19,6 +20,17 @@
     <string name="balance_deficit">Deficit %1$s%%</string>
     <string name="balance_surplus">Surplus %1$s%%</string>
     <string name="requests_percent">%1$d req · %2$s%%</string>
+
+    <!-- Stats -->
+    <string name="stats_period_week">Week</string>
+    <string name="stats_period_session">Session</string>
+    <string name="stats_empty_title">No data yet</string>
+    <string name="stats_empty_hint">The chart fills up with each usage refresh. Check back over time to see your history.</string>
+    <string name="stats_last_closed">%1$s: %2$s%% used before reset</string>
+    <string name="stats_current">You\'re at %1$s%% in the current %2$s</string>
+    <string name="stats_week_of">Week of %1$s</string>
+    <string name="stats_session_of">Session of %1$s</string>
+    <string name="stats_tooltip">%1$s · %2$s%%</string>
 
     <!-- Cookie / API key setup -->
     <string name="connect_account">Connect your account</string>

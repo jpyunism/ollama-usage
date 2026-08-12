@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Instant
 
 sealed interface UiState {
     data object Idle : UiState
@@ -40,6 +41,12 @@ data class AlertSettings(
     }
 }
 
+/** Histórico de consumo acumulado localmente + reset semanal conocido. */
+data class HistoryState(
+    val snapshots: List<UsageSnapshot> = emptyList(),
+    val weeklyResetAt: Instant? = null,
+)
+
 class UsageViewModel(
     private val prefs: android.content.SharedPreferences,
     private val scraper: UsageScraper,
@@ -47,6 +54,7 @@ class UsageViewModel(
     private val reschedule: (Int) -> Unit = {},
     private val context: android.content.Context? = null,
     private val apiScraper: UsageScraper = OllamaApiUsage(),
+    private val historyStore: UsageHistoryStore = UsageHistoryStore(prefs),
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
@@ -78,6 +86,10 @@ class UsageViewModel(
 
     private val _download = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val download: StateFlow<DownloadState> = _download
+
+    /** Histórico de consumo acumulado localmente (snapshots + reset semanal). */
+    private val _history = MutableStateFlow(loadHistory())
+    val history: StateFlow<HistoryState> = _history
 
     private val _showAuthSetup = MutableStateFlow(false)
     val showAuthSetup: StateFlow<Boolean> = _showAuthSetup
@@ -178,6 +190,11 @@ class UsageViewModel(
                     prefs.edit().putLong(KEY_LAST_UPDATED, now).apply()
                     // Widget del home screen: refleja el refresh manual.
                     context?.let { ctx -> UsageWidgetProvider.saveData(ctx, it) }
+                    // Histórico local: acumula el snapshot de este refresh.
+                    _history.value = HistoryState(
+                        snapshots = historyStore.record(it.sessionPercent, it.weeklyPercent),
+                        weeklyResetAt = it.weeklyResetAt,
+                    )
                     UiState.Success(it, cookieStored = true, lastUpdated = now)
                 },
                 onFailure = { e ->
@@ -318,6 +335,11 @@ class UsageViewModel(
         prefs.getString(KEY_AUTH_SOURCE, null)
             ?.let { name -> AuthSource.entries.firstOrNull { it.name == name } }
             ?: AuthSource.COOKIE
+
+    private fun loadHistory(): HistoryState = HistoryState(
+        snapshots = historyStore.load(),
+        weeklyResetAt = null,
+    )
 
     /** Versión instalada de la app (para mostrarla en Configuración). */
     val appVersion: String

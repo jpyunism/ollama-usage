@@ -4,6 +4,7 @@
 
     <!-- Tabs -->
     <string name="tab_usage">Uso</string>
+    <string name="tab_stats">Estadísticas</string>
     <string name="tab_settings">Configuración</string>
 
     <!-- Usage screen -->
@@ -19,6 +20,17 @@
     <string name="balance_deficit">Déficit %1$s%%</string>
     <string name="balance_surplus">Superávit %1$s%%</string>
     <string name="requests_percent">%1$d req · %2$s%%</string>
+
+    <!-- Stats -->
+    <string name="stats_period_week">Semana</string>
+    <string name="stats_period_session">Sesión</string>
+    <string name="stats_empty_title">Aún no hay datos</string>
+    <string name="stats_empty_hint">El gráfico se irá llenando con cada actualización de consumo. Revisa la app con el tiempo para ver tu historial.</string>
+    <string name="stats_last_closed">%1$s: %2$s%% consumido antes del reset</string>
+    <string name="stats_current">Vas %1$s%% en la %2$s actual</string>
+    <string name="stats_week_of">Semana del %1$s</string>
+    <string name="stats_session_of">Sesión del %1$s</string>
+    <string name="stats_tooltip">%1$s · %2$s%%</string>
 
     <!-- Cookie / API key setup -->
     <string name="connect_account">Conecta tu cuenta</string>

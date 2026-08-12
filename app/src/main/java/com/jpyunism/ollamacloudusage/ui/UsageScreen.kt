@@ -15,8 +15,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -46,6 +48,7 @@ import com.jpyunism.ollamacloudusage.DownloadState
 
 enum class Tab(val labelRes: Int, val icon: ImageVector, val selectedIcon: ImageVector) {
     Usage(R.string.tab_usage, Icons.Outlined.Speed, Icons.Filled.Speed),
+    Stats(R.string.tab_stats, Icons.Outlined.BarChart, Icons.Filled.BarChart),
     Settings(R.string.tab_settings, Icons.Outlined.Settings, Icons.Filled.Settings),
 }
 
@@ -100,6 +103,7 @@ fun UsageScreen(vm: UsageViewModel) {
                 Box(Modifier.fillMaxSize()) {
                     when (tab) {
                         Tab.Usage -> UsageTab(vm, state)
+                        Tab.Stats -> StatsTab(vm.history.collectAsStateWithLifecycle().value)
                         Tab.Settings -> SettingsTab(vm, settings)
                     }
                 }
