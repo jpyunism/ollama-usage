@@ -22,8 +22,8 @@
     de datos ya incluye los resets (no cambia); strings widget es/en
   - Verify: build + inspección visual del widget
   - Files: `UsageWidgetProvider.kt`, `res/values/strings.xml`, `res/values-en/strings.xml`
-- [ ] Task 5: Release v0.17.0
+- [x] Task 5: Release v0.17.0
   - Acceptance: versionCode 24, versionName 0.17.0, suite verde, tag v0.17.0,
     GitHub release con APK firmado, APK por Telegram (15710279)
-  - Verify: `./gradlew testDebugUnitTest lintDebug assembleRelease`
+  - Verify: `./gradlew testDebugUnitTest lintDebug assembleRelease` (verde)
   - Files: `app/build.gradle.kts`
