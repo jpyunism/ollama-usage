@@ -46,9 +46,9 @@
 
 ## Task 6: Release v0.18.0
 
-- [ ] Bump versionCode 25, versionName 0.18.0
-- [ ] `./gradlew testDebugUnitTest lintDebug assembleRelease` (verde)
-- [ ] Commit + push + tag v0.18.0
-- [ ] GitHub release con APK firmado
-- [ ] APK por Telegram (15710279)
+- [x] Bump versionCode 25, versionName 0.18.0
+- [x] `./gradlew testDebugUnitTest lintDebug assembleRelease` (verde)
+- [x] Commit + push + tag v0.18.0
+- [x] GitHub release con APK firmado
+- [x] APK por Telegram (15710279)
 - Files: `app/build.gradle.kts`
