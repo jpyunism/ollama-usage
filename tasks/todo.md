@@ -1,29 +1,54 @@
-# Todo: Balanza de consumo (déficit/superávit)
+# Tasks: Estadísticas de uso histórico
 
-- [x] Task 1: Balance.kt + BalanceTest.kt
-  - Acceptance: `computeBalance(percent, resetAt, now, duration)` devuelve
-    DEFICIT/SURPLUS/null; delta redondeado 0 → null; fuera de rango → null;
-    `balanceLabel` formatea "Déficit 8%" / "Superávit 5%"
-  - Verify: `./gradlew testDebugUnitTest --tests "*BalanceTest*"` (verde)
-  - Files: `app/src/main/java/com/jpyunism/ollamacloudusage/Balance.kt` (nuevo),
-    `app/src/test/java/com/jpyunism/ollamacloudusage/BalanceTest.kt` (nuevo)
-- [x] Task 2: UI UsageTab (Row reset + balanza)
-  - Acceptance: en cards Sesión y Semana, el texto de reset se muestra en una Row
-    con la balanza al lado (déficit = error, superávit = primary); strings es/en
-  - Verify: `./gradlew testDebugUnitTest lintDebug` (verde)
-  - Files: `ui/UsageTab.kt`, `res/values/strings.xml`, `res/values-en/strings.xml`
-- [x] Task 3: Notificación persistente (UsageNotifier)
-  - Acceptance: tras la línea de reset de semana y de sesión se agrega
-    " · Déficit 8%" / " · Superávit 5%"; strings es/en
-  - Verify: `./gradlew testDebugUnitTest lintDebug` (verde)
-  - Files: `UsageNotifier.kt`, `res/values/strings.xml`, `res/values-en/strings.xml`
-- [x] Task 4: Widget (UsageWidgetProvider)
-  - Acceptance: `widget_session_reset` muestra "<reset> · Déficit 8%"; persistencia
-    de datos ya incluye los resets (no cambia); strings widget es/en
-  - Verify: build + inspección visual del widget
-  - Files: `UsageWidgetProvider.kt`, `res/values/strings.xml`, `res/values-en/strings.xml`
-- [x] Task 5: Release v0.17.0
-  - Acceptance: versionCode 24, versionName 0.17.0, suite verde, tag v0.17.0,
-    GitHub release con APK firmado, APK por Telegram (15710279)
-  - Verify: `./gradlew testDebugUnitTest lintDebug assembleRelease` (verde)
-  - Files: `app/build.gradle.kts`
+## Task 1: UsageHistory.kt + UsageHistoryTest.kt (TDD)
+
+- [ ] Agrupación por período (semana 168 h / sesión 24 h) desde el primer snapshot
+- [ ] Pico (máx %) por período → "cuánto se consumió antes del reset"
+- [ ] Reset markers dentro del rango (para líneas punteadas)
+- [ ] nearestSnapshot(ts) para el tooltip
+- Verify: `./gradlew testDebugUnitTest --tests "*UsageHistoryTest*"`
+- Files: `app/src/main/java/com/jpyunism/ollamacloudusage/UsageHistory.kt` (nuevo),
+  `app/src/test/java/com/jpyunism/ollamacloudusage/UsageHistoryTest.kt` (nuevo)
+
+## Task 2: UsageHistoryStore.kt (persistencia) + tests
+
+- [ ] JSON en SecurePrefs: load/save
+- [ ] Dedupe: % idéntico al anterior y < 15 min → se omite
+- [ ] Límite 600 snapshots FIFO
+- Verify: `./gradlew testDebugUnitTest --tests "*UsageHistoryStoreTest*"`
+- Files: `app/src/main/java/com/jpyunism/ollamacloudusage/UsageHistoryStore.kt` (nuevo),
+  `app/src/test/java/com/jpyunism/ollamacloudusage/UsageHistoryStoreTest.kt` (nuevo)
+
+## Task 3: Integración en UsageViewModel
+
+- [ ] En `refresh()` exitoso: `historyStore.record(...)` con los % del fetch
+- [ ] StateFlow `history` expuesto (lista de snapshots)
+- Verify: refresh manual guarda snapshot (log/inspección)
+- Files: `UsageViewModel.kt`
+
+## Task 4: ui/StatsTab.kt + strings es/en
+
+- [ ] Toggle Semana/Sesión (SingleChoiceSegmentedButtonRow M3)
+- [ ] Gráfico Canvas: línea + área gradiente, eje Y 0/50/100, labels fecha en X
+- [ ] Líneas punteadas de reset (diente de sierra)
+- [ ] Tooltip al tocar: burbuja con fecha + % del punto más cercano
+- [ ] Resumen: último período cerrado + período actual en curso
+- [ ] Estado vacío con hint
+- Verify: `./gradlew testDebugUnitTest lintDebug` + inspección visual
+- Files: `app/src/main/java/com/jpyunism/ollamacloudusage/ui/StatsTab.kt` (nuevo),
+  `app/src/main/res/values/strings.xml`, `app/src/main/res/values-en/strings.xml`
+
+## Task 5: Tab en UsageScreen.kt
+
+- [ ] Nueva tab en NavigationBar (Usage / Estadísticas / Settings) con icono BarChart
+- Verify: navegación entre las 3 tabs
+- Files: `ui/UsageScreen.kt`, `res/values/strings.xml`, `res/values-en/strings.xml`
+
+## Task 6: Release v0.18.0
+
+- [ ] Bump versionCode 25, versionName 0.18.0
+- [ ] `./gradlew testDebugUnitTest lintDebug assembleRelease` (verde)
+- [ ] Commit + push + tag v0.18.0
+- [ ] GitHub release con APK firmado
+- [ ] APK por Telegram (15710279)
+- Files: `app/build.gradle.kts`

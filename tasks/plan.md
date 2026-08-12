@@ -1,55 +1,73 @@
-# Implementation Plan: Balanza de consumo (déficit/superávit)
+# Implementation Plan: Estadísticas de uso histórico
 
 ## Overview
 
-Mostrar en las cards de Sesión y Semana (app), en la notificación persistente y
-en el widget, si el consumo va en déficit o superávit respecto al ritmo lineal
-esperado del período. Reset semanal: domingo 21:00 CLT (viene en `weeklyResetAt`
-del API; el cálculo usa solo timestamps, sin zona explícita).
+Nueva tab **Estadísticas** con gráfico de consumo porcentual (línea + área) a lo
+largo del tiempo, toggle **Semana / Sesión**, marcadores de reset (diente de
+sierra), tooltip al tocar y resumen del último período cerrado + período actual.
+Los datos se acumulan localmente en cada refresh exitoso (la API no entrega
+histórico).
 
 ## Architecture Decisions
 
-- **Función pura `computeBalance(percent, resetAt, now, duration)`** en
-  `Balance.kt` (nuevo, sin dependencias Android), mismo patrón que
-  `formatPercent`/`formatReset` en `UsageData.kt`:
-  - `inicio = resetAt - duration`; `esperado = clamp(elapsed/duration * 100, 0, 100)`
-  - `delta = percent - esperado`; `delta > 0` → `DEFICIT`, `delta < 0` → `SURPLUS`
-  - Fuera de rango (`now >= resetAt` o `now <= inicio`) o `resetAt == null` → `null`
-  - `delta` redondeado a 1 decimal = 0 → `null` (en ritmo; evita "Déficit 0%")
-- **`Balance`** = `data class Balance(status: BalanceStatus, percentDelta: Double)`.
-- **Label**: helper puro `balanceLabel(balance, deficitTemplate, surplusTemplate)`
-  → "Déficit 8%" / "Superávit 5%" usando `formatPercent`. Cada consumidor pasa
-  los templates desde resources (es/en).
-- **UI app**: el texto de reset pasa a `Row` con `·` separador: reset texto
-  existente + label de balanza (déficit `colorScheme.error`, superávit `primary`).
-- **Notificación persistente**: tras cada línea de reset (semana y sesión),
-  agregar ` · Déficit 8%` dentro del mismo `buildString`.
-- **Widget**: reusa `widget_session_reset` (TextView secundario ya existente):
-  `"<reset> · Déficit 8%"` vía string compuesto. Sin colores extra (paleta fija
-  del widget, excepción RemoteViews documentada).
-- **Duración sesión = 24 h**; **semana = 168 h**. No hay config de duración.
+- **Snapshots locales**: en cada refresh exitoso (manual, worker, arranque) se
+  guarda `(timestamp, sessionPercent, weeklyPercent)` en SecurePrefs como JSON.
+  - Dedupe: se omite si el % es idéntico al anterior y pasaron < 15 min.
+  - Límite: 600 snapshots FIFO (≈25 días con refresco cada 60 min).
+  - Sin Room ni deps nuevas (YAGNI, stdlib primero).
+- **`UsageHistory.kt`** (puro, sin Android): modelo `UsageSnapshot(ts, sessionPct,
+  weeklyPct)` + agregación:
+  - `groupByPeriod(snapshots, periodDuration, resetAnchor)`: agrupa por período
+    (semana: anclas cada 168 h desde el primer snapshot; sesión: cada 24 h).
+  - `periodPeak(snapshots)`: pico (máx %) de un período → "cuánto se consumió
+    antes del reset".
+  - `resetMarkers(snapshots, periodDuration)`: timestamps de resets dentro del
+    rango (para las líneas punteadas).
+  - `nearestSnapshot(snapshots, xMillis)`: para el tooltip.
+- **`UsageHistoryStore.kt`**: persistencia JSON en SecurePrefs (load/save,
+  dedupe, límite FIFO). `record(percent, sessionPct, weeklyPct, now)`.
+- **Gráfico**: Compose `Canvas` con `pointerInput` para tap → tooltip (burbuja
+  con fecha + % del punto más cercano). Eje Y 0/50/100, labels de fecha en X.
+  Línea + área con gradiente del color primario; líneas punteadas de reset.
+- **UI**: nueva tab en `NavigationBar` (Usage / Estadísticas / Settings) con
+  `Icons.Outlined.BarChart` / `Icons.Filled.BarChart`. Toggle con
+  `SingleChoiceSegmentedButtonRow` (M3). Resumen: card con último período
+  cerrado ("Semana del 3 ago: 62%") + período actual ("Vas 45% en la semana
+  actual"). Estado vacío con hint.
+- **Strings**: es/en para todo lo nuevo.
+- **Duración**: sesión 24 h, semana 168 h (mismas constantes que Balance).
 
 ## Task List
 
-- [ ] Task 1: Balance.kt + BalanceTest.kt (TDD: tests primero)
-- [ ] Task 2: UI UsageTab (Row reset + balanza en Sesión y Semana) + strings es/en
-- [ ] Task 3: Notificación persistente (UsageNotifier) + strings es/en
-- [ ] Task 4: Widget (UsageWidgetProvider) + strings widget
-- [ ] Task 5: Release v0.17.0 (bump versionCode 24, tests+lint+assemble, tag, GitHub release, APK por Telegram)
+- [ ] Task 1: `UsageHistory.kt` + `UsageHistoryTest.kt` (TDD)
+  - Agrupación por período, picos, reset markers, nearestSnapshot
+- [ ] Task 2: `UsageHistoryStore.kt` (JSON en SecurePrefs, dedupe, FIFO) + tests
+- [ ] Task 3: Integración en `UsageViewModel.refresh()` (guardar snapshot) +
+      StateFlow `history` expuesto
+- [ ] Task 4: `ui/StatsTab.kt` — toggle, gráfico Canvas, tooltip, resumen,
+      estado vacío + strings es/en
+- [ ] Task 5: Tab en `UsageScreen.kt` (NavigationBar) + strings
+- [ ] Task 6: Release v0.18.0 (bump versionCode 25, tests+lint+assemble, tag,
+      GitHub release, APK por Telegram)
 
-### Checkpoint: Tasks 1-4
-- [ ] BalanceTest verde + suite completa verde + lint limpio
-- [ ] Balanza visible en app, notificación y widget (manual)
+### Checkpoint: Tasks 1-3
+- [ ] Tests de agregación y store verdes
+- [ ] Snapshot guardado en cada refresh (verificación manual con logs)
+
+### Checkpoint: Tasks 4-5
+- [ ] Tab Estadísticas funcional: toggle, gráfico, tooltip, resumen, vacío
+- [ ] Suite completa verde + lint limpio
 
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Reset recién pasado → esperado 100 → falso superávit | Med | Fuera de rango (`now >= resetAt`) devuelve null; el API manda reset futuro |
-| Ruido "Déficit 0%" | Bajo | delta redondeado a 1 decimal == 0 → null |
-| Romper notificación/widget existentes | Med | Solo se agrega texto a líneas existentes; strings nuevos, sin tocar IDs de layout |
+| Sin histórico en la API → gráfico vacío al inicio | Med | Estado vacío claro + hint; se llena con el uso |
+| Snapshots duplicados por refrescos frecuentes | Bajo | Dedupe 15 min + % idéntico |
+| Crecimiento ilimitado del storage | Bajo | Límite 600 FIFO |
+| Tooltip complejo en Canvas | Med | Solo tap → punto más cercano en X; sin gestos extra |
+| Romper tabs existentes | Bajo | Tab nueva agregada al enum; sin tocar Usage/Settings |
 
 ## Open Questions
 
-Ninguna (resueltas en spec: alcance app+notificación+widget; siempre visible;
-formato `%`).
+Ninguna (resueltas en spec: tooltip SÍ, ventana = todo, resumen = ambos).
