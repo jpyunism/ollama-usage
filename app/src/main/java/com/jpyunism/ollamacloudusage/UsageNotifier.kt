@@ -14,6 +14,7 @@ import android.os.Bundle
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -84,13 +85,17 @@ object UsageNotifier {
                 .atZone(ZoneId.systemDefault())
                 .format(DateTimeFormatter.ofPattern("HH:mm"))
             val mode = resetDisplayMode(context)
+            val locale = context.resources.configuration.locales[0]
+            val deficit = context.getString(R.string.balance_deficit)
+            val surplus = context.getString(R.string.balance_surplus)
+            val now = Instant.now()
             buildString {
                 append(context.getString(R.string.persistent_body_week_session, formatPercent(data.weeklyPercent), formatPercent(data.sessionPercent)))
-                formatReset(data.weeklyResetAt, mode, locale = context.resources.configuration.locales[0])?.let {
-                    append(context.getString(R.string.persistent_body_week_reset, it))
+                formatReset(data.weeklyResetAt, mode, locale = locale)?.let {
+                    append(context.getString(R.string.persistent_body_week_reset, it + balanceSuffix(data.weeklyPercent, data.weeklyResetAt, WEEK_DURATION, now, deficit, surplus)))
                 }
-                formatReset(data.sessionResetAt, mode, locale = context.resources.configuration.locales[0])?.let {
-                    append(context.getString(R.string.persistent_body_session_reset, it))
+                formatReset(data.sessionResetAt, mode, locale = locale)?.let {
+                    append(context.getString(R.string.persistent_body_session_reset, it + balanceSuffix(data.sessionPercent, data.sessionResetAt, SESSION_DURATION, now, deficit, surplus)))
                 }
                 append(context.getString(R.string.persistent_body_plan_updated, data.plan, time))
             }
@@ -185,4 +190,21 @@ object UsageNotifier {
             SecurePrefs.get(context).getString(UsageViewModel.KEY_RESET_DISPLAY, null)
                 ?.let { name -> ResetDisplayMode.entries.firstOrNull { it.name == name } }
         }.getOrNull() ?: ResetDisplayMode.COUNTDOWN
+
+    /** Sufijo de balanza para una línea de reset: " · Déficit 8%" o vacío. */
+    private fun balanceSuffix(
+        percent: Double,
+        resetAt: Instant?,
+        duration: Duration,
+        now: Instant,
+        deficit: String,
+        surplus: String,
+    ): String {
+        val balance = computeBalance(percent, resetAt, now, duration) ?: return ""
+        val label = balanceLabel(balance, deficit, surplus) ?: return ""
+        return " · $label"
+    }
+
+    private val SESSION_DURATION: Duration = Duration.ofHours(24)
+    private val WEEK_DURATION: Duration = Duration.ofHours(168)
 }

@@ -38,18 +38,25 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.jpyunism.ollamacloudusage.BalanceStatus
 import com.jpyunism.ollamacloudusage.ModelUsage
 import com.jpyunism.ollamacloudusage.R
 import com.jpyunism.ollamacloudusage.ResetDisplayMode
 import com.jpyunism.ollamacloudusage.UiState
 import com.jpyunism.ollamacloudusage.UsageData
 import com.jpyunism.ollamacloudusage.UsageViewModel
+import com.jpyunism.ollamacloudusage.balanceLabel
+import com.jpyunism.ollamacloudusage.computeBalance
 import com.jpyunism.ollamacloudusage.formatPercent
 import com.jpyunism.ollamacloudusage.formatReset
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
+
+private val SESSION_DURATION: Duration = Duration.ofHours(24)
+private val WEEK_DURATION: Duration = Duration.ofHours(168)
 
 @Composable
 fun UsageTab(vm: UsageViewModel, state: UiState) {
@@ -99,8 +106,8 @@ private fun SuccessContent(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Header(data, lastUpdated)
-        UsageMeterCard(stringResource(R.string.session_usage), data.sessionPercent, data.sessionModels, data.sessionResetAt)
-        UsageMeterCard(stringResource(R.string.weekly_usage), data.weeklyPercent, data.weeklyModels, data.weeklyResetAt)
+        UsageMeterCard(stringResource(R.string.session_usage), data.sessionPercent, data.sessionModels, data.sessionResetAt, SESSION_DURATION)
+        UsageMeterCard(stringResource(R.string.weekly_usage), data.weeklyPercent, data.weeklyModels, data.weeklyResetAt, WEEK_DURATION)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = onRefresh, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -140,6 +147,7 @@ private fun UsageMeterCard(
     percent: Double,
     models: List<ModelUsage>,
     resetAt: Instant?,
+    duration: Duration,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -166,12 +174,35 @@ private fun UsageMeterCard(
             LinearUsageBar(percent, models)
             if (resetAt != null) {
                 Spacer(Modifier.height(8.dp))
-                Text(
-                    formatReset(resetAt, ResetDisplayMode.COUNTDOWN)?.replaceFirstChar { it.uppercase() }
-                        ?: stringResource(R.string.resets_at, resetAt.atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        formatReset(resetAt, ResetDisplayMode.COUNTDOWN)?.replaceFirstChar { it.uppercase() }
+                            ?: stringResource(R.string.resets_at, resetAt.atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    val balance = computeBalance(
+                        percent,
+                        resetAt,
+                        Instant.now(),
+                        duration,
+                    )
+                    val balanceText = balanceLabel(
+                        balance,
+                        stringResource(R.string.balance_deficit),
+                        stringResource(R.string.balance_surplus),
+                    )
+                    if (balanceText != null) {
+                        Text(
+                            " · $balanceText",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = when (balance!!.status) {
+                                BalanceStatus.DEFICIT -> MaterialTheme.colorScheme.error
+                                BalanceStatus.SURPLUS -> MaterialTheme.colorScheme.primary
+                            },
+                        )
+                    }
+                }
             }
             if (models.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))

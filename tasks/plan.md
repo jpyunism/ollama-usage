@@ -1,50 +1,55 @@
-# Implementation Plan: Modo claro/oscuro (ollama-usage)
+# Implementation Plan: Balanza de consumo (déficit/superávit)
 
 ## Overview
 
-Selector de modo claro/oscuro en Configuración → Apariencia con 3 opciones
-(Sistema / Claro / Oscuro), persistente y de aplicación instantánea. Independiente
-del tema de color (AppTheme) existente. El widget de home screen sigue al sistema
-(vía resources night, no lee la preferencia in-app).
+Mostrar en las cards de Sesión y Semana (app), en la notificación persistente y
+en el widget, si el consumo va en déficit o superávit respecto al ritmo lineal
+esperado del período. Reset semanal: domingo 21:00 CLT (viene en `weeklyResetAt`
+del API; el cálculo usa solo timestamps, sin zona explícita).
 
 ## Architecture Decisions
 
-- **Nuevo enum `AppDarkMode`** (System/Light/Dark) con `labelRes`, mismo patrón que
-  `AppTheme` y `AppLanguage`. Persistencia con key nueva `KEY_DARK_MODE` en las
-  mismas prefs cifradas.
-- **Resolución pura** `resolveDarkMode(mode, systemDark): Boolean` — testeable sin
-  Android, default `System` (sigue al sistema).
-- **`OllamaUsageTheme` recibe `darkMode`** en vez de calcular `isSystemInDarkTheme()`
-  por defecto; el booleano `darkTheme` se resuelve con `resolveDarkMode`.
-- **UI**: chips (FilterChip, mismo patrón del selector de idioma) en un Card dentro
-  de la sección Apariencia, arriba de los temas de color. Renombra el SectionHeader
-  a "Apariencia"; "Temas de color" pasa a mini-título dentro de la sección.
-- **`values-night/themes.xml`** nuevo: parent `android:Theme.Material.NoActionBar`
-  para que la ventana/splash no flashee en blanco al arrancar en modo oscuro.
-  El layout del widget usa `@drawable/widget_background` + colores fijos (excepción
-  RemoteViews ya documentada en AGENTS.md) — se mantiene igual, sigue al sistema
-  vía night resources si se agregan.
+- **Función pura `computeBalance(percent, resetAt, now, duration)`** en
+  `Balance.kt` (nuevo, sin dependencias Android), mismo patrón que
+  `formatPercent`/`formatReset` en `UsageData.kt`:
+  - `inicio = resetAt - duration`; `esperado = clamp(elapsed/duration * 100, 0, 100)`
+  - `delta = percent - esperado`; `delta > 0` → `DEFICIT`, `delta < 0` → `SURPLUS`
+  - Fuera de rango (`now >= resetAt` o `now <= inicio`) o `resetAt == null` → `null`
+  - `delta` redondeado a 1 decimal = 0 → `null` (en ritmo; evita "Déficit 0%")
+- **`Balance`** = `data class Balance(status: BalanceStatus, percentDelta: Double)`.
+- **Label**: helper puro `balanceLabel(balance, deficitTemplate, surplusTemplate)`
+  → "Déficit 8%" / "Superávit 5%" usando `formatPercent`. Cada consumidor pasa
+  los templates desde resources (es/en).
+- **UI app**: el texto de reset pasa a `Row` con `·` separador: reset texto
+  existente + label de balanza (déficit `colorScheme.error`, superávit `primary`).
+- **Notificación persistente**: tras cada línea de reset (semana y sesión),
+  agregar ` · Déficit 8%` dentro del mismo `buildString`.
+- **Widget**: reusa `widget_session_reset` (TextView secundario ya existente):
+  `"<reset> · Déficit 8%"` vía string compuesto. Sin colores extra (paleta fija
+  del widget, excepción RemoteViews documentada).
+- **Duración sesión = 24 h**; **semana = 168 h**. No hay config de duración.
 
 ## Task List
 
-- [ ] Task 1: AppDarkMode + resolución + ViewModel (state flow, update, load, persist)
-- [ ] Task 2: Theme.kt + MainActivity + SettingsTab UI + strings (es/en)
-- [ ] Task 3: values-night/themes.xml (ventana oscura al arrancar)
-- [ ] Task 4: Release v0.16.0 (bump versionCode 23, tests+lint+assemble, tag, GitHub release, APK por Telegram)
+- [ ] Task 1: Balance.kt + BalanceTest.kt (TDD: tests primero)
+- [ ] Task 2: UI UsageTab (Row reset + balanza en Sesión y Semana) + strings es/en
+- [ ] Task 3: Notificación persistente (UsageNotifier) + strings es/en
+- [ ] Task 4: Widget (UsageWidgetProvider) + strings widget
+- [ ] Task 5: Release v0.17.0 (bump versionCode 24, tests+lint+assemble, tag, GitHub release, APK por Telegram)
 
-### Checkpoint: Tasks 1-2
-- [ ] Tests nuevos pasan (AppDarkModeTest + UsageViewModelTest)
-- [ ] Suite completa verde + lint limpio
-- [ ] Release v0.16.0 publicado
+### Checkpoint: Tasks 1-4
+- [ ] BalanceTest verde + suite completa verde + lint limpio
+- [ ] Balanza visible en app, notificación y widget (manual)
 
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Flash blanco al arrancar en modo oscuro | Med | values-night/themes.xml con parent oscuro |
-| Romper tema de color existente | Med | darkMode es ortogonal a theme; tests existentes de AppTheme siguen cubriendo |
-| Widget con colores fijos en oscuro | Bajo | Decisión aprobada: sigue al sistema; RemoteViews no lee prefs in-app |
+| Reset recién pasado → esperado 100 → falso superávit | Med | Fuera de rango (`now >= resetAt`) devuelve null; el API manda reset futuro |
+| Ruido "Déficit 0%" | Bajo | delta redondeado a 1 decimal == 0 → null |
+| Romper notificación/widget existentes | Med | Solo se agrega texto a líneas existentes; strings nuevos, sin tocar IDs de layout |
 
 ## Open Questions
 
-Ninguna (resueltas en revisión de spec: widget sigue al sistema; modo arriba de temas de color).
+Ninguna (resueltas en spec: alcance app+notificación+widget; siempre visible;
+formato `%`).

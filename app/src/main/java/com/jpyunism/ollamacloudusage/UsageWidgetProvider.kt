@@ -9,6 +9,7 @@ import android.content.Intent
 import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONObject
+import java.time.Duration
 import java.time.Instant
 import kotlin.math.roundToInt
 
@@ -94,7 +95,21 @@ class UsageWidgetProvider : AppWidgetProvider() {
                 )
                 views.setTextViewText(R.id.widget_plan, context.getString(R.string.widget_plan, data.plan))
                 val reset = data.sessionResetAt?.let { formatReset(it, ResetDisplayMode.COUNTDOWN) }
-                views.setTextViewText(R.id.widget_session_reset, reset ?: "")
+                val balance = computeBalance(
+                    data.sessionPercent,
+                    data.sessionResetAt,
+                    Instant.now(),
+                    SESSION_DURATION,
+                )
+                val balanceText = balanceLabel(
+                    balance,
+                    context.getString(R.string.balance_deficit),
+                    context.getString(R.string.balance_surplus),
+                )
+                views.setTextViewText(
+                    R.id.widget_session_reset,
+                    listOfNotNull(reset, balanceText).joinToString(" · "),
+                )
                 views.setProgressBar(
                     R.id.widget_progress,
                     100,
@@ -105,5 +120,7 @@ class UsageWidgetProvider : AppWidgetProvider() {
             }
             return views
         }
+
+        private val SESSION_DURATION: Duration = Duration.ofHours(24)
     }
 }

@@ -16,6 +16,8 @@
     <string name="updated_at">Updated %1$s</string>
     <string name="percent_used">%1$s%% used</string>
     <string name="resets_at">Resets: %1$s</string>
+    <string name="balance_deficit">Deficit %1$s%%</string>
+    <string name="balance_surplus">Surplus %1$s%%</string>
     <string name="requests_percent">%1$d req · %2$s%%</string>
 
     <!-- Cookie / API key setup -->
