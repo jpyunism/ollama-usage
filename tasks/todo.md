@@ -29,8 +29,8 @@
 
 ## Task 4: Release v0.21.0
 
-- [ ] Bump versionCode 28 + versionName 0.21.0
-- [ ] `./gradlew testDebugUnitTest lintDebug assembleRelease` (JAVA_HOME + ANDROID_HOME)
-- [ ] Commit + push + tag v0.21.0
-- [ ] GitHub release con APK firmado + notas
-- [ ] APK por Telegram (chat 15710279)
+- [x] Bump versionCode 28 + versionName 0.21.0
+- [x] `./gradlew testDebugUnitTest lintDebug assembleRelease` (JAVA_HOME + ANDROID_HOME)
+- [x] Commit + push + tag v0.21.0
+- [x] GitHub release con APK firmado + notas
+- [x] APK por Telegram (chat 15710279)
