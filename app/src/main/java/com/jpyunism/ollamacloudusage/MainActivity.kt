@@ -15,6 +15,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jpyunism.ollamacloudusage.AppDarkMode
+import com.jpyunism.ollamacloudusage.UsageScheduler
 import com.jpyunism.ollamacloudusage.ui.OllamaUsageTheme
 import com.jpyunism.ollamacloudusage.ui.UsageScreen
 
@@ -37,6 +38,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         requestNotificationPermissionIfNeeded()
+        // Si el FGS de refresco rápido quedó pendiente (Android lo denegó por
+        // arrancar en background), reintentarlo ahora que la app está visible.
+        UsageScheduler.retryPending(applicationContext)
         setContent {
             val vm: UsageViewModel = viewModel(
                 factory = UsageViewModel.factory(applicationContext),
