@@ -33,7 +33,7 @@
 
 - [x] Bump versionCode 26, versionName 0.19.0
 - [x] `./gradlew testDebugUnitTest lintDebug assembleRelease` (verde)
-- [ ] Commit + push + tag v0.19.0
-- [ ] GitHub release con APK firmado
-- [ ] APK por Telegram (15710279)
+- [x] Commit + push + tag v0.19.0
+- [x] GitHub release con APK firmado
+- [x] APK por Telegram (15710279)
 - Files: `app/build.gradle.kts`
