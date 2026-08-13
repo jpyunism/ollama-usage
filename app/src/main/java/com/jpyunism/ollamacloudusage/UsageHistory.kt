@@ -35,6 +35,14 @@ data class HistorySummary(
     val current: PeriodSummary?,
 )
 
+/** Una barra del gráfico "Consumo por período": pico de un período de cuota. */
+data class PeriodBar(
+    val start: Long,
+    val end: Long,
+    val peakPercent: Double,
+    val inProgress: Boolean,
+)
+
 /**
  * Agrupa snapshots en períodos de cuota consecutivos.
  *
@@ -111,6 +119,28 @@ fun nearestSnapshot(
     timestampMillis: Long,
 ): UsageSnapshot? =
     snapshots.minByOrNull { abs(it.timestampMillis - timestampMillis) }
+
+/**
+ * Barras del gráfico "Consumo por período": una por período con datos, en
+ * orden cronológico. El valor de cada barra es el pico (máx %) del período
+ * ("cuánto se consumió antes del reset"). El período actual en curso se
+ * incluye con `inProgress = true` (end > now).
+ */
+fun periodBars(
+    snapshots: List<UsageSnapshot>,
+    period: HistoryPeriod,
+    resetAnchor: Long?,
+    now: Long,
+    selector: (UsageSnapshot) -> Double,
+): List<PeriodBar> =
+    periodsFor(snapshots, period, resetAnchor).map { g ->
+        PeriodBar(
+            start = g.start,
+            end = g.end,
+            peakPercent = peakPercent(g, selector) ?: 0.0,
+            inProgress = g.end > now,
+        )
+    }
 
 /**
  * Resumen para la UI: último período cerrado (pico de consumo antes de su

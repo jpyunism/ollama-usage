@@ -120,6 +120,83 @@ class UsageHistoryTest {
         assertNull(nearestSnapshot(emptyList(), 0L))
     }
 
+    // ── periodBars ──
+
+    @Test
+    fun `una barra por periodo con datos en orden cronologico`() {
+        val data = snap(
+            Triple("2026-07-27T12:00:00Z", 10.0, 30.0),
+            Triple("2026-08-03T12:00:00Z", 20.0, 55.0),
+            Triple("2026-08-10T12:00:00Z", 5.0, 20.0),
+        )
+        val now = Instant.parse("2026-08-10T20:00:00Z").toEpochMilli()
+        val bars = periodBars(data, week, reset, now, UsageSnapshot::weeklyPercent)
+        assertEquals(3, bars.size)
+        assertEquals(Instant.parse("2026-07-27T01:00:00Z").toEpochMilli(), bars[0].start)
+        assertEquals(Instant.parse("2026-08-03T01:00:00Z").toEpochMilli(), bars[1].start)
+        assertEquals(Instant.parse("2026-08-10T01:00:00Z").toEpochMilli(), bars[2].start)
+    }
+
+    @Test
+    fun `pico de la barra es el maximo del periodo no el ultimo snapshot`() {
+        val data = snap(
+            Triple("2026-08-03T12:00:00Z", 20.0, 55.0),
+            Triple("2026-08-05T12:00:00Z", 30.0, 80.0),
+            Triple("2026-08-08T12:00:00Z", 25.0, 62.0),
+        )
+        val now = Instant.parse("2026-08-10T20:00:00Z").toEpochMilli()
+        val bars = periodBars(data, week, reset, now, UsageSnapshot::weeklyPercent)
+        assertEquals(1, bars.size)
+        assertEquals(80.0, bars[0].peakPercent, 0.001)
+    }
+
+    @Test
+    fun `periodo actual marcado como en curso`() {
+        val data = snap(
+            Triple("2026-08-03T12:00:00Z", 20.0, 55.0),
+            Triple("2026-08-10T12:00:00Z", 5.0, 20.0),
+        )
+        val now = Instant.parse("2026-08-10T20:00:00Z").toEpochMilli()
+        val bars = periodBars(data, week, reset, now, UsageSnapshot::weeklyPercent)
+        assertEquals(2, bars.size)
+        assertEquals(false, bars[0].inProgress)
+        assertEquals(true, bars[1].inProgress)
+    }
+
+    @Test
+    fun `periodos vacios intermedios se omiten`() {
+        val data = snap(
+            Triple("2026-07-27T12:00:00Z", 10.0, 30.0),
+            Triple("2026-08-10T12:00:00Z", 5.0, 20.0),
+        )
+        val now = Instant.parse("2026-08-10T20:00:00Z").toEpochMilli()
+        val bars = periodBars(data, week, reset, now, UsageSnapshot::weeklyPercent)
+        assertEquals(2, bars.size)
+        assertEquals(Instant.parse("2026-07-27T01:00:00Z").toEpochMilli(), bars[0].start)
+        assertEquals(Instant.parse("2026-08-10T01:00:00Z").toEpochMilli(), bars[1].start)
+    }
+
+    @Test
+    fun `periodBars sin snapshots devuelve lista vacia`() {
+        val now = Instant.parse("2026-08-10T20:00:00Z").toEpochMilli()
+        assertEquals(0, periodBars(emptyList(), week, reset, now, UsageSnapshot::weeklyPercent).size)
+    }
+
+    @Test
+    fun `sesion genera una barra por cada 24 horas`() {
+        val data = snap(
+            Triple("2026-08-09T12:00:00Z", 40.0, 10.0),
+            Triple("2026-08-10T12:00:00Z", 60.0, 20.0),
+        )
+        val now = Instant.parse("2026-08-10T20:00:00Z").toEpochMilli()
+        val bars = periodBars(data, session, reset, now, UsageSnapshot::sessionPercent)
+        assertEquals(2, bars.size)
+        assertEquals(40.0, bars[0].peakPercent, 0.001)
+        assertEquals(60.0, bars[1].peakPercent, 0.001)
+        assertEquals(false, bars[0].inProgress)
+        assertEquals(true, bars[1].inProgress)
+    }
+
     // ── summarize ──
 
     @Test

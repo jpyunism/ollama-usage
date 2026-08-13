@@ -2,10 +2,10 @@
 
 ## Task 1: periodBars() + PeriodBar en UsageHistory.kt + tests (TDD)
 
-- [ ] `PeriodBar(start, end, peakPercent, inProgress)` data class
-- [ ] `periodBars(snapshots, period, resetAnchor, now, selector)`: una barra por
+- [x] `PeriodBar(start, end, peakPercent, inProgress)` data class
+- [x] `periodBars(snapshots, period, resetAnchor, now, selector)`: una barra por
       período con datos, orden cronológico, períodos vacíos omitidos
-- [ ] `peakPercent` = pico (máx %) del período; `inProgress = end > now`
+- [x] `peakPercent` = pico (máx %) del período; `inProgress = end > now`
 - Verify: `./gradlew testDebugUnitTest --tests "*UsageHistoryTest*"` (verde)
 - Files: `app/src/main/java/com/jpyunism/ollamacloudusage/UsageHistory.kt`,
   `app/src/test/java/com/jpyunism/ollamacloudusage/UsageHistoryTest.kt`
