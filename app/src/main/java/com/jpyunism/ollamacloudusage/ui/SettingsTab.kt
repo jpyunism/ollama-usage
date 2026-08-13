@@ -1,5 +1,6 @@
 package com.jpyunism.ollamacloudusage.ui
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -266,7 +267,7 @@ fun SettingsTab(vm: UsageViewModel, settings: AlertSettings) {
 
         Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(16.dp)) {
-                val activity = LocalContext.current as? android.app.Activity
+                val activity = LocalActivity.current
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AppLanguage.entries.forEach { language ->
                         val label = stringResource(language.labelRes)
