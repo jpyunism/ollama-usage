@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -47,16 +48,20 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jpyunism.ollamacloudusage.HistoryPeriod
 import com.jpyunism.ollamacloudusage.HistoryState
+import com.jpyunism.ollamacloudusage.PeriodBar
 import com.jpyunism.ollamacloudusage.R
 import com.jpyunism.ollamacloudusage.UsageSnapshot
 import com.jpyunism.ollamacloudusage.formatPercent
 import com.jpyunism.ollamacloudusage.nearestSnapshot
+import com.jpyunism.ollamacloudusage.periodBars
 import com.jpyunism.ollamacloudusage.resetMarkers
 import com.jpyunism.ollamacloudusage.summarize
 import java.time.Instant
@@ -117,6 +122,24 @@ fun StatsTab(history: HistoryState) {
                     selector = selector,
                     markers = markers,
                 )
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            ),
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                Text(
+                    stringResource(R.string.stats_bars_title),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Spacer(Modifier.height(12.dp))
+                val bars = periodBars(snapshots, period, weeklyReset, now, selector)
+                PeriodBarsChart(bars = bars)
             }
         }
 
@@ -384,6 +407,110 @@ private fun xToTimestamp(
     val span = (last - first).coerceAtLeast(1L)
     val fraction = ((x - chartLeft) / chartWidth).coerceIn(0f, 1f)
     return first + (fraction * span).toLong()
+}
+
+/** Gráfico de barras: una barra por período con el % consumido antes del reset. */
+@Composable
+private fun PeriodBarsChart(bars: List<PeriodBar>) {
+    val barColor = MaterialTheme.colorScheme.primary
+    val gridColor = MaterialTheme.colorScheme.outlineVariant
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val density = LocalDensity.current
+    val inProgressLabel = stringResource(R.string.stats_bars_in_progress)
+    val desc = stringResource(R.string.stats_bars_desc)
+
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(CHART_HEIGHT)
+            .semantics { contentDescription = desc },
+    ) {
+        val chartLeft = with(density) { 28.dp.toPx() }
+        val chartRight = size.width - with(density) { 8.dp.toPx() }
+        val chartTop = with(density) { 8.dp.toPx() }
+        val chartBottom = size.height - with(density) { 20.dp.toPx() }
+        val chartWidth = chartRight - chartLeft
+        val chartHeight = chartBottom - chartTop
+
+        fun yFor(pct: Double): Float =
+            chartBottom - (pct.toFloat().coerceIn(0f, 100f) / 100f) * chartHeight
+
+        // Grid horizontal + labels Y (0 / 50 / 100)
+        Y_LABELS.forEach { pct ->
+            val y = yFor(pct)
+            drawLine(gridColor, Offset(chartLeft, y), Offset(chartRight, y), strokeWidth = 1f)
+            drawContext.canvas.nativeCanvas.drawText(
+                formatPercent(pct),
+                chartLeft - with(density) { 4.dp.toPx() },
+                y + with(density) { 4.dp.toPx() },
+                android.graphics.Paint().apply {
+                    color = labelColor.toArgb()
+                    textSize = with(density) { 10.sp.toPx() }
+                },
+            )
+        }
+
+        if (bars.isEmpty()) return@Canvas
+
+        val slot = chartWidth / bars.size
+        val barWidth = (slot * 0.6f).coerceAtLeast(with(density) { 4.dp.toPx() })
+        val showDateLabels = bars.size <= 8
+        val showPercentLabels = bars.size <= 14
+        val corner = with(density) { 4.dp.toPx() }
+
+        bars.forEachIndexed { i, bar ->
+            val x = chartLeft + slot * i + (slot - barWidth) / 2f
+            val y = yFor(bar.peakPercent)
+            val barFill = if (bar.inProgress) barColor.copy(alpha = 0.45f) else barColor
+
+            // Barra con esquinas superiores redondeadas
+            val top = y.coerceAtLeast(chartTop)
+            val rect = Rect(
+                left = x,
+                top = top,
+                right = x + barWidth,
+                bottom = chartBottom,
+            )
+            drawRoundRect(
+                color = barFill,
+                topLeft = rect.topLeft,
+                size = Size(rect.width, rect.height),
+                cornerRadius = CornerRadius(corner, corner),
+            )
+
+            // % encima de la barra
+            if (showPercentLabels) {
+                val pctText = formatPercent(bar.peakPercent)
+                val paint = android.graphics.Paint().apply {
+                    color = labelColor.toArgb()
+                    textSize = with(density) { 10.sp.toPx() }
+                    textAlign = android.graphics.Paint.Align.CENTER
+                }
+                drawContext.canvas.nativeCanvas.drawText(
+                    pctText,
+                    x + barWidth / 2f,
+                    top - with(density) { 4.dp.toPx() },
+                    paint,
+                )
+            }
+
+            // Label de fecha (o "En curso") bajo la barra
+            val label = if (bar.inProgress) inProgressLabel else formatDate(bar.start)
+            if (showDateLabels || i == 0 || i == bars.lastIndex) {
+                val paint = android.graphics.Paint().apply {
+                    color = labelColor.toArgb()
+                    textSize = with(density) { 10.sp.toPx() }
+                    textAlign = android.graphics.Paint.Align.CENTER
+                }
+                drawContext.canvas.nativeCanvas.drawText(
+                    label,
+                    x + barWidth / 2f,
+                    chartBottom + with(density) { 14.dp.toPx() },
+                    paint,
+                )
+            }
+        }
+    }
 }
 
 private fun formatDate(ts: Long): String =

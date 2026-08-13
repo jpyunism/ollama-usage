@@ -31,6 +31,9 @@
     <string name="stats_week_of">Semana del %1$s</string>
     <string name="stats_session_of">Sesión del %1$s</string>
     <string name="stats_tooltip">%1$s · %2$s%%</string>
+    <string name="stats_bars_title">Consumo por período</string>
+    <string name="stats_bars_in_progress">En curso</string>
+    <string name="stats_bars_desc">Gráfico de barras del consumo por período</string>
 
     <!-- Cookie / API key setup -->
     <string name="connect_account">Conecta tu cuenta</string>

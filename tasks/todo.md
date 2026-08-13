@@ -12,20 +12,20 @@
 
 ## Task 2: Card "Consumo por período" en ui/StatsTab.kt (bar chart Canvas)
 
-- [ ] Card nueva debajo de la card del gráfico de línea (mismo toggle Semana/Sesión)
-- [ ] Barras Canvas: eje Y 0/50/100, fecha en X, % encima de cada barra,
+- [x] Card nueva debajo de la card del gráfico de línea (mismo toggle Semana/Sesión)
+- [x] Barras Canvas: eje Y 0/50/100, fecha en X, % encima de cada barra,
       esquinas superiores redondeadas, color primario
-- [ ] Período actual: alpha 0.45 + etiqueta "en curso"
-- [ ] Labels: n > 8 → solo fecha primero/último; n > 14 → además sin %;
+- [x] Período actual: alpha 0.45 + etiqueta "en curso"
+- [x] Labels: n > 8 → solo fecha primero/último; n > 14 → además sin %;
       ancho mínimo de barra 4.dp
 - Verify: `./gradlew testDebugUnitTest lintDebug` (verde) + inspección visual
 - Files: `app/src/main/java/com/jpyunism/ollamacloudusage/ui/StatsTab.kt`
 
 ## Task 3: Strings es/en
 
-- [ ] Título card "Consumo por período" / "Usage per period"
-- [ ] "En curso" / "In progress"
-- [ ] contentDescription del gráfico
+- [x] Título card "Consumo por período" / "Usage per period"
+- [x] "En curso" / "In progress"
+- [x] contentDescription del gráfico
 - Verify: lint (hardcoded strings) limpio
 - Files: `app/src/main/res/values/strings.xml`, `app/src/main/res/values-en/strings.xml`
 
