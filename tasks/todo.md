@@ -31,8 +31,8 @@
 
 ## Task 4: Release v0.19.0
 
-- [ ] Bump versionCode 26, versionName 0.19.0
-- [ ] `./gradlew testDebugUnitTest lintDebug assembleRelease` (verde)
+- [x] Bump versionCode 26, versionName 0.19.0
+- [x] `./gradlew testDebugUnitTest lintDebug assembleRelease` (verde)
 - [ ] Commit + push + tag v0.19.0
 - [ ] GitHub release con APK firmado
 - [ ] APK por Telegram (15710279)
