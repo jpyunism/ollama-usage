@@ -1,73 +1,65 @@
-# Implementation Plan: Estadísticas de uso histórico
+# Implementation Plan: Gráfico de barras de consumo por período (Stats)
 
 ## Overview
 
-Nueva tab **Estadísticas** con gráfico de consumo porcentual (línea + área) a lo
-largo del tiempo, toggle **Semana / Sesión**, marcadores de reset (diente de
-sierra), tooltip al tocar y resumen del último período cerrado + período actual.
-Los datos se acumulan localmente en cada refresh exitoso (la API no entrega
-histórico).
+Nueva card **"Consumo por período"** en la tab Estadísticas: un gráfico de
+barras (Compose Canvas) con **una barra por semana/sesión** (toggle existente)
+que muestra el **% de consumo antes del reset** (pico del período). El período
+actual en curso se incluye como barra distinguible ("en curso"). Se agrega
+debajo del gráfico de línea existente, sin reemplazarlo.
 
 ## Architecture Decisions
 
-- **Snapshots locales**: en cada refresh exitoso (manual, worker, arranque) se
-  guarda `(timestamp, sessionPercent, weeklyPercent)` en SecurePrefs como JSON.
-  - Dedupe: se omite si el % es idéntico al anterior y pasaron < 15 min.
-  - Límite: 600 snapshots FIFO (≈25 días con refresco cada 60 min).
-  - Sin Room ni deps nuevas (YAGNI, stdlib primero).
-- **`UsageHistory.kt`** (puro, sin Android): modelo `UsageSnapshot(ts, sessionPct,
-  weeklyPct)` + agregación:
-  - `groupByPeriod(snapshots, periodDuration, resetAnchor)`: agrupa por período
-    (semana: anclas cada 168 h desde el primer snapshot; sesión: cada 24 h).
-  - `periodPeak(snapshots)`: pico (máx %) de un período → "cuánto se consumió
-    antes del reset".
-  - `resetMarkers(snapshots, periodDuration)`: timestamps de resets dentro del
-    rango (para las líneas punteadas).
-  - `nearestSnapshot(snapshots, xMillis)`: para el tooltip.
-- **`UsageHistoryStore.kt`**: persistencia JSON en SecurePrefs (load/save,
-  dedupe, límite FIFO). `record(percent, sessionPct, weeklyPct, now)`.
-- **Gráfico**: Compose `Canvas` con `pointerInput` para tap → tooltip (burbuja
-  con fecha + % del punto más cercano). Eje Y 0/50/100, labels de fecha en X.
-  Línea + área con gradiente del color primario; líneas punteadas de reset.
-- **UI**: nueva tab en `NavigationBar` (Usage / Estadísticas / Settings) con
-  `Icons.Outlined.BarChart` / `Icons.Filled.BarChart`. Toggle con
-  `SingleChoiceSegmentedButtonRow` (M3). Resumen: card con último período
-  cerrado ("Semana del 3 ago: 62%") + período actual ("Vas 45% en la semana
-  actual"). Estado vacío con hint.
-- **Strings**: es/en para todo lo nuevo.
+- **Sin datos nuevos**: reutiliza los snapshots acumulados y la agrupación
+  existente (`periodsFor` + `peakPercent`). Solo se agrega una función pura
+  `periodBars()` que mapea períodos → barras.
+- **`PeriodBar(start, end, peakPercent, inProgress)`**: `peakPercent` = pico
+  (máx %) del período (decisión usuario); `inProgress = end > now` (decisión
+  usuario: incluir período actual).
+- **Gráfico**: Compose `Canvas` (sin librerías — YAGNI). Eje Y 0/50/100 con
+  grid (mismo patrón que `UsageChart`), labels de fecha en X, barras con
+  esquinas superiores redondeadas, % encima de cada barra, barra "en curso"
+  con alpha 0.45 + etiqueta.
+- **Labels con muchos períodos**: `n > 8` → solo fecha primero/último;
+  `n > 14` → además se omiten los % (evita solapamiento). Ancho mínimo de
+  barra 4.dp.
+- **UI**: card nueva debajo de la card del gráfico de línea, mismo toggle
+  Semana/Sesión (el `period` state ya vive en `StatsTab`).
+- **Strings**: es/en para título de card, "en curso" y contentDescription.
 - **Duración**: sesión 24 h, semana 168 h (mismas constantes que Balance).
 
 ## Task List
 
-- [ ] Task 1: `UsageHistory.kt` + `UsageHistoryTest.kt` (TDD)
-  - Agrupación por período, picos, reset markers, nearestSnapshot
-- [ ] Task 2: `UsageHistoryStore.kt` (JSON en SecurePrefs, dedupe, FIFO) + tests
-- [ ] Task 3: Integración en `UsageViewModel.refresh()` (guardar snapshot) +
-      StateFlow `history` expuesto
-- [ ] Task 4: `ui/StatsTab.kt` — toggle, gráfico Canvas, tooltip, resumen,
-      estado vacío + strings es/en
-- [ ] Task 5: Tab en `UsageScreen.kt` (NavigationBar) + strings
-- [ ] Task 6: Release v0.18.0 (bump versionCode 25, tests+lint+assemble, tag,
+- [ ] Task 1: `periodBars()` + `PeriodBar` en `UsageHistory.kt` + tests TDD
+  - Una barra por período con datos, orden cronológico
+  - Pico correcto, `inProgress` correcto, períodos vacíos omitidos
+  - Verify: `./gradlew testDebugUnitTest --tests "*UsageHistoryTest*"` (verde)
+  - Files: `UsageHistory.kt`, `UsageHistoryTest.kt`
+- [ ] Task 2: Card "Consumo por período" en `ui/StatsTab.kt` (bar chart Canvas)
+  - Barras + % encima + fecha en X + "en curso" (alpha + etiqueta)
+  - Reglas de labels con n > 8 / n > 14
+  - Verify: `./gradlew testDebugUnitTest lintDebug` (verde) + inspección visual
+  - Files: `ui/StatsTab.kt`
+- [ ] Task 3: Strings es/en (título card, "en curso", contentDescription)
+  - Files: `res/values/strings.xml`, `res/values-en/strings.xml`
+- [ ] Task 4: Release v0.19.0 (bump versionCode 26, tests+lint+assemble, tag,
       GitHub release, APK por Telegram)
 
 ### Checkpoint: Tasks 1-3
-- [ ] Tests de agregación y store verdes
-- [ ] Snapshot guardado en cada refresh (verificación manual con logs)
-
-### Checkpoint: Tasks 4-5
-- [ ] Tab Estadísticas funcional: toggle, gráfico, tooltip, resumen, vacío
+- [ ] Tests de `periodBars` verdes
+- [ ] Card con barras funcional: toggle, "en curso", labels sin solapamiento
 - [ ] Suite completa verde + lint limpio
 
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Sin histórico en la API → gráfico vacío al inicio | Med | Estado vacío claro + hint; se llena con el uso |
-| Snapshots duplicados por refrescos frecuentes | Bajo | Dedupe 15 min + % idéntico |
-| Crecimiento ilimitado del storage | Bajo | Límite 600 FIFO |
-| Tooltip complejo en Canvas | Med | Solo tap → punto más cercano en X; sin gestos extra |
-| Romper tabs existentes | Bajo | Tab nueva agregada al enum; sin tocar Usage/Settings |
+| Muchos períodos → labels solapados | Med | Reglas n > 8 / n > 14 (omitir labels/%); ancho mínimo 4.dp |
+| Confundir período actual con cerrado | Med | Alpha 0.45 + etiqueta "en curso" |
+| Romper gráfico de línea existente | Bajo | Card nueva separada; no se toca `UsageChart` |
+| Pico de período con 1 snapshot = valor plano | Bajo | Correcto por definición (pico = ese valor) |
 
 ## Open Questions
 
-Ninguna (resueltas en spec: tooltip SÍ, ventana = todo, resumen = ambos).
+Ninguna (resueltas en spec: período actual SÍ con distinción visual; valor =
+pico).
