@@ -1,39 +1,36 @@
-# Tasks: Gráfico de barras de consumo por período (Stats)
+# Tasks: Orden y agrupación de modelos en la vista de consumo
 
-## Task 1: periodBars() + PeriodBar en UsageHistory.kt + tests (TDD)
+## Task 1: UsageSegment + groupModels() + sortedByUsage() en UsageData.kt + tests (TDD)
 
-- [x] `PeriodBar(start, end, peakPercent, inProgress)` data class
-- [x] `periodBars(snapshots, period, resetAnchor, now, selector)`: una barra por
-      período con datos, orden cronológico, períodos vacíos omitidos
-- [x] `peakPercent` = pico (máx %) del período; `inProgress = end > now`
-- Verify: `./gradlew testDebugUnitTest --tests "*UsageHistoryTest*"` (verde)
-- Files: `app/src/main/java/com/jpyunism/ollamacloudusage/UsageHistory.kt`,
-  `app/src/test/java/com/jpyunism/ollamacloudusage/UsageHistoryTest.kt`
+- [x] `UsageSegment(label, percent, modelCount, colorKey)` data class
+- [x] `sortedByUsage(models)`: orden desc por % (tiebreak requests desc)
+- [x] `groupModels(models, threshold = 3.0, othersLabel)`: modelos < umbral →
+      ≥2 → "Otros" (suma %, modelCount=N, colorKey=null); 1 → individual
+- [x] Todos < umbral → sin agrupar
+- [x] "Otros" siempre al final
+- Verify: `./gradlew testDebugUnitTest --tests "*GroupModelsTest*"` (verde)
+- Files: `app/src/main/java/com/jpyunism/ollamacloudusage/UsageData.kt`,
+  `app/src/test/java/com/jpyunism/ollamacloudusage/GroupModelsTest.kt`
 
-## Task 2: Card "Consumo por período" en ui/StatsTab.kt (bar chart Canvas)
+## Task 2: UI en UsageTab.kt — barra usa groupModels, lista usa sortedByUsage
 
-- [x] Card nueva debajo de la card del gráfico de línea (mismo toggle Semana/Sesión)
-- [x] Barras Canvas: eje Y 0/50/100, fecha en X, % encima de cada barra,
-      esquinas superiores redondeadas, color primario
-- [x] Período actual: alpha 0.45 + etiqueta "en curso"
-- [x] Labels: n > 8 → solo fecha primero/último; n > 14 → además sin %;
-      ancho mínimo de barra 4.dp
+- [x] Barra: segmentos ordenados mayor → menor, "Otros" con color neutro
+      (outlineVariant), uniones continuas (clip en contenedor, sin shape por
+      segmento)
+- [x] Lista: mismo orden, detalle individual de TODOS los modelos
 - Verify: `./gradlew testDebugUnitTest lintDebug` (verde) + inspección visual
-- Files: `app/src/main/java/com/jpyunism/ollamacloudusage/ui/StatsTab.kt`
+- Files: `app/src/main/java/com/jpyunism/ollamacloudusage/ui/UsageTab.kt`
 
 ## Task 3: Strings es/en
 
-- [x] Título card "Consumo por período" / "Usage per period"
-- [x] "En curso" / "In progress"
-- [x] contentDescription del gráfico
+- [x] "Otros" / "Others" (label barra + contentDescription)
 - Verify: lint (hardcoded strings) limpio
 - Files: `app/src/main/res/values/strings.xml`, `app/src/main/res/values-en/strings.xml`
 
-## Task 4: Release v0.19.0
+## Task 4: Release v0.21.0
 
-- [x] Bump versionCode 26, versionName 0.19.0
-- [x] `./gradlew testDebugUnitTest lintDebug assembleRelease` (verde)
-- [x] Commit + push + tag v0.19.0
-- [x] GitHub release con APK firmado
-- [x] APK por Telegram (15710279)
-- Files: `app/build.gradle.kts`
+- [ ] Bump versionCode 28 + versionName 0.21.0
+- [ ] `./gradlew testDebugUnitTest lintDebug assembleRelease` (JAVA_HOME + ANDROID_HOME)
+- [ ] Commit + push + tag v0.21.0
+- [ ] GitHub release con APK firmado + notas
+- [ ] APK por Telegram (chat 15710279)

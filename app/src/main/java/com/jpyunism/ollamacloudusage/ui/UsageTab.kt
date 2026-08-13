@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
@@ -35,6 +36,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -49,6 +52,8 @@ import com.jpyunism.ollamacloudusage.balanceLabel
 import com.jpyunism.ollamacloudusage.computeBalance
 import com.jpyunism.ollamacloudusage.formatPercent
 import com.jpyunism.ollamacloudusage.formatReset
+import com.jpyunism.ollamacloudusage.groupModels
+import com.jpyunism.ollamacloudusage.sortedByUsage
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
@@ -208,7 +213,7 @@ private fun UsageMeterCard(
                 Spacer(Modifier.height(12.dp))
                 HorizontalDivider()
                 Spacer(Modifier.height(8.dp))
-                models.sortedByDescending { it.requests }.forEach { m ->
+                sortedByUsage(models).forEach { m ->
                     Row(
                         Modifier.fillMaxWidth().padding(vertical = 2.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -229,21 +234,36 @@ private fun UsageMeterCard(
 @Composable
 private fun LinearUsageBar(percent: Double, models: List<ModelUsage>) {
     val barHeight = 12.dp
-    Row(Modifier.fillMaxWidth().height(barHeight)) {
-        if (models.isEmpty()) {
+    val othersLabel = stringResource(R.string.others)
+    val segments = groupModels(models, othersLabel = othersLabel)
+    val shape = RoundedCornerShape(6.dp)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(barHeight)
+            .clip(shape)
+            .semantics {
+                contentDescription = segments.joinToString { s ->
+                    "${s.label} ${formatPercent(s.percent)}%"
+                }
+            },
+    ) {
+        if (segments.isEmpty()) {
             Box(
                 Modifier
                     .fillMaxWidth()
                     .height(barHeight)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(6.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
             )
         } else {
-            models.forEach { m ->
+            segments.forEach { s ->
+                val color = s.colorKey?.let { modelColor(it) }
+                    ?: MaterialTheme.colorScheme.outlineVariant
                 Box(
                     Modifier
-                        .weight(m.percent.toFloat().coerceAtLeast(0.1f))
+                        .weight(s.percent.toFloat().coerceAtLeast(0.1f))
                         .fillMaxHeight()
-                        .background(modelColor(m.model), RoundedCornerShape(6.dp))
+                        .background(color)
                 )
             }
         }

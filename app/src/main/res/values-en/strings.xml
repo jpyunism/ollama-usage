@@ -20,6 +20,7 @@
     <string name="balance_deficit">Deficit %1$s%%</string>
     <string name="balance_surplus">Surplus %1$s%%</string>
     <string name="requests_percent">%1$d req · %2$s%%</string>
+    <string name="others">Others</string>
 
     <!-- Stats -->
     <string name="stats_period_week">Week</string>

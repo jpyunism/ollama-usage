@@ -13,6 +13,55 @@ data class ModelUsage(
     val percent: Double,
 )
 
+/**
+ * Segmento de la barra de consumo: un modelo individual o el grupo "Otros".
+ * [colorKey] = nombre del modelo para asignar color de la paleta;
+ * `null` para "Otros" (color neutro del tema).
+ */
+data class UsageSegment(
+    val label: String,
+    val percent: Double,
+    val modelCount: Int,
+    val colorKey: String?,
+)
+
+/**
+ * Ordena los modelos por % de uso descendente (tiebreak: requests desc).
+ * Usado por la lista de modelos (detalle individual de todos).
+ */
+fun sortedByUsage(models: List<ModelUsage>): List<ModelUsage> =
+    models.sortedWith(compareByDescending<ModelUsage> { it.percent }.thenByDescending { it.requests })
+
+/**
+ * Agrupa los modelos para la barra de consumo:
+ * - Ordena por % desc (tiebreak requests desc).
+ * - Modelos con % >= [threshold] → segmento individual.
+ * - Modelos con % < [threshold]: si hay ≥ 2 → un segmento "Otros" con la suma
+ *   de sus % y modelCount = N; si hay 1 solo → se mantiene individual.
+ * - Si todos están bajo el umbral → no agrupa (la barra conserva los colores).
+ * - "Otros" siempre va al final.
+ */
+fun groupModels(
+    models: List<ModelUsage>,
+    threshold: Double = 3.0,
+    othersLabel: String = "Otros",
+): List<UsageSegment> {
+    val sorted = sortedByUsage(models)
+    if (sorted.isEmpty()) return emptyList()
+
+    val (small, big) = sorted.partition { it.percent < threshold }
+    if (small.size >= 2 && big.isNotEmpty()) {
+        return big.map { UsageSegment(it.model, it.percent, 1, it.model) } +
+            UsageSegment(
+                label = othersLabel,
+                percent = small.sumOf { it.percent },
+                modelCount = small.size,
+                colorKey = null,
+            )
+    }
+    return sorted.map { UsageSegment(it.model, it.percent, 1, it.model) }
+}
+
 data class UsageData(
     val sessionPercent: Double,
     val weeklyPercent: Double,
