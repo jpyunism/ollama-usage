@@ -84,7 +84,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("org.jsoup:jsoup:1.18.1")
+    implementation("org.jsoup:jsoup:1.23.1")
 
     // Cifrado de la cookie de sesión en reposo (AndroidX Security)
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
