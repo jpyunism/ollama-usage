@@ -49,17 +49,32 @@ fun groupModels(
     val sorted = sortedByUsage(models)
     if (sorted.isEmpty()) return emptyList()
 
-    val (small, big) = sorted.partition { it.percent < threshold }
-    if (small.size >= 2 && big.isNotEmpty()) {
+    val others = othersGroup(sorted, threshold)
+    if (others != null) {
+        val big = sorted.filter { it !in others }
         return big.map { UsageSegment(it.model, it.percent, 1, it.model) } +
             UsageSegment(
                 label = othersLabel,
-                percent = small.sumOf { it.percent },
-                modelCount = small.size,
+                percent = others.sumOf { it.percent },
+                modelCount = others.size,
                 colorKey = null,
             )
     }
     return sorted.map { UsageSegment(it.model, it.percent, 1, it.model) }
+}
+
+/**
+ * Modelos que irían al grupo "Otros" (los < [threshold] cuando hay ≥ 2 y
+ * existe al menos un modelo grande). Devuelve null si no corresponde agrupar
+ * (mismo criterio que [groupModels]); la lista queda en el orden de entrada
+ * (ya ordenada por % desc).
+ */
+fun othersGroup(
+    models: List<ModelUsage>,
+    threshold: Double = 3.0,
+): List<ModelUsage>? {
+    val (small, big) = models.partition { it.percent < threshold }
+    return if (small.size >= 2 && big.isNotEmpty()) small else null
 }
 
 data class UsageData(

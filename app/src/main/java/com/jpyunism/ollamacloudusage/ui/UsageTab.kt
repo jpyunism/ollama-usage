@@ -54,6 +54,7 @@ import com.jpyunism.ollamacloudusage.computeBalance
 import com.jpyunism.ollamacloudusage.formatPercent
 import com.jpyunism.ollamacloudusage.formatReset
 import com.jpyunism.ollamacloudusage.groupModels
+import com.jpyunism.ollamacloudusage.othersGroup
 import com.jpyunism.ollamacloudusage.sortedByUsage
 import java.time.Duration
 import java.time.Instant
@@ -214,6 +215,7 @@ private fun UsageMeterCard(
                 Spacer(Modifier.height(12.dp))
                 HorizontalDivider()
                 Spacer(Modifier.height(8.dp))
+                val others = othersGroup(sortedByUsage(models))
                 sortedByUsage(models).forEach { m ->
                     Row(
                         Modifier.fillMaxWidth().padding(vertical = 2.dp),
@@ -228,7 +230,14 @@ private fun UsageMeterCard(
                             Box(
                                 Modifier
                                     .size(10.dp)
-                                    .background(modelColor(m.model), CircleShape)
+                                    .background(
+                                        if (others?.contains(m) == true) {
+                                            MaterialTheme.colorScheme.outlineVariant
+                                        } else {
+                                            modelColor(m.model)
+                                        },
+                                        CircleShape,
+                                    )
                             )
                             Text(m.model, style = MaterialTheme.typography.bodyMedium)
                         }

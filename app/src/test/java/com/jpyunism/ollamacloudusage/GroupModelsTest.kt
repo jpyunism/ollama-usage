@@ -173,4 +173,78 @@ class GroupModelsTest {
         assertEquals(1, segments[0].modelCount)
         assertEquals(1, segments[1].modelCount)
     }
+
+    // ── othersGroup: modelos que van a "Otros" ──
+
+    @Test
+    fun `othersGroup devuelve los modelos bajo umbral cuando hay 2 o mas y hay grandes`() {
+        val others = othersGroup(
+            listOf(
+                model("a", 50.0),
+                model("b", 2.0),
+                model("c", 1.5),
+            ),
+        )
+        assertEquals(listOf("b", "c"), others?.map { it.model })
+    }
+
+    @Test
+    fun `othersGroup devuelve null con un solo modelo bajo umbral`() {
+        val others = othersGroup(
+            listOf(
+                model("a", 50.0),
+                model("b", 2.0),
+            ),
+        )
+        assertNull(others)
+    }
+
+    @Test
+    fun `othersGroup devuelve null si todos estan bajo umbral`() {
+        val others = othersGroup(
+            listOf(
+                model("a", 2.0),
+                model("b", 1.0),
+            ),
+        )
+        assertNull(others)
+    }
+
+    @Test
+    fun `othersGroup devuelve null con lista vacia`() {
+        assertNull(othersGroup(emptyList()))
+    }
+
+    @Test
+    fun `othersGroup respeta umbral custom`() {
+        val others = othersGroup(
+            listOf(
+                model("a", 6.0),
+                model("b", 4.0),
+                model("c", 2.0),
+            ),
+            threshold = 5.0,
+        )
+        assertEquals(listOf("b", "c"), others?.map { it.model })
+    }
+
+    @Test
+    fun `othersGroup es consistente con groupModels`() {
+        val models = listOf(
+            model("a", 50.0),
+            model("b", 2.0),
+            model("c", 1.5),
+        )
+        val others = othersGroup(models)
+        val segments = groupModels(models)
+        val othersSegment = segments.last()
+        if (others != null) {
+            assertEquals("Otros", othersSegment.label)
+            assertEquals(others.size, othersSegment.modelCount)
+        } else {
+            assertNull(othersSegment.colorKey)
+        }
+    }
+
+    // ── groupModels: casos borde ──
 }
