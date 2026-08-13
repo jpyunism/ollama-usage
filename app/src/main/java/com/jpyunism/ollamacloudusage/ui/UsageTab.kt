@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -217,8 +218,20 @@ private fun UsageMeterCard(
                     Row(
                         Modifier.fillMaxWidth().padding(vertical = 2.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(m.model, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(10.dp)
+                                    .background(modelColor(m.model), CircleShape)
+                            )
+                            Text(m.model, style = MaterialTheme.typography.bodyMedium)
+                        }
                         Text(
                             stringResource(R.string.requests_percent, m.requests, formatPercent(m.percent)),
                             style = MaterialTheme.typography.bodyMedium,

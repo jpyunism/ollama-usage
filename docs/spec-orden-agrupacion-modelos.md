@@ -63,6 +63,9 @@ Reglas:
 - Filas en el orden de `sortedByUsage` (mayor % → menor %).
 - **Detalle individual de TODOS los modelos** (incluidos los < umbral): nombre +
   requests + %, igual que hoy. No hay fila "Otros" en la lista.
+- **Indicador de color**: cada fila muestra un círculo pequeño (10.dp) con el
+  color de paleta del modelo (`modelColor`), el mismo que aparece en la barra —
+  así se puede correlacionar visualmente la lista con los segmentos.
 
 ### Strings (es/en)
 

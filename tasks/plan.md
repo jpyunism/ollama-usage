@@ -41,7 +41,8 @@ para que no se vean como líneas de 1px.
       `sortedByUsage`
   - Barra: segmentos ordenados, "Otros" con color neutro, uniones continuas
     (clip en contenedor, sin shape por segmento)
-  - Lista: mismo orden, detalle individual de todos los modelos
+  - Lista: mismo orden, detalle individual de todos los modelos, con círculo
+    de color de paleta por modelo (correlación visual con la barra)
   - Verify: `./gradlew testDebugUnitTest lintDebug` (verde) + inspección visual
   - Files: `ui/UsageTab.kt`
 - [ ] Task 3: Strings es/en ("Otros")

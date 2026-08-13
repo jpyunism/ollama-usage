@@ -18,6 +18,7 @@
       (outlineVariant), uniones continuas (clip en contenedor, sin shape por
       segmento)
 - [x] Lista: mismo orden, detalle individual de TODOS los modelos
+- [ ] Lista: círculo de color de paleta por modelo (correlación con la barra)
 - Verify: `./gradlew testDebugUnitTest lintDebug` (verde) + inspección visual
 - Files: `app/src/main/java/com/jpyunism/ollamacloudusage/ui/UsageTab.kt`
 
