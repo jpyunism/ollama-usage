@@ -50,8 +50,10 @@ object SecurePrefs {
     /** Elimina archivos de formatos anteriores (cookie en claro y prefs cifradas viejas). */
     fun purgeLegacy(context: Context) {
         runCatching {
-            val legacy = context.getSharedPreferences(LEGACY_NAME, Context.MODE_PRIVATE)
-            if (legacy.all.isNotEmpty()) legacy.edit().clear().commit()
+            // Borra directo los archivos XML: leer `legacy.all` (getAll) fuerza
+            // a descifrar TODOS los secretos en el main thread durante el
+            // arranque tras un update — la causa más probable del arranque
+            // "pegado" (SettingsProvider/Keystore ocupados justo tras instalar).
             File(context.applicationInfo.dataDir, "shared_prefs/$LEGACY_NAME.xml").delete()
             File(context.applicationInfo.dataDir, "shared_prefs/$OLD_ENCRYPTED_NAME.xml").delete()
         }
@@ -61,13 +63,13 @@ object SecurePrefs {
 /** Cifra/descifra secretos con AES-256-GCM; clave derivada del ANDROID_ID. */
 private class SecretCipher(context: Context) {
 
-    private val key: SecretKeySpec = run {
-        val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
-            ?: "unknown-device"
-        val material = "ollama-usage|$androidId|v2".toByteArray(Charsets.UTF_8)
-        val digest = MessageDigest.getInstance("SHA-256").digest(material)
-        SecretKeySpec(digest, "AES")
-    }
+    // La clave se deriva de forma PERZOSA y se cachea por proceso: leer
+    // ANDROID_ID es una query al content resolver que, si se hace en el
+    // main thread durante el arranque tras un update (SettingsProvider
+    // ocupado), puede bloquear la app y dejarla "pegada" sin iniciar.
+    // Con lazy, la primera crypto real ocurre en background (refresh/worker),
+    // nunca en attachBaseContext/onCreate.
+    private val key: SecretKeySpec by lazy { deriveKeyFor(context) }
 
     fun encrypt(plain: String): String {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -85,6 +87,31 @@ private class SecretCipher(context: Context) {
         cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
         String(cipher.doFinal(ct), Charsets.UTF_8)
     }.getOrNull()
+
+    companion object {
+        @Volatile
+        private var cachedKey: SecretKeySpec? = null
+
+        private fun deriveKeyFor(context: Context): SecretKeySpec {
+            cachedKey?.let { return it }
+            synchronized(this) {
+                cachedKey?.let { return it }
+                val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+                    ?: "unknown-device"
+                return deriveKey(androidId).also { cachedKey = it }
+            }
+        }
+    }
+}
+
+/**
+ * Deriva la clave AES-256 de la app a partir del ANDROID_ID.
+ * Función pura (testeable sin Android): misma entrada → misma clave.
+ */
+internal fun deriveKey(androidId: String): SecretKeySpec {
+    val material = "ollama-usage|$androidId|v2".toByteArray(Charsets.UTF_8)
+    val digest = MessageDigest.getInstance("SHA-256").digest(material)
+    return SecretKeySpec(digest, "AES")
 }
 
 /** Wrapper que cifra solo [SecurePrefs.SECRET_KEYS]; el resto pasa directo. */
