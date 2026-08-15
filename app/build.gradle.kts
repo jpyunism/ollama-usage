@@ -94,7 +94,7 @@ dependencies {
     // Tink (usado por security-crypto) referencia anotaciones errorprone; R8 las necesita.
     compileOnly("com.google.errorprone:error_prone_annotations:2.50.0")
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     // Background check + notificaciones de límite
     implementation("androidx.work:work-runtime-ktx:2.9.1")
@@ -102,7 +102,7 @@ dependencies {
     // Tests
     testImplementation("junit:junit:4.13.2")
     testImplementation("io.mockk:mockk:1.13.12")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     // Implementación real de org.json para tests unitarios (android.jar la mockea).
     testImplementation("org.json:json:20240303")
     testImplementation(composeBom)
