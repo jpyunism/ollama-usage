@@ -90,7 +90,7 @@ dependencies {
     implementation("org.jsoup:jsoup:1.23.1")
 
     // Cifrado de la cookie de sesión en reposo (AndroidX Security)
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("androidx.security:security-crypto:1.1.0")
     // Tink (usado por security-crypto) referencia anotaciones errorprone; R8 las necesita.
     compileOnly("com.google.errorprone:error_prone_annotations:2.50.0")
 
