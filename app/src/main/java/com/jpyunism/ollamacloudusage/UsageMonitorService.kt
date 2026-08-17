@@ -30,7 +30,21 @@ class UsageMonitorService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         intervalMinutes = intent?.getIntExtra(EXTRA_INTERVAL, -1)?.takeIf { it > 0 }
             ?: prefs().getInt(UsageViewModel.KEY_REFRESH_INTERVAL, UsageScheduler.MIN_PERIODIC_MINUTES)
-        startForeground(UsageNotifier.PERSISTENT_ID, UsageNotifier.buildPersistent(this, null))
+        try {
+            startForeground(UsageNotifier.PERSISTENT_ID, UsageNotifier.buildPersistent(this, null))
+        } catch (_: IllegalStateException) {
+            // Android 12+ deniega startForeground() cuando la app está en
+            // background (p.ej. restart sticky del sistema con intent=null).
+            // ForegroundServiceStartNotAllowedException extiende
+            // IllegalStateException. No crashear: dejar el intervalo pendiente
+            // para que UsageScheduler.retryPending lo restaure en el próximo
+            // arranque en foreground, y parar el servicio.
+            SecurePrefs.get(this).edit()
+                .putInt(UsageScheduler.KEY_PENDING_FGS, intervalMinutes)
+                .apply()
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
         startLoop()
         return START_STICKY
     }
