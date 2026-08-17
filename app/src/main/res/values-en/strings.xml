@@ -84,7 +84,7 @@
     <string name="refresh_frequency_description">How often usage is updated in the background. From 1 to 14 min it uses a foreground service; from 15 min on it uses WorkManager.</string>
     <string name="min_1">1 min</string>
     <string name="hours_12">12 h</string>
-    <string name="save_settings">Save settings</string>
+    <string name="settings_saved">Settings saved</string>
     <string name="alert">Alert</string>
     <string name="critical">Critical</string>
     <string name="interval_minutes">%1$d min</string>

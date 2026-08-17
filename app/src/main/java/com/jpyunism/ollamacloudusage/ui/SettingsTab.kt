@@ -39,10 +39,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,21 +63,16 @@ import com.jpyunism.ollamacloudusage.UsageScheduler
 import com.jpyunism.ollamacloudusage.UsageViewModel
 
 /**
- * Configuración unificada: alertas de consumo, pantalla de bloqueo, reset de
- * cuota, frecuencia de refresco, apariencia (temas) y actualizaciones.
+ * Configuración unificada: apariencia (idioma, modo, temas), alertas de
+ * consumo y actualizaciones. Cada cambio se guarda automáticamente al instante
+ * (sin botón de guardar); el snackbar de confirmación lo maneja UsageScreen.
  */
 @Composable
-fun SettingsTab(vm: UsageViewModel, settings: AlertSettings) {
-    // ── Estado local de alertas ──
-    var enabled by remember { mutableStateOf(settings.notificationsEnabled) }
-    var weeklyAlert by remember { mutableIntStateOf(settings.weeklyAlert) }
-    var weeklyCritical by remember { mutableIntStateOf(settings.weeklyCritical) }
-    var sessionAlert by remember { mutableIntStateOf(settings.sessionAlert) }
-    var sessionCritical by remember { mutableIntStateOf(settings.sessionCritical) }
-    var persistentEnabled by remember { mutableStateOf(settings.persistentEnabled) }
-    var refreshInterval by remember { mutableIntStateOf(settings.refreshIntervalMinutes) }
-    var resetMode by remember { mutableStateOf(settings.resetDisplayMode) }
-
+fun SettingsTab(
+    vm: UsageViewModel,
+    settings: AlertSettings,
+    onSettingsChanged: () -> Unit,
+) {
     // ── Estado del ViewModel ──
     val currentTheme by vm.theme.collectAsStateWithLifecycle()
     val currentDarkMode by vm.darkMode.collectAsStateWithLifecycle()
@@ -91,6 +82,12 @@ fun SettingsTab(vm: UsageViewModel, settings: AlertSettings) {
     val checkResult by vm.checkResult.collectAsStateWithLifecycle()
     val download by vm.download.collectAsStateWithLifecycle()
 
+    // Persiste el cambio y avisa al snackbar debounced de UsageScreen.
+    fun save(newSettings: AlertSettings) {
+        vm.updateSettings(newSettings)
+        onSettingsChanged()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -98,175 +95,22 @@ fun SettingsTab(vm: UsageViewModel, settings: AlertSettings) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // ════ Alertas ════
+        // ════ Apariencia ════
         SectionHeader(
-            title = stringResource(R.string.consumption_alerts),
-            subtitle = stringResource(R.string.alerts_description),
+            title = stringResource(R.string.appearance),
+            subtitle = stringResource(R.string.appearance_description),
         )
 
-        // Master switch
-        Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
-            Row(
-                Modifier.padding(16.dp).fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconBox(Icons.Filled.Notifications)
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.notifications), style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        stringResource(if (enabled) R.string.enabled else R.string.disabled),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
-                    checked = enabled,
-                    onCheckedChange = { enabled = it },
-                )
-            }
-        }
-
-        ThresholdCard(
-            title = stringResource(R.string.weekly_limit),
-            subtitle = stringResource(R.string.weekly_limit_subtitle),
-            alert = weeklyAlert,
-            critical = weeklyCritical,
-            onAlertChange = { weeklyAlert = it },
-            onCriticalChange = { weeklyCritical = it },
-        )
-
-        ThresholdCard(
-            title = stringResource(R.string.current_session),
-            subtitle = stringResource(R.string.session_subtitle),
-            alert = sessionAlert,
-            critical = sessionCritical,
-            onAlertChange = { sessionAlert = it },
-            onCriticalChange = { sessionCritical = it },
-        )
-
-        // Pantalla de bloqueo
-        Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
-            Row(
-                Modifier.padding(16.dp).fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconBox(Icons.Filled.Lock)
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.lock_screen), style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        stringResource(if (persistentEnabled) R.string.always_visible else R.string.hidden),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
-                    checked = persistentEnabled,
-                    onCheckedChange = { persistentEnabled = it },
-                )
-            }
-        }
-
-        // Reset de cuota
+        // Idioma
         Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(16.dp)) {
-                Text(stringResource(R.string.quota_reset), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.language), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    stringResource(R.string.quota_reset_description),
+                    stringResource(R.string.language_description),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ResetModeChip(
-                        label = stringResource(R.string.countdown),
-                        selected = resetMode == ResetDisplayMode.COUNTDOWN,
-                        onClick = { resetMode = ResetDisplayMode.COUNTDOWN },
-                    )
-                    ResetModeChip(
-                        label = stringResource(R.string.date),
-                        selected = resetMode == ResetDisplayMode.DATE,
-                        onClick = { resetMode = ResetDisplayMode.DATE },
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    stringResource(
-                        if (resetMode == ResetDisplayMode.COUNTDOWN) R.string.countdown_example else R.string.date_example
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        // Frecuencia de refresco
-        Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
-            Column(Modifier.padding(16.dp)) {
-                Text(stringResource(R.string.refresh_frequency), style = MaterialTheme.typography.titleMedium)
-                Text(
-                    stringResource(R.string.refresh_frequency_description),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(12.dp))
-                Slider(
-                    value = refreshInterval.toFloat(),
-                    onValueChange = { refreshInterval = it.toInt() },
-                    valueRange = UsageScheduler.MIN_REFRESH_MINUTES.toFloat()..
-                        UsageScheduler.MAX_REFRESH_MINUTES.toFloat(),
-                    steps = 30,
-                    colors = SliderDefaults.colors(
-                        thumbColor = MaterialTheme.colorScheme.primary,
-                        activeTrackColor = MaterialTheme.colorScheme.primary,
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(stringResource(R.string.min_1), style = MaterialTheme.typography.labelSmall)
-                    Text(
-                        formatInterval(refreshInterval),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Text(stringResource(R.string.hours_12), style = MaterialTheme.typography.labelSmall)
-                }
-            }
-        }
-
-        FilledTonalButton(
-            onClick = {
-                vm.updateSettings(
-                    AlertSettings(
-                        notificationsEnabled = enabled,
-                        weeklyAlert = weeklyAlert,
-                        weeklyCritical = weeklyCritical,
-                        sessionAlert = sessionAlert,
-                        sessionCritical = sessionCritical,
-                        persistentEnabled = persistentEnabled,
-                        refreshIntervalMinutes = refreshInterval,
-                        resetDisplayMode = resetMode,
-                    )
-                )
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(stringResource(R.string.save_settings))
-        }
-
-        // ════ Idioma ════
-        SectionHeader(
-            title = stringResource(R.string.language),
-            subtitle = stringResource(R.string.language_description),
-        )
-
-        Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
-            Column(Modifier.padding(16.dp)) {
                 val activity = LocalActivity.current
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AppLanguage.entries.forEach { language ->
@@ -286,12 +130,6 @@ fun SettingsTab(vm: UsageViewModel, settings: AlertSettings) {
             }
         }
 
-        // ════ Apariencia ════
-        SectionHeader(
-            title = stringResource(R.string.appearance),
-            subtitle = stringResource(R.string.appearance_description),
-        )
-
         // Modo claro/oscuro
         Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(16.dp)) {
@@ -302,7 +140,10 @@ fun SettingsTab(vm: UsageViewModel, settings: AlertSettings) {
                         ResetModeChip(
                             label = stringResource(mode.labelRes),
                             selected = mode == currentDarkMode,
-                            onClick = { vm.updateDarkMode(mode) },
+                            onClick = {
+                                vm.updateDarkMode(mode)
+                                onSettingsChanged()
+                            },
                         )
                     }
                 }
@@ -315,8 +156,152 @@ fun SettingsTab(vm: UsageViewModel, settings: AlertSettings) {
             ThemeRow(
                 theme = theme,
                 selected = theme == currentTheme,
-                onClick = { vm.updateTheme(theme) },
+                onClick = {
+                    vm.updateTheme(theme)
+                    onSettingsChanged()
+                },
             )
+        }
+
+        // ════ Alertas de consumo ════
+        SectionHeader(
+            title = stringResource(R.string.consumption_alerts),
+            subtitle = stringResource(R.string.alerts_description),
+        )
+
+        // Master switch
+        Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+            Row(
+                Modifier.padding(16.dp).fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconBox(Icons.Filled.Notifications)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.notifications), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        stringResource(if (settings.notificationsEnabled) R.string.enabled else R.string.disabled),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = settings.notificationsEnabled,
+                    onCheckedChange = { save(settings.copy(notificationsEnabled = it)) },
+                )
+            }
+        }
+
+        ThresholdCard(
+            title = stringResource(R.string.weekly_limit),
+            subtitle = stringResource(R.string.weekly_limit_subtitle),
+            alert = settings.weeklyAlert,
+            critical = settings.weeklyCritical,
+            onAlertChange = { save(settings.copy(weeklyAlert = it)) },
+            onCriticalChange = { save(settings.copy(weeklyCritical = it)) },
+        )
+
+        ThresholdCard(
+            title = stringResource(R.string.current_session),
+            subtitle = stringResource(R.string.session_subtitle),
+            alert = settings.sessionAlert,
+            critical = settings.sessionCritical,
+            onAlertChange = { save(settings.copy(sessionAlert = it)) },
+            onCriticalChange = { save(settings.copy(sessionCritical = it)) },
+        )
+
+        // Pantalla de bloqueo
+        Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+            Row(
+                Modifier.padding(16.dp).fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconBox(Icons.Filled.Lock)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.lock_screen), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        stringResource(if (settings.persistentEnabled) R.string.always_visible else R.string.hidden),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = settings.persistentEnabled,
+                    onCheckedChange = { save(settings.copy(persistentEnabled = it)) },
+                )
+            }
+        }
+
+        // Reset de cuota
+        Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+            Column(Modifier.padding(16.dp)) {
+                Text(stringResource(R.string.quota_reset), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(R.string.quota_reset_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ResetModeChip(
+                        label = stringResource(R.string.countdown),
+                        selected = settings.resetDisplayMode == ResetDisplayMode.COUNTDOWN,
+                        onClick = { save(settings.copy(resetDisplayMode = ResetDisplayMode.COUNTDOWN)) },
+                    )
+                    ResetModeChip(
+                        label = stringResource(R.string.date),
+                        selected = settings.resetDisplayMode == ResetDisplayMode.DATE,
+                        onClick = { save(settings.copy(resetDisplayMode = ResetDisplayMode.DATE)) },
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(
+                        if (settings.resetDisplayMode == ResetDisplayMode.COUNTDOWN) R.string.countdown_example else R.string.date_example
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        // Frecuencia de refresco
+        Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+            Column(Modifier.padding(16.dp)) {
+                Text(stringResource(R.string.refresh_frequency), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(R.string.refresh_frequency_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(12.dp))
+                Slider(
+                    value = settings.refreshIntervalMinutes.toFloat(),
+                    onValueChange = { save(settings.copy(refreshIntervalMinutes = it.toInt())) },
+                    valueRange = UsageScheduler.MIN_REFRESH_MINUTES.toFloat()..
+                        UsageScheduler.MAX_REFRESH_MINUTES.toFloat(),
+                    steps = 30,
+                    colors = SliderDefaults.colors(
+                        thumbColor = MaterialTheme.colorScheme.primary,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(stringResource(R.string.min_1), style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        formatInterval(settings.refreshIntervalMinutes),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(stringResource(R.string.hours_12), style = MaterialTheme.typography.labelSmall)
+                }
+            }
         }
 
         // ════ Actualización ════

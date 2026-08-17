@@ -28,13 +28,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -60,9 +67,27 @@ fun UsageScreen(vm: UsageViewModel) {
     val update by vm.update.collectAsStateWithLifecycle()
     val download by vm.download.collectAsStateWithLifecycle()
     var tab by remember { mutableStateOf(Tab.Usage) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    var settingsSaveJob by remember { mutableStateOf<Job?>(null) }
+    val settingsSavedMessage = stringResource(R.string.settings_saved)
+
+    // Debounce de 1 s: cada cambio de configuración reinicia el timer y al
+    // final muestra el snackbar temporal "Configuración guardada".
+    val onSettingsChanged: () -> Unit = {
+        settingsSaveJob?.cancel()
+        settingsSaveJob = scope.launch {
+            delay(1000)
+            snackbarHostState.showSnackbar(
+                message = settingsSavedMessage,
+                duration = SnackbarDuration.Short,
+            )
+        }
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(stringResource(R.string.app_name), fontWeight = FontWeight.SemiBold) },
@@ -104,7 +129,7 @@ fun UsageScreen(vm: UsageViewModel) {
                     when (tab) {
                         Tab.Usage -> UsageTab(vm, state)
                         Tab.Stats -> StatsTab(vm.history.collectAsStateWithLifecycle().value)
-                        Tab.Settings -> SettingsTab(vm, settings)
+                        Tab.Settings -> SettingsTab(vm, settings, onSettingsChanged)
                     }
                 }
             }

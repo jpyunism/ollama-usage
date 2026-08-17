@@ -84,7 +84,7 @@
     <string name="refresh_frequency_description">Cada cuánto se actualiza el consumo en segundo plano. De 1 a 14 min usa un servicio en primer plano; de 15 min en adelante usa WorkManager.</string>
     <string name="min_1">1 min</string>
     <string name="hours_12">12 h</string>
-    <string name="save_settings">Guardar configuración</string>
+    <string name="settings_saved">Configuración guardada</string>
     <string name="alert">Alerta</string>
     <string name="critical">Crítico</string>
     <string name="interval_minutes">%1$d min</string>
