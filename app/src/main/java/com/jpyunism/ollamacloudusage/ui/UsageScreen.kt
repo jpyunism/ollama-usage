@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -66,7 +67,9 @@ fun UsageScreen(vm: UsageViewModel) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val update by vm.update.collectAsStateWithLifecycle()
     val download by vm.download.collectAsStateWithLifecycle()
-    var tab by remember { mutableStateOf(Tab.Usage) }
+    // rememberSaveable: la pestaña sobrevive a recreate() (p.ej. cambio de
+    // idioma), que de otro modo devolvería la vista a la pestaña inicial.
+    var tab by rememberSaveable { mutableStateOf(Tab.Usage) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var settingsSaveJob by remember { mutableStateOf<Job?>(null) }
