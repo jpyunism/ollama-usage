@@ -12,6 +12,28 @@ Al terminar cualquier cambio de funcionalidad en este repo, **publicar siempre l
 
 El APK debe quedar firmado con el cert CN=JuanPa (SHA-256 `05844a35e86e2cf17d604c54268f40b3f53f573e14e046baa722bf2148a5cdda`) para instalarse sobre versiones previas.
 
+## Validación en emulador (obligatorio antes de publicar)
+
+Antes de publicar un release, **validar los cambios navegando la app en el emulador** (no basta con que los tests pasen):
+
+1. Levantar el emulador headless en el server (AVD `test64`, Android 15 / API 35):
+   ```bash
+   export ANDROID_HOME=/home/jyunis/android-sdk
+   export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
+   sg kvm -c "setsid nohup emulator -avd test64 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -memory 2048 -no-snapshot > /tmp/emulator.log 2>&1 < /dev/null &"
+   adb wait-for-device  # esperar hasta sys.boot_completed=1
+   ```
+2. Instalar el APK release y abrir la app: `adb install -r app/build/outputs/apk/release/app-release.apk` + `am start`.
+3. Navegar manualmente (con `adb shell input tap` / `uiautomator dump` y capturas `screencap`) por las pantallas afectadas por el cambio, verificando:
+   - El flujo principal de la feature/modificación.
+   - Los settings que deben persistir (idioma, tema, modo oscuro, frecuencia de refresco) tras force-stop + relanzar.
+   - Que cambiar idioma **no resetee la pestaña activa** (regresión conocida v0.22.1).
+4. Verificar que no haya crashes ni ANRs: `adb logcat -d -b crash` y buscar `FATAL EXCEPTION` / `ANR in com.jpyunism.ollamacloudusage`.
+5. Revisar las capturas con el script de visión (`skills/vision-delegation/scripts/describe_image.py`) para confirmar visualmente el estado.
+6. Terminar con `adb emu kill`.
+
+Solo después de esta validación se publica el release (pasos 1-5 de la sección anterior).
+
 ## UI: Material 3 (obligatorio)
 
 Toda la interfaz debe usar **exclusivamente componentes Material 3** (`androidx.compose.material3.*`). No usar componentes de Material 2 (`androidx.compose.material.*`), ni vistas XML clásicas (`android.widget.*`, `appcompat`) para UI nueva. Esto incluye:
