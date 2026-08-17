@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Settings
@@ -38,7 +40,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -60,6 +61,10 @@ enum class Tab(val labelRes: Int, val icon: ImageVector, val selectedIcon: Image
     Settings(R.string.tab_settings, Icons.Outlined.Settings, Icons.Filled.Settings),
 }
 
+fun pageForTab(tab: Tab): Int = Tab.entries.indexOf(tab).let { if (it < 0) 0 else it }
+
+fun tabForPage(page: Int): Tab = Tab.entries.getOrElse(page) { Tab.Usage }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UsageScreen(vm: UsageViewModel) {
@@ -67,9 +72,7 @@ fun UsageScreen(vm: UsageViewModel) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val update by vm.update.collectAsStateWithLifecycle()
     val download by vm.download.collectAsStateWithLifecycle()
-    // rememberSaveable: la pestaña sobrevive a recreate() (p.ej. cambio de
-    // idioma), que de otro modo devolvería la vista a la pestaña inicial.
-    var tab by rememberSaveable { mutableStateOf(Tab.Usage) }
+    val pagerState = rememberPagerState(pageCount = { Tab.entries.size })
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var settingsSaveJob by remember { mutableStateOf<Job?>(null) }
@@ -98,13 +101,13 @@ fun UsageScreen(vm: UsageViewModel) {
         },
         bottomBar = {
             NavigationBar {
-                Tab.entries.forEach { t ->
+                Tab.entries.forEachIndexed { index, t ->
                     NavigationBarItem(
-                        selected = tab == t,
-                        onClick = { tab = t },
+                        selected = pagerState.currentPage == index,
+                        onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
                         icon = {
                             Icon(
-                                if (tab == t) t.selectedIcon else t.icon,
+                                if (pagerState.currentPage == index) t.selectedIcon else t.icon,
                                 contentDescription = stringResource(t.labelRes),
                             )
                         },
@@ -128,8 +131,12 @@ fun UsageScreen(vm: UsageViewModel) {
                         onClick = { vm.startUpdateDownload(update!!) },
                     )
                 }
-                Box(Modifier.fillMaxSize()) {
-                    when (tab) {
+                HorizontalPager(
+                    state = pagerState,
+                    beyondViewportPageCount = Tab.entries.size - 1,
+                    modifier = Modifier.fillMaxSize(),
+                ) { page ->
+                    when (tabForPage(page)) {
                         Tab.Usage -> UsageTab(vm, state)
                         Tab.Stats -> StatsTab(vm.history.collectAsStateWithLifecycle().value)
                         Tab.Settings -> SettingsTab(vm, settings, onSettingsChanged)
