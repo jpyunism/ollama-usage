@@ -78,10 +78,10 @@
 
 ## Task 6: Publicación del release (regla AGENTS.md)
 
-- [ ] Commit + push a `main`
-- [ ] Tag `v0.23.0` apuntando al commit
-- [ ] Release en GitHub con APK firmado + notas de versión
-- [ ] Enviar APK por Telegram (chat `telegram:15710279`)
+- [x] Commit + push a `main`
+- [x] Tag `v0.23.0` apuntando al commit
+- [x] Release en GitHub con APK firmado + notas de versión
+- [x] Enviar APK por Telegram (chat `telegram:15710279`)
 - Acceptance: release `v0.23.0` publicado con APK firmado CN=JuanPa
 - Verify: tag y release visibles en GitHub; APK entregado
 - Files: `app/build.gradle.kts`, `app/build/outputs/apk/release/app-release.apk`
