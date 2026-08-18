@@ -152,6 +152,8 @@ drawLine(projColor, Offset(xFrom, yFrom), Offset(xTo, yTo))           // proyecc
 - **Framework:** JUnit4 + Mockk + kotlinx-coroutines-test (ya en el repo).
 - **Qué se testea (REQ-009)** en `ProjectionTest.kt` (RED primero):
   - `currentPeriod` sin anchor → null.
+  - `fallbackResetAnchor`: semana → próximo domingo 21:00 CLT; sesión → null
+    (no sintetizable; la ventana móvil no tiene cierre real).
   - Con anchor y snapshots del período: `start`/`end` correctos (end = próximo
     reset, start = end − duration).
   - Proyección con 2 puntos: `toTimestamp == end` y `toPercent` = valor de la
@@ -215,6 +217,11 @@ drawLine(projColor, Offset(xFrom, yFrom), Offset(xTo, yTo))           // proyecc
 - **El período se alinea al próximo reset conocido** (`while (end <= now) end
   += duration`), igual que `periodsFor` pero hacia adelante. El `anchor` de la
   sesión llega vía `HistoryState.sessionResetAt` (REQ-008).
+- **Fuente sin resets (método API key):** `fallbackResetAnchor` sintetiza el
+  ancla semanal (próximo domingo 21:00 CLT, supuesto documentado del repo)
+  para que ideal/proyección funcionen en modo Semana. La sesión no es
+  sintetizable (ventana móvil sin cierre real) → sin ideal/proyección en modo
+  Sesión con esta fuente; con cookie sí (el scraper entrega resets reales).
 - **La línea ideal es la rampa lineal 0→100 del período actual** (no de los
   históricos): es la única donde tiene sentido la comparación con el consumo en
   curso. Se recorta al rango visible del gráfico.
