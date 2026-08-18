@@ -79,6 +79,6 @@
       proyección + leyenda + resumen), toggle Semana/Sesión, sin datos
       (historial vacío), cambio de idioma no resetea la tab, logcat sin
       crash/ANR, screenshots.
-- [ ] Commit + push a `main` + tag `v0.29.0`.
-- [ ] Release en GitHub con APK firmado + screenshots (nombres descriptivos).
-- [ ] Enviar APK por Telegram (chat 15710279).
+- [x] Commit + push a `main` + tag `v0.29.0`.
+- [x] Release en GitHub con APK firmado + screenshots (nombres descriptivos).
+- [x] Enviar APK por Telegram (chat 15710279).
