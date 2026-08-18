@@ -14,8 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.jpyunism.ollamacloudusage.AppDarkMode
-import com.jpyunism.ollamacloudusage.UsageScheduler
+import com.jpyunism.ollamacloudusage.PrefsKeys
+import com.jpyunism.ollamacloudusage.di.AppContainer
 import com.jpyunism.ollamacloudusage.ui.OllamaUsageTheme
 import com.jpyunism.ollamacloudusage.ui.UsageScreen
 
@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() {
     /** Aplica el idioma guardado antes de inflar la UI (arranque en frío). */
     override fun attachBaseContext(newBase: android.content.Context) {
         val prefs = SecurePrefs.get(newBase)
-        val language = prefs.getString(UsageViewModel.KEY_LANGUAGE, null)
+        val language = prefs.getString(PrefsKeys.LANGUAGE, null)
             ?.let { name -> AppLanguage.entries.firstOrNull { it.name == name } }
             ?: AppLanguage.System
         LocaleHelper.apply(newBase, language)

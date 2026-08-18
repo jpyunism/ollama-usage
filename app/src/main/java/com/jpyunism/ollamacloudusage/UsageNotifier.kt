@@ -92,10 +92,10 @@ object UsageNotifier {
             buildString {
                 append(context.getString(R.string.persistent_body_week_session, formatPercent(data.weeklyPercent), formatPercent(data.sessionPercent)))
                 formatReset(data.weeklyResetAt, mode, locale = locale)?.let {
-                    append(context.getString(R.string.persistent_body_week_reset, it + balanceSuffix(data.weeklyPercent, data.weeklyResetAt, WEEK_DURATION, now, deficit, surplus)))
+                    append(context.getString(R.string.persistent_body_week_reset, it + balanceSuffix(data.weeklyPercent, data.weeklyResetAt, HistoryPeriod.WEEK.duration, now, deficit, surplus)))
                 }
                 formatReset(data.sessionResetAt, mode, locale = locale)?.let {
-                    append(context.getString(R.string.persistent_body_session_reset, it + balanceSuffix(data.sessionPercent, data.sessionResetAt, SESSION_DURATION, now, deficit, surplus)))
+                    append(context.getString(R.string.persistent_body_session_reset, it + balanceSuffix(data.sessionPercent, data.sessionResetAt, HistoryPeriod.SESSION.duration, now, deficit, surplus)))
                 }
                 append(context.getString(R.string.persistent_body_plan_updated, data.plan, time))
             }
@@ -187,7 +187,7 @@ object UsageNotifier {
     /** Modo de visualización del reset configurado por el usuario. */
     private fun resetDisplayMode(context: Context): ResetDisplayMode =
         runCatching {
-            SecurePrefs.get(context).getString(UsageViewModel.KEY_RESET_DISPLAY, null)
+            SecurePrefs.get(context).getString(PrefsKeys.RESET_DISPLAY, null)
                 ?.let { name -> ResetDisplayMode.entries.firstOrNull { it.name == name } }
         }.getOrNull() ?: ResetDisplayMode.COUNTDOWN
 
@@ -205,6 +205,4 @@ object UsageNotifier {
         return " · $label"
     }
 
-    private val SESSION_DURATION: Duration = Duration.ofHours(24)
-    private val WEEK_DURATION: Duration = Duration.ofHours(168)
 }

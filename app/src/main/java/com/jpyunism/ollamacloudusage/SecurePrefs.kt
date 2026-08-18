@@ -38,8 +38,8 @@ object SecurePrefs {
 
     /** Claves cuyo valor se cifra en reposo. */
     internal val SECRET_KEYS = setOf(
-        UsageViewModel.KEY_COOKIE,
-        UsageViewModel.KEY_API_KEY,
+        PrefsKeys.COOKIE,
+        PrefsKeys.API_KEY,
     )
 
     fun get(context: Context): SharedPreferences {

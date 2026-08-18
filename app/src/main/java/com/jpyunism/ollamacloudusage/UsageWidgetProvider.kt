@@ -9,7 +9,6 @@ import android.content.Intent
 import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONObject
-import java.time.Duration
 import java.time.Instant
 import kotlin.math.roundToInt
 
@@ -99,7 +98,7 @@ class UsageWidgetProvider : AppWidgetProvider() {
                     data.sessionPercent,
                     data.sessionResetAt,
                     Instant.now(),
-                    SESSION_DURATION,
+                    HistoryPeriod.SESSION.duration,
                 )
                 val balanceText = balanceLabel(
                     balance,
@@ -121,6 +120,5 @@ class UsageWidgetProvider : AppWidgetProvider() {
             return views
         }
 
-        private val SESSION_DURATION: Duration = Duration.ofHours(24)
     }
 }

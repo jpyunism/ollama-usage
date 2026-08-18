@@ -48,6 +48,7 @@ import com.jpyunism.ollamacloudusage.R
 import com.jpyunism.ollamacloudusage.ResetDisplayMode
 import com.jpyunism.ollamacloudusage.UiState
 import com.jpyunism.ollamacloudusage.UsageData
+import com.jpyunism.ollamacloudusage.HistoryPeriod
 import com.jpyunism.ollamacloudusage.UsageViewModel
 import com.jpyunism.ollamacloudusage.balanceLabel
 import com.jpyunism.ollamacloudusage.computeBalance
@@ -62,8 +63,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 
-private val SESSION_DURATION: Duration = Duration.ofHours(24)
-private val WEEK_DURATION: Duration = Duration.ofHours(168)
 
 @Composable
 fun UsageTab(vm: UsageViewModel, state: UiState) {
@@ -113,8 +112,8 @@ private fun SuccessContent(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Header(data, lastUpdated)
-        UsageMeterCard(stringResource(R.string.session_usage), data.sessionPercent, data.sessionModels, data.sessionResetAt, SESSION_DURATION)
-        UsageMeterCard(stringResource(R.string.weekly_usage), data.weeklyPercent, data.weeklyModels, data.weeklyResetAt, WEEK_DURATION)
+        UsageMeterCard(stringResource(R.string.session_usage), data.sessionPercent, data.sessionModels, data.sessionResetAt, HistoryPeriod.SESSION.duration)
+        UsageMeterCard(stringResource(R.string.weekly_usage), data.weeklyPercent, data.weeklyModels, data.weeklyResetAt, HistoryPeriod.WEEK.duration)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = onRefresh, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
