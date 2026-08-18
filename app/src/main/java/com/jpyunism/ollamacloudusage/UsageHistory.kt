@@ -1,6 +1,8 @@
 package com.jpyunism.ollamacloudusage
 
 import java.time.Duration
+import java.time.Instant
+import java.time.ZoneId
 import kotlin.math.abs
 
 /** Un registro puntual de consumo capturado en un refresh exitoso. */
@@ -171,4 +173,115 @@ fun summarize(
     }
 
     return HistorySummary(lastClosed, current)
+}
+
+/**
+ * Proyección lineal del consumo del período actual hasta el próximo reset:
+ * si se siguiera consumiendo al ritmo actual, en [toTimestamp] (el reset) se
+ * llegaría a [toPercent]. Sin clamp: puede superar 100.
+ */
+data class Projection(
+    val fromTimestamp: Long,
+    val fromPercent: Double,
+    val toTimestamp: Long,
+    val toPercent: Double,
+)
+
+/** Período de cuota en curso con la info para dibujar ideal + proyección. */
+data class CurrentPeriod(
+    val start: Long,
+    val end: Long,
+    val snapshotCount: Int,
+    val projection: Projection?,
+)
+fun currentPeriod(
+    snapshots: List<UsageSnapshot>,
+    period: HistoryPeriod,
+    resetAnchor: Long?,
+    now: Long,
+    selector: (UsageSnapshot) -> Double,
+): CurrentPeriod? {
+    if (resetAnchor == null || snapshots.isEmpty()) return null
+    val d = period.durationMillis
+
+    // Próximo reset estrictamente futuro (puede ser el propio anchor si > now).
+    var end = resetAnchor
+    while (end <= now) end += d
+    val start = end - d
+
+    val inPeriod = snapshots.filter { it.timestampMillis in start until end }
+    return CurrentPeriod(
+        start = start,
+        end = end,
+        snapshotCount = inPeriod.size,
+        projection = linearProjection(inPeriod, end, selector),
+    )
+}
+
+/**
+ * Regresión lineal (mínimos cuadrados) del % de consumo vs. timestamp sobre
+ * los snapshots del período actual, evaluada en [end] (próximo reset).
+ * Requiere ≥ 2 snapshots; si no, devuelve null. El % proyectado no se
+ * clampa (puede superar 100 para señalizar riesgo de exceder la cuota).
+ */
+fun linearProjection(
+    snapshotsInPeriod: List<UsageSnapshot>,
+    end: Long,
+    selector: (UsageSnapshot) -> Double,
+): Projection? {
+    if (snapshotsInPeriod.size < 2) return null
+
+    val last = snapshotsInPeriod.last()
+    val n = snapshotsInPeriod.size.toDouble()
+    val sumX = snapshotsInPeriod.sumOf { it.timestampMillis.toDouble() }
+    val sumY = snapshotsInPeriod.sumOf { selector(it) }
+    val sumXY = snapshotsInPeriod.sumOf { it.timestampMillis.toDouble() * selector(it) }
+    val sumX2 = snapshotsInPeriod.sumOf { it.timestampMillis.toDouble() * it.timestampMillis.toDouble() }
+
+    val denom = n * sumX2 - sumX * sumX
+    // Con ≥2 snapshots de timestamps distintos el denominador es > 0.
+    if (denom == 0.0) return null
+    val slope = (n * sumXY - sumX * sumY) / denom
+    val intercept = (sumY - slope * sumX) / n
+
+    return Projection(
+        fromTimestamp = last.timestampMillis,
+        fromPercent = selector(last),
+        toTimestamp = end,
+        toPercent = slope * end + intercept,
+    )
+}
+
+/**
+ * Ancla de reset sintetizada cuando la fuente de datos no la entrega
+ * (método de API key: la API /api/usage no expone resets).
+ *
+ * - Semana: próximo domingo 21:00 en [zone] (supuesto documentado del repo:
+ *   la cuota semanal de Ollama Cloud se reinicia el domingo 21:00 CLT).
+ * - Sesión: no sintetizable — sin ancla real la ventana móvil de 24 h se
+ *   desliza continuamente y no tiene cierre; se devuelve null y la UI omite
+ *   ideal/proyección (solo el scraper entrega resets de sesión reales).
+ */
+fun fallbackResetAnchor(
+    period: HistoryPeriod,
+    now: Long,
+    zone: ZoneId = ZoneId.of("America/Santiago"),
+): Long? = when (period) {
+    HistoryPeriod.SESSION -> null
+    HistoryPeriod.WEEK -> nextSundayAt21(now, zone)
+}
+
+/** Próximo domingo 21:00 en [zone] estrictamente posterior a `now`. */
+private fun nextSundayAt21(now: Long, zone: ZoneId): Long {
+    val zdt = Instant.ofEpochMilli(now).atZone(zone)
+    // dayOfWeek: 1=Lunes … 7=Domingo.
+    val daysUntilSunday = (7 - zdt.dayOfWeek.value) % 7
+    var candidate = zdt.toLocalDate()
+        .plusDays(daysUntilSunday.toLong())
+        .atTime(21, 0)
+        .atZone(zone)
+    if (!candidate.toInstant().isAfter(Instant.ofEpochMilli(now))) {
+        candidate = candidate.plusDays(7)
+    }
+    return candidate.toInstant().toEpochMilli()
 }

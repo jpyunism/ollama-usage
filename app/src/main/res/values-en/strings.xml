@@ -32,6 +32,9 @@
     <string name="stats_week_of">Week of %1$s</string>
     <string name="stats_session_of">Session of %1$s</string>
     <string name="stats_tooltip">%1$s · %2$s%%</string>
+    <string name="stats_ideal">Ideal</string>
+    <string name="stats_projection">Projection: %1$s</string>
+    <string name="stats_projection_summary">At this rate you\'d end at %1$s%%</string>
     <string name="stats_bars_title">Usage per period</string>
     <string name="stats_bars_in_progress">In progress</string>
     <string name="stats_bars_desc">Bar chart of usage per period</string>

@@ -32,6 +32,9 @@
     <string name="stats_week_of">Semana del %1$s</string>
     <string name="stats_session_of">Sesión del %1$s</string>
     <string name="stats_tooltip">%1$s · %2$s%%</string>
+    <string name="stats_ideal">Ideal</string>
+    <string name="stats_projection">Proyección: %1$s</string>
+    <string name="stats_projection_summary">A este ritmo terminarías en %1$s%%</string>
     <string name="stats_bars_title">Consumo por período</string>
     <string name="stats_bars_in_progress">En curso</string>
     <string name="stats_bars_desc">Gráfico de barras del consumo por período</string>

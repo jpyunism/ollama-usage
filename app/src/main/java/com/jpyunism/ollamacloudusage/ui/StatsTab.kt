@@ -51,15 +51,17 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jpyunism.ollamacloudusage.HistoryPeriod
 import com.jpyunism.ollamacloudusage.HistoryState
 import com.jpyunism.ollamacloudusage.PeriodBar
+import com.jpyunism.ollamacloudusage.CurrentPeriod
 import com.jpyunism.ollamacloudusage.R
 import com.jpyunism.ollamacloudusage.UsageSnapshot
+import com.jpyunism.ollamacloudusage.currentPeriod
+import com.jpyunism.ollamacloudusage.fallbackResetAnchor
 import com.jpyunism.ollamacloudusage.formatPercent
 import com.jpyunism.ollamacloudusage.nearestSnapshot
 import com.jpyunism.ollamacloudusage.periodBars
@@ -89,13 +91,19 @@ fun StatsTab(history: HistoryState, isRefreshing: Boolean = false, onRefresh: ()
 
     var period by remember { mutableStateOf(HistoryPeriod.WEEK) }
     val weeklyReset = history.weeklyResetAt?.toEpochMilli()
+    val sessionReset = history.sessionResetAt?.toEpochMilli()
+    val resetAnchor = if (period == HistoryPeriod.WEEK) weeklyReset else sessionReset
     val selector: (UsageSnapshot) -> Double = { s ->
         if (period == HistoryPeriod.WEEK) s.weeklyPercent else s.sessionPercent
     }
 
     val now = System.currentTimeMillis()
-    val summary = summarize(snapshots, period, weeklyReset, now, selector)
-    val markers = resetMarkers(snapshots, period, weeklyReset)
+    // Si la fuente no entrega el reset (p.ej. método API key), se sintetiza
+    // el ancla: semana = próximo domingo 21:00 CLT, sesión = ventana móvil 24 h.
+    val anchor = resetAnchor ?: fallbackResetAnchor(period, now)
+    val summary = summarize(snapshots, period, anchor, now, selector)
+    val markers = resetMarkers(snapshots, period, resetAnchor)
+    val current = currentPeriod(snapshots, period, anchor, now, selector)
 
     PullToRefreshBox(
         isRefreshing = isRefreshing,
@@ -133,7 +141,19 @@ fun StatsTab(history: HistoryState, isRefreshing: Boolean = false, onRefresh: ()
                     snapshots = snapshots,
                     selector = selector,
                     markers = markers,
+                    current = current,
                 )
+                current?.let { cp ->
+                    val idealLabel = stringResource(R.string.stats_ideal)
+                    val projLabel = cp.projection?.let {
+                        stringResource(R.string.stats_projection, formatPercent(it.toPercent))
+                    }
+                    ChartLegend(
+                        showIdeal = cp.snapshotCount > 0,
+                        idealLabel = idealLabel,
+                        projectionLabel = projLabel,
+                    )
+                }
             }
         }
 
@@ -171,6 +191,11 @@ fun StatsTab(history: HistoryState, isRefreshing: Boolean = false, onRefresh: ()
             ).lowercase()
             SummaryRow(
                 text = stringResource(R.string.stats_current, formatPercent(current.peakPercent), periodLabel),
+            )
+        }
+        current?.projection?.let { proj ->
+            SummaryRow(
+                text = stringResource(R.string.stats_projection_summary, formatPercent(proj.toPercent)),
             )
         }
         }
@@ -259,6 +284,7 @@ private fun UsageChart(
     snapshots: List<UsageSnapshot>,
     selector: (UsageSnapshot) -> Double,
     markers: List<Long>,
+    current: CurrentPeriod?,
 ) {
     var tooltip by remember { mutableStateOf<UsageSnapshot?>(null) }
     val lineColor = MaterialTheme.colorScheme.primary
@@ -266,7 +292,14 @@ private fun UsageChart(
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val markerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.6f)
     val bubbleColor = MaterialTheme.colorScheme.surface
+    val idealColor = MaterialTheme.colorScheme.tertiary
+    val projectionColor = MaterialTheme.colorScheme.secondary
+    val dangerColor = MaterialTheme.colorScheme.error
     val density = LocalDensity.current
+
+    // Fin del eje X: último snapshot, o el fin de la proyección si existe.
+    val xEnd = current?.projection?.toTimestamp?.coerceAtLeast(snapshots.last().timestampMillis)
+        ?: snapshots.last().timestampMillis
 
     // Texto del tooltip precomputado (stringResource no es válido en DrawScope).
     val tooltipText = tooltip?.let { s ->
@@ -281,9 +314,9 @@ private fun UsageChart(
         modifier = Modifier
             .fillMaxWidth()
             .height(CHART_HEIGHT)
-            .pointerInput(snapshots, selector) {
+            .pointerInput(snapshots, selector, xEnd) {
                 detectTapGestures { offset ->
-                    tooltip = nearestSnapshot(snapshots, xToTimestamp(offset.x, size.width.toFloat(), snapshots, density))
+                    tooltip = nearestSnapshot(snapshots, xToTimestamp(offset.x, size.width.toFloat(), snapshots, density, xEndMillis = xEnd))
                 }
             },
     ) {
@@ -296,8 +329,7 @@ private fun UsageChart(
 
         fun xFor(ts: Long): Float {
             val first = snapshots.first().timestampMillis
-            val last = snapshots.last().timestampMillis
-            val span = (last - first).coerceAtLeast(1L)
+            val span = (xEnd - first).coerceAtLeast(1L)
             return chartLeft + ((ts - first).toFloat() / span.toFloat()) * chartWidth
         }
 
@@ -370,6 +402,59 @@ private fun UsageChart(
             )
         }
 
+        // Línea ideal: rampa lineal 0% → 100% del período actual (si hay datos).
+        if (current != null && current.snapshotCount > 0) {
+            val idealStartX = xFor(current.start)
+            val idealEndX = xFor(current.end)
+            val visibleStartX = idealStartX.coerceIn(chartLeft, chartRight)
+            val visibleEndX = idealEndX.coerceIn(chartLeft, chartRight)
+            if (visibleEndX > visibleStartX) {
+                // Recorta la rampa al rango visible del eje X.
+                val fracStart = (visibleStartX - idealStartX) / (idealEndX - idealStartX).coerceAtLeast(1f)
+                val fracEnd = (visibleEndX - idealStartX) / (idealEndX - idealStartX).coerceAtLeast(1f)
+                val yStart = yFor(fracStart * 100.0)
+                val yEnd = yFor(fracEnd * 100.0)
+                drawLine(
+                    idealColor,
+                    Offset(visibleStartX, yStart),
+                    Offset(visibleEndX, yEnd),
+                    strokeWidth = with(density) { 1.5.dp.toPx() },
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(with(density) { 6.dp.toPx() }, with(density) { 6.dp.toPx() })),
+                )
+            }
+        }
+
+        // Línea de proyección: último snapshot → próximo reset.
+        current?.projection?.let { proj ->
+            val fromX = xFor(proj.fromTimestamp)
+            val toX = xFor(proj.toTimestamp)
+            val fromY = yFor(proj.fromPercent)
+            val toY = yFor(proj.toPercent)
+            val projColor2 = if (proj.toPercent > 100) dangerColor else projectionColor
+            drawLine(
+                projColor2,
+                Offset(fromX, fromY),
+                Offset(toX, toY),
+                strokeWidth = with(density) { 2.dp.toPx() },
+            )
+            // Punto en el extremo de la proyección.
+            drawCircle(
+                color = projColor2,
+                radius = with(density) { 3.dp.toPx() },
+                center = Offset(toX, toY),
+            )
+            // Etiqueta del % proyectado (reubicada si sale del borde derecho).
+            val projText = formatPercent(proj.toPercent)
+            val paint = android.graphics.Paint().apply {
+                color = projColor2.toArgb()
+                textSize = with(density) { 10.sp.toPx() }
+                textAlign = android.graphics.Paint.Align.CENTER
+            }
+            val textX = (toX + with(density) { 14.dp.toPx() }).coerceAtMost(chartRight - with(density) { 2.dp.toPx() })
+            val textY = (toY - with(density) { 6.dp.toPx() }).coerceAtLeast(chartTop + with(density) { 10.dp.toPx() })
+            drawContext.canvas.nativeCanvas.drawText(projText, textX, textY, paint)
+        }
+
         // Tooltip: marcador + burbuja con fecha y %
         if (tooltip != null && tooltipText != null) {
             val s = tooltip!!
@@ -411,14 +496,14 @@ private fun xToTimestamp(
     width: Float,
     snapshots: List<UsageSnapshot>,
     density: androidx.compose.ui.unit.Density,
+    xEndMillis: Long,
 ): Long {
     if (snapshots.isEmpty()) return 0L
     val chartLeft = with(density) { 28.dp.toPx() }
     val chartRight = width - with(density) { 8.dp.toPx() }
     val chartWidth = (chartRight - chartLeft).coerceAtLeast(1f)
     val first = snapshots.first().timestampMillis
-    val last = snapshots.last().timestampMillis
-    val span = (last - first).coerceAtLeast(1L)
+    val span = (xEndMillis - first).coerceAtLeast(1L)
     val fraction = ((x - chartLeft) / chartWidth).coerceIn(0f, 1f)
     return first + (fraction * span).toLong()
 }
@@ -536,3 +621,63 @@ private fun formatDateTime(ts: Long): String =
     Instant.ofEpochMilli(ts)
         .atZone(ZoneId.systemDefault())
         .format(DateTimeFormatter.ofPattern("d MMM, HH:mm", Locale.getDefault()))
+/** Leyenda bajo el gráfico: swatch + etiqueta para Ideal y Proyección. */
+@Composable
+private fun ChartLegend(
+    showIdeal: Boolean,
+    idealLabel: String,
+    projectionLabel: String?,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (showIdeal) {
+            LegendItem(
+                color = MaterialTheme.colorScheme.tertiary,
+                label = idealLabel,
+                dashed = true,
+            )
+        }
+        if (projectionLabel != null) {
+            LegendItem(
+                color = MaterialTheme.colorScheme.secondary,
+                label = projectionLabel,
+                dashed = false,
+            )
+        }
+    }
+}
+
+@Composable
+private fun LegendItem(color: Color, label: String, dashed: Boolean) {
+    val density = LocalDensity.current
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        // Swatch dibujado como línea (continua o discontinua) igual que en el gráfico.
+        Canvas(Modifier.size(width = 20.dp, height = 6.dp)) {
+            val y = size.height / 2f
+            val swatchWidth = with(density) { 2.dp.toPx() }
+            val dash = with(density) { 5.dp.toPx() }
+            val gap = with(density) { 4.dp.toPx() }
+            drawLine(
+                color = color,
+                start = Offset(0f, y),
+                end = Offset(size.width, y),
+                strokeWidth = swatchWidth,
+                pathEffect = if (dashed) {
+                    PathEffect.dashPathEffect(floatArrayOf(dash, gap))
+                } else {
+                    null
+                },
+            )
+        }
+        Spacer(Modifier.width(6.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+

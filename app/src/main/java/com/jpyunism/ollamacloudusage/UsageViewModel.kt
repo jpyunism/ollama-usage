@@ -47,10 +47,11 @@ data class AlertSettings(
     }
 }
 
-/** Histórico de consumo acumulado localmente + reset semanal conocido. */
+/** Histórico de consumo acumulado localmente + resets conocidos. */
 data class HistoryState(
     val snapshots: List<UsageSnapshot> = emptyList(),
     val weeklyResetAt: Instant? = null,
+    val sessionResetAt: Instant? = null,
 )
 
 /**
@@ -209,6 +210,7 @@ class UsageViewModel(
                         _history.value = HistoryState(
                             snapshots = repository.historySnapshots(),
                             weeklyResetAt = data.weeklyResetAt,
+                            sessionResetAt = data.sessionResetAt,
                         )
                         UiState.Success(data, cookieStored = true, lastUpdated = repository.lastUpdated())
                     },

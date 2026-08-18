@@ -1,44 +1,45 @@
-# Plan: Pull-to-refresh (swipe hacia abajo) en Uso y Estadísticas
+# Plan: Línea de proyección y consumo ideal en el gráfico de Estadísticas
 
-Spec de referencia: `docs/spec-pull-to-refresh.md` (REQ-001 a REQ-008).
+Spec de referencia: `docs/spec-proyeccion-consumo.md` (REQ-001 a REQ-009).
 
 ## Overview
 
-Feature pequeña y acotada, sin dependencias nuevas (`PullToRefreshBox` ya viene
-en material3 1.4.0). El ViewModel gana una bandera `isRefreshing` y un refresh
-"silencioso" (`fromPull = true`) que NO oculta el contenido con el spinner
-full-screen; las tabs Uso y Estadísticas se envuelven en `PullToRefreshBox`.
+Sobre el gráfico de línea existente de la tab Estadísticas se agregan dos
+referencias para el período en curso: la **proyección** (regresión lineal del
+consumo real extendida hasta el próximo reset) y el **consumo ideal** (rampa
+lineal 0% → 100%). La lógica pura vive en `UsageHistory.kt`; el Canvas dibuja.
 
 ## Steps
 
-1. **T1 (RED)** — Tests del ViewModel: `isRefreshing` on/off, refresh silencioso
-   no toca `Loading`, error no deja la bandera pegada.
-2. **T2 (GREEN)** — `UsageViewModel.refresh(fromPull)` + `isRefreshing`.
-3. **T3** — `UsageTab`: `PullToRefreshBox` en la rama Success; botón
-   "Actualizar" pasa a refresh silencioso.
-4. **T4** — `StatsTab`: nueva firma (`history, isRefreshing, onRefresh`) +
-   `PullToRefreshBox`; `UsageScreen` hoistea las props; `EmptyStats` se hace
-   scrollable para que el gesto funcione.
-5. **T5** — Verificación: `testDebugUnitTest lintDebug assembleRelease`.
-6. **T6** — Validación en emulador (AGENTS.md) + release v0.28.0 (versionCode
-   40) con APK firmado + screenshots.
+1. **T1 (RED)** — `ProjectionTest.kt`: período actual, proyección lineal,
+   casos borde (sin anchor, 1 snapshot, fuera de rango, >100%).
+2. **T2 (GREEN)** — `currentPeriod()` + `Projection` + `linearProjection()`
+   en `UsageHistory.kt`.
+3. **T3** — `HistoryState.sessionResetAt` (REQ-008): populate en refresh.
+4. **T4** — StatsTab: rango X extendido, línea ideal discontinua, línea de
+   proyección + etiqueta, leyenda, SummaryRow (REQ-002..006).
+5. **T5** — Strings es/en (stats_ideal, stats_projection, stats_projection_summary).
+6. **T6** — Verificación completa: tests + lint + build.
+7. **T7** — Emulador (AGENTS.md) + release v0.29.0 (versionCode 41).
 
 ## Architecture Decisions
 
-- **`isRefreshing` separado de `UiState`**: `UiState` describe el contenido;
-  el indicador de pull necesita su propio estado booleano, testeable.
-- **`refresh(fromPull: Boolean = false)`**: default preserva call sites
-  existentes (init, saveCookie, saveApiKey) con la UX de carga completa.
-- **`StatsTab` sin ViewModel**: recibe `isRefreshing` y `onRefresh` por
-  parámetro (state hoisting, mantiene el desacoplamiento actual).
-- **Sin strings nuevos**: el indicador M3 no lleva texto; el botón ya tiene
-  `R.string.refresh`.
+- **Lógica pura en `UsageHistory.kt`**: `currentPeriod()` y
+  `linearProjection()` sin Android, testeables en JVM (patrón del repo).
+- **Ancla de sesión**: `HistoryState.sessionResetAt` (nullable, default null)
+  — mínimo cambio, no rompe consumidores existentes.
+- **Rango X = max(último snapshot, fin de proyección)**: el valor de la
+  proyección queda visible al cerrar el período.
+- **Sin clamp del % proyectado**: si la regresión da 112%, se dibuja y se
+  etiqueta 112% con color error (la advertencia es parte de la feature).
+- **Colores del tema**: ideal = `tertiary`, proyección = `secondary` o `error`
+  (si >100). Cero colores hardcodeados (regla del repo).
 
 ## Riesgos
 
-- **PullToRefreshBox necesita hijo scrollable**: `EmptyStats` (Stats sin
-  snapshots) no lo es → se le agrega `verticalScroll` (mínimo).
-- **Regresión v0.22.1 (idioma → tab)**: no se toca `rememberPagerState`; la
-  verificación en emulador cubre el caso.
-- **Bandera pegada en true**: `finally` en la corutina del refresh; test
-  explícito para el caso de error.
+- **Gráfico con pocos snapshots**: con <2 en el período actual no hay
+  proyección (guard explícito + test).
+- **Aglomeración de etiquetas**: la etiqueta de proyección se reubica si queda
+  fuera del borde derecho del canvas.
+- **Regresión v0.22.1**: no se toca `rememberPagerState`; verificación en
+  emulador cubre el caso.

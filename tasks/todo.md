@@ -1,69 +1,84 @@
-# Tasks: Pull-to-refresh (REQ-001..008, spec-pull-to-refresh.md)
+# Tasks: Línea de proyección + consumo ideal (REQ-001..009, spec-proyeccion-consumo.md)
 
-## T1 — RED: tests del ViewModel (REQ-006)
+## T1 — RED: `ProjectionTest.kt` (REQ-001, REQ-009)
 
-- [x] En `UsageViewModelTest.kt`:
-  - `refresh` normal setea `Loading` de inmediato y `isRefreshing` true → false
-    tras `advanceUntilIdle`.
-  - `refresh(fromPull = true)` con Success previo NO cambia el estado a
-    `Loading` (sigue `Success` tras la llamada) e `isRefreshing` true → false.
-  - `refresh(fromPull = true)` con fallo: estado `Error` e `isRefreshing` en
-    `false` (no queda pegada).
-- Acceptance: referencian `vm.isRefreshing` y `refresh(fromPull = true)`
-  (aún inexistentes).
-- Verify: `./gradlew testDebugUnitTest` → **RED** (no compila). ✅ RED confirmado
+- [x] Tests de `currentPeriod(snapshots, period, resetAnchor, now, selector)`:
+  - Sin anchor → null.
+  - Período correcto: `end` = próximo reset futuro (> now), `start` = end −
+    duration; snapshots del período incluidos.
+  - Proyección con 2 puntos con pendiente conocida: `toTimestamp == end` y
+    `toPercent` = valor exacto de la regresión lineal.
+  - Pendiente que supera 100: `toPercent > 100` (sin clamp).
+  - Con 1 snapshot en el período: `projection == null`, `snapshotCount == 1`.
+  - Snapshots de períodos anteriores se excluyen del cálculo.
+  - `now` justo antes de un reset: `end` es ESE reset (no el siguiente).
+- Acceptance: referencian `currentPeriod`/`Projection` (aún inexistentes).
+- Verify: `./gradlew testDebugUnitTest` → **RED** (no compila).
 
-## T2 — GREEN: ViewModel (REQ-003, REQ-005)
+## T2 — GREEN: lógica pura en `UsageHistory.kt` (REQ-001)
 
-- [x] `UsageViewModel`: `_isRefreshing`/`isRefreshing: StateFlow<Boolean>`.
-- [x] `refresh(fromPull: Boolean = false)`: con `fromPull` NO setea `Loading`;
-      `isRefreshing = true` antes del launch, `false` en `finally`;
-      `refreshJob?.cancel()` intacto.
-- Acceptance: T1 verde; refrescos rápidos no se pisan.
-- Verify: `./gradlew testDebugUnitTest` → **GREEN**. ✅
+- [x] `data class Projection(fromTimestamp, fromPercent, toTimestamp, toPercent)`.
+- [x] `data class CurrentPeriod(start, end, snapshotCount, projection)`.
+- [x] `linearProjection(snapshotsInPeriod, end, selector)`: mínimos cuadrados
+      (x = timestamp, y = %); con < 2 puntos → null; toPercent sin clamp.
+- [x] `currentPeriod(snapshots, period, resetAnchor, now, selector)`:
+      próximo reset = primero > now alineado a duration; filtra snapshots en
+      [start, end); arma `CurrentPeriod`.
+- Acceptance: T1 verde.
+- Verify: `./gradlew testDebugUnitTest` → **GREEN**.
+- Files: `UsageHistory.kt`
+
+## T3 — `HistoryState.sessionResetAt` (REQ-008)
+
+- [x] `HistoryState` + `sessionResetAt: Instant? = null`.
+- [x] `UsageViewModel.refresh()`: popular con `data.sessionResetAt`;
+      `loadHistory()` sigue con null.
+- Acceptance: tests existentes del VM verdes (default null).
 - Files: `UsageViewModel.kt`
 
-## T3 — Pull en la tab Uso (REQ-001, REQ-004)
+## T4 — StatsTab: dibujo + leyenda + resumen (REQ-002..006)
 
-- [x] `UsageTab`: en la rama Success, envolver `SuccessContent` en
-      `PullToRefreshBox` (import `androidx.compose.material3.pulltorefresh.*`);
-      `isRefreshing` recolectado del vm; `onRefresh = { vm.refresh(fromPull =
-      true) }`.
-- [x] Botón "Actualizar" → `vm.refresh(fromPull = true)` (UX no destructiva).
-- Acceptance: contenido visible durante el refresh; botón y gesto comparten
-  el mismo refresh silencioso.
-- Files: `ui/UsageTab.kt`
+- [x] `UsageChart` recibe `period` y `currentPeriod` (calculado en `StatsTab`
+      con `history.sessionResetAt` como anchor según período).
+- [x] Rango X: `xFor` usa `max(lastSnapshot, projection.toTimestamp)` cuando
+      hay proyección (REQ-003). `xToTimestamp` (tooltip) igual.
+- [x] Línea ideal: `tertiary` discontinua, de (start, 0%) a (end, 100%),
+      recortada al rango visible; solo si hay ≥1 snapshot en el período actual
+      (REQ-004).
+- [x] Línea de proyección: de (fromTimestamp, fromPercent) a (toTimestamp,
+      toPercent), color `error` si toPercent > 100 sino `secondary`, punto en
+      el extremo + etiqueta "%" reubicada si sale del borde (REQ-002).
+- [x] Leyenda bajo el Canvas: swatch + "Ideal" (si aplica) y swatch +
+      "Proyección: X%" (si hay proyección) (REQ-005).
+- [x] Nueva `SummaryRow`: "A este ritmo terminarías en %P%%" (solo con
+      proyección), tras la fila del período actual (REQ-006).
+- Acceptance: con datos reales se ven las 3 líneas diferenciadas; sin datos
+  del período actual no aparece nada extra (REQ-007).
+- Files: `ui/StatsTab.kt`
 
-## T4 — Pull en la tab Estadísticas (REQ-002)
+## T5 — Strings es/en (REQ-005, REQ-006)
 
-- [x] `StatsTab(history, isRefreshing, onRefresh)`: envolver todo en
-      `PullToRefreshBox`; `EmptyStats` con `verticalScroll` (para que el gesto
-      funcione sin datos).
-- [x] `UsageScreen`: recolectar `vm.isRefreshing` y pasarla a `UsageTab` /
-      `StatsTab(history, isRefreshing, onRefresh = { vm.refresh(fromPull = true) })`.
-- Acceptance: pull funciona en Stats con y sin datos; StatsTab no recibe el vm.
-- Files: `ui/StatsTab.kt`, `ui/UsageScreen.kt`
+- [x] `values/strings.xml`: `stats_ideal` ("Ideal"), `stats_projection`
+      ("Proyección: %1$s"), `stats_projection_summary` ("A este ritmo
+      terminarías en %1$s%%").
+- [x] `values-en/strings.xml`: "Ideal", "Projection: %1$s", "At this rate
+      you\'d end at %1$s%%".
+- Acceptance: `grep stats_` muestra las 3 keys en ambos locales.
+- Files: `app/src/main/res/values/strings.xml`, `values-en/strings.xml`
 
-## T5 — Verificación
+## T6 — Verificación
 
-- [x] `./gradlew testDebugUnitTest lintDebug assembleRelease` verdes. ✅
-      (34 tests, 0 errores lint)
-- [x] Sin dependencias nuevas (`grep pulltorefresh` solo en material3).
+- [x] `./gradlew testDebugUnitTest lintDebug assembleRelease` verdes.
+- [x] Sin dependencias nuevas.
 - Files: —
 
-## T6 — Emulador + release (REQ-008, AGENTS.md)
+## T7 — Emulador + release (REQ-009, AGENTS.md)
 
-- [x] Bump `versionCode` 40 y `versionName` "0.28.0" en `app/build.gradle.kts`.
-- [x] Validación en emulador (AVD `test64`): pull en Uso y Estadísticas con
-      contenido y vacío, botón Actualizar, carga inicial, cambio de idioma no
-      resetea la tab, logcat sin crash/ANR, screenshots. ✅
-      - Pull en Uso: contenido desplazado + spinner circular visible (captura
-        `screenshot-pull-refresh-spinner-uso.png`), "Actualizado" refrescó.
-      - Pull en Estadísticas: spinner visible (captura
-        `screenshot-pull-refresh-spinner-stats.png`).
-      - Cambio de idioma (ES→EN→ES) mantiene la tab activa (sin regresión v0.22.1).
-      - Force-stop + relanzar: carga normal, sin crash; logcat crash/ANR = 0.
-- [x] Commit + push a `main` + tag `v0.28.0`. ✅ (commit 5d6f2b0)
-- [x] Release en GitHub con APK firmado + screenshots (nombres descriptivos).
-      ✅ https://github.com/jpyunism/ollama-usage/releases/tag/v0.28.0
-- [x] Enviar APK por Telegram (chat 15710279). ✅
+- [x] Bump `versionCode` 41 y `versionName` "0.29.0" en `app/build.gradle.kts`.
+- [x] Validación en emulador (AVD `test64`): Stats con datos (línea ideal +
+      proyección + leyenda + resumen), toggle Semana/Sesión, sin datos
+      (historial vacío), cambio de idioma no resetea la tab, logcat sin
+      crash/ANR, screenshots.
+- [ ] Commit + push a `main` + tag `v0.29.0`.
+- [ ] Release en GitHub con APK firmado + screenshots (nombres descriptivos).
+- [ ] Enviar APK por Telegram (chat 15710279).
