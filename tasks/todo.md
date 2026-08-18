@@ -53,10 +53,17 @@
 
 ## T6 — Emulador + release (REQ-008, AGENTS.md)
 
-- [ ] Bump `versionCode` 40 y `versionName` "0.28.0" en `app/build.gradle.kts`.
-- [ ] Validación en emulador (AVD `test64`): pull en Uso y Estadísticas con
+- [x] Bump `versionCode` 40 y `versionName` "0.28.0" en `app/build.gradle.kts`.
+- [x] Validación en emulador (AVD `test64`): pull en Uso y Estadísticas con
       contenido y vacío, botón Actualizar, carga inicial, cambio de idioma no
-      resetea la tab, logcat sin crash/ANR, screenshots.
-- [ ] Commit + push a `main` + tag `v0.28.0`.
-- [ ] Release en GitHub con APK firmado + screenshots (nombres descriptivos).
-- [ ] Enviar APK por Telegram (chat 15710279).
+      resetea la tab, logcat sin crash/ANR, screenshots. ✅
+      - Pull en Uso: contenido desplazado + spinner circular visible (captura
+        `screenshot-pull-refresh-spinner-uso.png`), "Actualizado" refrescó.
+      - Pull en Estadísticas: spinner visible (captura
+        `screenshot-pull-refresh-spinner-stats.png`).
+      - Cambio de idioma (ES→EN→ES) mantiene la tab activa (sin regresión v0.22.1).
+      - Force-stop + relanzar: carga normal, sin crash; logcat crash/ANR = 0.
+- [x] Commit + push a `main` + tag `v0.28.0`. ✅ (commit 5d6f2b0)
+- [x] Release en GitHub con APK firmado + screenshots (nombres descriptivos).
+      ✅ https://github.com/jpyunism/ollama-usage/releases/tag/v0.28.0
+- [x] Enviar APK por Telegram (chat 15710279). ✅
