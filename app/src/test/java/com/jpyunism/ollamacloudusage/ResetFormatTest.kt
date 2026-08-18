@@ -11,46 +11,57 @@ class ResetFormatTest {
 
     private val zone = ZoneId.of("America/Santiago")
     private val now = Instant.parse("2026-08-08T17:24:00Z")
-    private val es = Locale.forLanguageTag("es")
-    private val en = Locale.forLanguageTag("en")
+
+    private val es = ResetStrings(
+        resetsSoon = "resetea pronto",
+        resetsIn = "resetea en %s",
+        lessThanMin = "resetea en <1 min",
+        resetsOn = "resetea el %s",
+    )
+    private val en = ResetStrings(
+        resetsSoon = "resets soon",
+        resetsIn = "resets in %s",
+        lessThanMin = "resets in <1 min",
+        resetsOn = "resets on %s",
+    )
 
     // ── Español ──
 
     @Test
     fun `countdown con minutos`() {
         val reset = Instant.parse("2026-08-08T18:00:00Z")
-        assertEquals("resetea en 36 min", formatReset(reset, ResetDisplayMode.COUNTDOWN, now, zone, es))
+        assertEquals("resetea en 36 min", formatReset(reset, ResetDisplayMode.COUNTDOWN, es, now, zone, Locale.forLanguageTag("es")))
     }
 
     @Test
     fun `countdown con horas y minutos`() {
         val reset = Instant.parse("2026-08-08T20:10:00Z")
-        assertEquals("resetea en 2 h 46 min", formatReset(reset, ResetDisplayMode.COUNTDOWN, now, zone, es))
+        assertEquals("resetea en 2 h 46 min", formatReset(reset, ResetDisplayMode.COUNTDOWN, es, now, zone, Locale.forLanguageTag("es")))
     }
 
     @Test
     fun `countdown con dias`() {
         val reset = Instant.parse("2026-08-11T18:00:00Z")
-        assertEquals("resetea en 3 d 0 h", formatReset(reset, ResetDisplayMode.COUNTDOWN, now, zone, es))
+        assertEquals("resetea en 3 d 0 h", formatReset(reset, ResetDisplayMode.COUNTDOWN, es, now, zone, Locale.forLanguageTag("es")))
     }
 
     @Test
     fun `countdown con menos de un minuto`() {
         val reset = Instant.parse("2026-08-08T17:24:30Z")
-        assertEquals("resetea en <1 min", formatReset(reset, ResetDisplayMode.COUNTDOWN, now, zone, es))
+        assertEquals("resetea en <1 min", formatReset(reset, ResetDisplayMode.COUNTDOWN, es, now, zone, Locale.forLanguageTag("es")))
     }
 
     @Test
     fun `countdown con reset ya pasado`() {
         val reset = Instant.parse("2026-08-08T17:00:00Z")
-        assertEquals("resetea pronto", formatReset(reset, ResetDisplayMode.COUNTDOWN, now, zone, es))
+        assertEquals("resetea pronto", formatReset(reset, ResetDisplayMode.COUNTDOWN, es, now, zone, Locale.forLanguageTag("es")))
     }
 
     @Test
     fun `date muestra fecha y hora local`() {
         val reset = Instant.parse("2026-08-08T18:00:00Z")
         // 18:00 UTC = 14:00 en Santiago (UTC-4)
-        assertEquals("resetea el 8 ago, 14:00", formatReset(reset, ResetDisplayMode.DATE, now, zone, es))
+        assertEquals("resetea el 8 ago, 14:00", formatReset(reset, ResetDisplayMode.DATE, es, now, zone, Locale.forLanguageTag("es")))
     }
 
     // ── Inglés ──
@@ -58,38 +69,38 @@ class ResetFormatTest {
     @Test
     fun `countdown en ingles con minutos`() {
         val reset = Instant.parse("2026-08-08T18:00:00Z")
-        assertEquals("resets in 36 min", formatReset(reset, ResetDisplayMode.COUNTDOWN, now, zone, en))
+        assertEquals("resets in 36 min", formatReset(reset, ResetDisplayMode.COUNTDOWN, en, now, zone, Locale.forLanguageTag("en")))
     }
 
     @Test
     fun `countdown en ingles con horas y minutos`() {
         val reset = Instant.parse("2026-08-08T20:10:00Z")
-        assertEquals("resets in 2 h 46 min", formatReset(reset, ResetDisplayMode.COUNTDOWN, now, zone, en))
+        assertEquals("resets in 2 h 46 min", formatReset(reset, ResetDisplayMode.COUNTDOWN, en, now, zone, Locale.forLanguageTag("en")))
     }
 
     @Test
     fun `countdown en ingles con dias`() {
         val reset = Instant.parse("2026-08-11T18:00:00Z")
-        assertEquals("resets in 3 d 0 h", formatReset(reset, ResetDisplayMode.COUNTDOWN, now, zone, en))
+        assertEquals("resets in 3 d 0 h", formatReset(reset, ResetDisplayMode.COUNTDOWN, en, now, zone, Locale.forLanguageTag("en")))
     }
 
     @Test
     fun `countdown en ingles con reset ya pasado`() {
         val reset = Instant.parse("2026-08-08T17:00:00Z")
-        assertEquals("resets soon", formatReset(reset, ResetDisplayMode.COUNTDOWN, now, zone, en))
+        assertEquals("resets soon", formatReset(reset, ResetDisplayMode.COUNTDOWN, en, now, zone, Locale.forLanguageTag("en")))
     }
 
     @Test
     fun `date en ingles muestra fecha y hora local`() {
         val reset = Instant.parse("2026-08-08T18:00:00Z")
-        assertEquals("resets on 8 Aug, 14:00", formatReset(reset, ResetDisplayMode.DATE, now, zone, en))
+        assertEquals("resets on 8 Aug, 14:00", formatReset(reset, ResetDisplayMode.DATE, en, now, zone, Locale.forLanguageTag("en")))
     }
 
     // ── Ambos modos ──
 
     @Test
     fun `null devuelve null en ambos modos`() {
-        assertNull(formatReset(null, ResetDisplayMode.COUNTDOWN, now, zone, es))
-        assertNull(formatReset(null, ResetDisplayMode.DATE, now, zone, en))
+        assertNull(formatReset(null, ResetDisplayMode.COUNTDOWN, es, now, zone, Locale.forLanguageTag("es")))
+        assertNull(formatReset(null, ResetDisplayMode.DATE, en, now, zone, Locale.forLanguageTag("en")))
     }
 }

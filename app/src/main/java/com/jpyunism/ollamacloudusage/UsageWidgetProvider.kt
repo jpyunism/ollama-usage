@@ -93,7 +93,18 @@ class UsageWidgetProvider : AppWidgetProvider() {
                     context.getString(R.string.widget_week, formatPercent(data.weeklyPercent)),
                 )
                 views.setTextViewText(R.id.widget_plan, context.getString(R.string.widget_plan, data.plan))
-                val reset = data.sessionResetAt?.let { formatReset(it, ResetDisplayMode.COUNTDOWN) }
+                val reset = data.sessionResetAt?.let {
+                    formatReset(
+                        it,
+                        ResetDisplayMode.COUNTDOWN,
+                        ResetStrings(
+                            resetsSoon = context.getString(R.string.reset_soon),
+                            resetsIn = context.getString(R.string.reset_in),
+                            lessThanMin = context.getString(R.string.reset_less_than_min),
+                            resetsOn = context.getString(R.string.reset_on),
+                        ),
+                    )
+                }
                 val balance = computeBalance(
                     data.sessionPercent,
                     data.sessionResetAt,

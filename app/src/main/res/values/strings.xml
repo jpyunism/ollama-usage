@@ -142,6 +142,10 @@
     <string name="api_key_invalid">API key inválida o expirada. Crea una nueva en ollama.com/settings/keys.</string>
     <string name="network_error">Error de red: %1$s</string>
     <string name="unknown_error">Error inesperado</string>
+    <string name="reset_soon">resetea pronto</string>
+    <string name="reset_in">resetea en %1$s</string>
+    <string name="reset_less_than_min">resetea en &lt;1 min</string>
+    <string name="reset_on">resetea el %1$s</string>
 
     <!-- Widget -->
     <string name="widget_description">Consumo actual de Ollama Cloud</string>

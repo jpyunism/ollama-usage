@@ -110,32 +110,32 @@ enum class ResetDisplayMode { COUNTDOWN, DATE }
  * Formatea el reset de una cuota según el modo elegido.
  * - COUNTDOWN: tiempo restante ("resetea en 36 min").
  * - DATE: fecha y hora local ("resetea el 8 ago, 18:00").
- * Devuelve null si no hay fecha de reset.
+ * Los textos vienen de [strings] (localizados en la UI); la decisión de
+ * formato de fecha usa [locale]. Devuelve null si no hay fecha de reset.
  */
 fun formatReset(
     resetAt: Instant?,
     mode: ResetDisplayMode,
+    strings: ResetStrings,
     now: Instant = Instant.now(),
     zone: ZoneId = ZoneId.systemDefault(),
     locale: Locale = Locale.getDefault(),
 ): String? {
     if (resetAt == null) return null
-    val es = locale.language == "es"
     return when (mode) {
         ResetDisplayMode.DATE -> {
             val date = resetAt.atZone(zone).format(DateTimeFormatter.ofPattern("d MMM, HH:mm", locale))
-            if (es) "resetea el $date" else "resets on $date"
+            strings.resetsOn.format(date)
         }
 
         ResetDisplayMode.COUNTDOWN -> {
             val diff = Duration.between(now, resetAt)
-            val verb = if (es) "resetea en" else "resets in"
             when {
-                diff.isNegative || diff.isZero -> if (es) "resetea pronto" else "resets soon"
-                diff.toMinutes() < 1 -> "$verb <1 min"
-                diff.toHours() < 1 -> "$verb ${diff.toMinutes()} min"
-                diff.toHours() < 24 -> "$verb ${diff.toHours()} h ${diff.toMinutes() % 60} min"
-                else -> "$verb ${diff.toDays()} d ${diff.toHours() % 24} h"
+                diff.isNegative || diff.isZero -> strings.resetsSoon
+                diff.toMinutes() < 1 -> strings.lessThanMin
+                diff.toHours() < 1 -> strings.resetsIn.format("${diff.toMinutes()} min")
+                diff.toHours() < 24 -> strings.resetsIn.format("${diff.toHours()} h ${diff.toMinutes() % 60} min")
+                else -> strings.resetsIn.format("${diff.toDays()} d ${diff.toHours() % 24} h")
             }
         }
     }

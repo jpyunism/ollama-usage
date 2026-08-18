@@ -91,10 +91,10 @@ object UsageNotifier {
             val now = Instant.now()
             buildString {
                 append(context.getString(R.string.persistent_body_week_session, formatPercent(data.weeklyPercent), formatPercent(data.sessionPercent)))
-                formatReset(data.weeklyResetAt, mode, locale = locale)?.let {
+                formatReset(data.weeklyResetAt, mode, strings = resetStrings(context), locale = locale)?.let {
                     append(context.getString(R.string.persistent_body_week_reset, it + balanceSuffix(data.weeklyPercent, data.weeklyResetAt, HistoryPeriod.WEEK.duration, now, deficit, surplus)))
                 }
-                formatReset(data.sessionResetAt, mode, locale = locale)?.let {
+                formatReset(data.sessionResetAt, mode, strings = resetStrings(context), locale = locale)?.let {
                     append(context.getString(R.string.persistent_body_session_reset, it + balanceSuffix(data.sessionPercent, data.sessionResetAt, HistoryPeriod.SESSION.duration, now, deficit, surplus)))
                 }
                 append(context.getString(R.string.persistent_body_plan_updated, data.plan, time))
@@ -190,6 +190,14 @@ object UsageNotifier {
             SecurePrefs.get(context).getString(PrefsKeys.RESET_DISPLAY, null)
                 ?.let { name -> ResetDisplayMode.entries.firstOrNull { it.name == name } }
         }.getOrNull() ?: ResetDisplayMode.COUNTDOWN
+
+    /** Templates localizados para [formatReset]. */
+    private fun resetStrings(context: Context): ResetStrings = ResetStrings(
+        resetsSoon = context.getString(R.string.reset_soon),
+        resetsIn = context.getString(R.string.reset_in),
+        lessThanMin = context.getString(R.string.reset_less_than_min),
+        resetsOn = context.getString(R.string.reset_on),
+    )
 
     /** Sufijo de balanza para una línea de reset: " · Déficit 8%" o vacío. */
     private fun balanceSuffix(
