@@ -30,6 +30,10 @@ import java.io.File
 class UpdaterService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var expectedSha256: String? = null
+    private val httpClient: okhttp3.OkHttpClient by lazy {
+        com.jpyunism.ollamacloudusage.di.AppContainer.get(this).httpClient
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -43,6 +47,7 @@ class UpdaterService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        expectedSha256 = intent?.getStringExtra(EXTRA_SHA256)
         // Sin el permiso "Instalar apps desconocidas" el instalador del sistema
         // rechaza el APK; avisamos antes de descargar.
         if (!canRequestPackageInstalls(this)) {
@@ -64,6 +69,16 @@ class UpdaterService : Service() {
         }
         result.fold(
             onSuccess = { file ->
+                // REQ-016: verificar la integridad del APK antes de instalar.
+                val expected = expectedSha256
+                if (expected != null && !verifySha256(file, expected)) {
+                    val msg = "Firma no coincide (sha256)"
+                    state.value = DownloadState.Failed(msg)
+                    notifyError(this, msg)
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                    return
+                }
                 state.value = DownloadState.Ready(file)
                 install(this, file)
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -80,16 +95,13 @@ class UpdaterService : Service() {
 
     /** Descarga a cacheDir con progreso 0..100. Devuelve el APK o lanza. */
     private fun downloadApk(url: String): File {
-        val client = okhttp3.OkHttpClient.Builder()
-            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .build()
         val request = okhttp3.Request.Builder().url(url).build()
-        val resp = client.newCall(request).execute()
+        val resp = httpClient.newCall(request).execute()
         if (!resp.isSuccessful) throw RuntimeException("HTTP ${resp.code}")
-        val total = resp.body?.contentLength() ?: -1
+        val body = resp.body ?: throw RuntimeException("Sin cuerpo de respuesta")
+        val total = body.contentLength()
         val file = File(cacheDir, "update.apk")
-        resp.body!!.byteStream().use { input ->
+        body.byteStream().use { input ->
             file.outputStream().use { output ->
                 val buf = ByteArray(8192)
                 var read: Int
@@ -119,17 +131,33 @@ class UpdaterService : Service() {
 
     companion object {
         private const val EXTRA_URL = "update_url"
+        private const val EXTRA_SHA256 = "update_sha256"
         private const val NOTIFICATION_ID = 2001
         const val CHANNEL_ID = "updates"
 
         /** Progreso de la descarga, observable desde la UI (SettingsTab). */
         val state = MutableStateFlow<DownloadState>(DownloadState.Idle)
 
-        fun start(context: Context, url: String) {
+        fun start(context: Context, url: String, sha256: String? = null) {
             val intent = Intent(context, UpdaterService::class.java)
                 .putExtra(EXTRA_URL, url)
+                .putExtra(EXTRA_SHA256, sha256)
             ContextCompat.startForegroundService(context, intent)
         }
+
+        /** SHA-256 en hex del archivo; true si coincide con [expected]. */
+        fun verifySha256(file: File, expected: String): Boolean = runCatching {
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
+            file.inputStream().use { input ->
+                val buf = ByteArray(8192)
+                while (true) {
+                    val read = input.read(buf)
+                    if (read < 0) break
+                    digest.update(buf, 0, read)
+                }
+            }
+            digest.digest().joinToString("") { "%02x".format(it) }.equals(expected.lowercase(), ignoreCase = true)
+        }.getOrDefault(false)
 
         fun ensureChannel(context: Context) {
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

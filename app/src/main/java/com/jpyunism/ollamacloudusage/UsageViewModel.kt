@@ -331,7 +331,7 @@ class UsageViewModel(
                         repository = container.usageRepository,
                         updateRepository = container.updateRepository,
                         reschedule = { UsageScheduler.schedule(app, it) },
-                        startUpdateDownload = { info -> UpdaterService.start(app, info.downloadUrl) },
+                        startUpdateDownload = { info -> UpdaterService.start(app, info.downloadUrl, info.sha256) },
                         onLanguageChange = { LocaleHelper.apply(app, it) },
                     ) as T
                 }
