@@ -9,7 +9,7 @@ jsoup = "1.23.1"
 coroutines = "1.9.0"
 work = "2.9.1"
 junit = "4.13.2"
-mockk = "1.13.12"
+mockk = "1.14.11"
 json = "20240303"
 androidxTestJunit = "1.2.1"
 
