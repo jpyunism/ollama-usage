@@ -1,46 +1,44 @@
-# Plan: Refactor de arquitectura — repositorio único, DI manual y calidad
+# Plan: Pull-to-refresh (swipe hacia abajo) en Uso y Estadísticas
 
-Spec de referencia: `docs/spec-arquitectura-refactor.md` (REQ-001 a REQ-021).
+Spec de referencia: `docs/spec-pull-to-refresh.md` (REQ-001 a REQ-008).
 
 ## Overview
 
-Refactor en 3 PRs apilados (práctica `gh stack` del workspace), cada uno
-independiente y con tests+lint+build verdes:
+Feature pequeña y acotada, sin dependencias nuevas (`PullToRefreshBox` ya viene
+en material3 1.4.0). El ViewModel gana una bandera `isRefreshing` y un refresh
+"silencioso" (`fromPull = true`) que NO oculta el contenido con el spinner
+full-screen; las tabs Uso y Estadísticas se envuelven en `PullToRefreshBox`.
 
-1. **PR 1 — Base (REQ-001..010)**: `AppContainer` (DI manual), `UsageRepository`
-   con pipeline único `refreshAndPropagate()` (fix del bug de alertas en FGS),
-   `UsageError` sealed, `AlertEngine` puro, `PrefsKeys`, `HistoryPeriod` como
-   fuente de duraciones, quitar `security-crypto`/`error_prone`, version
-   catalog, ViewModel sin Context.
-2. **PR 2 — ViewModel delgado + i18n (REQ-011..015)**: `UpdateRepository`,
-   i18n real de `formatReset` (templates desde resources), hoist del flow de
-   histórico, `appVersion` inyectada.
-3. **PR 3 — Calidad/seguridad (REQ-016..021)**: verificación sha256 del APK,
-   OkHttpClient compartido, cancelación de refrescos, widget con prefs claras,
-   NPE fix en descarga, upgrade compose-bom.
+## Steps
+
+1. **T1 (RED)** — Tests del ViewModel: `isRefreshing` on/off, refresh silencioso
+   no toca `Loading`, error no deja la bandera pegada.
+2. **T2 (GREEN)** — `UsageViewModel.refresh(fromPull)` + `isRefreshing`.
+3. **T3** — `UsageTab`: `PullToRefreshBox` en la rama Success; botón
+   "Actualizar" pasa a refresh silencioso.
+4. **T4** — `StatsTab`: nueva firma (`history, isRefreshing, onRefresh`) +
+   `PullToRefreshBox`; `UsageScreen` hoistea las props; `EmptyStats` se hace
+   scrollable para que el gesto funcione.
+5. **T5** — Verificación: `testDebugUnitTest lintDebug assembleRelease`.
+6. **T6** — Validación en emulador (AGENTS.md) + release v0.28.0 (versionCode
+   40) con APK firmado + screenshots.
 
 ## Architecture Decisions
 
-- **DI manual con `AppContainer`** (patrón oficial Android): clase raíz que
-  construye el grafo en `OllamaUsageApp`. Sin Hilt (overkill).
-- **Pipeline único**: `UsageRepository.refreshAndPropagate()` ejecuta SIEMPRE
-  fetch → widget → notif persistente → alertas → histórico → last_updated.
-  VM/Worker/FGS solo invocan; la lógica de negocio vive en una sola parte.
-- **`UsageError` sealed**: el mapeo Throwable→UsageError en el repository; el
-  mapeo UsageError→String en la UI con resources.
-- **Sin cambio de datos persistidos**: mismas keys (`PrefsKeys`),
-  `UsageHistoryStore` intacto, widget solo cambia de contenedor de prefs.
-- **i18n por templates**: `formatReset(..., strings: ResetStrings)`; las
-  funciones puras siguen testeables sin Android.
-- **Orden de merge**: PR1 → PR2 → PR3. Cada uno sobre el anterior
-  (`gh stack`).
+- **`isRefreshing` separado de `UiState`**: `UiState` describe el contenido;
+  el indicador de pull necesita su propio estado booleano, testeable.
+- **`refresh(fromPull: Boolean = false)`**: default preserva call sites
+  existentes (init, saveCookie, saveApiKey) con la UX de carga completa.
+- **`StatsTab` sin ViewModel**: recibe `isRefreshing` y `onRefresh` por
+  parámetro (state hoisting, mantiene el desacoplamiento actual).
+- **Sin strings nuevos**: el indicador M3 no lleva texto; el botón ya tiene
+  `R.string.refresh`.
 
 ## Riesgos
 
-- **Cambio de firma del constructor de `UsageViewModel`**: toca
-  `UsageViewModelTest` (9+ usos). Se actualiza el helper `buildVm` del test en
-  el mismo PR 1 (los tests no son API pública).
-- **Upgrade BOM (REQ-021)**: riesgo bajo-medio de símbolos deprecados; se
-  mitiga validando en emulador y ajustando si compila roto.
-- **i18n de `formatReset` (REQ-012)**: los tests existentes
-  (`ResetFormatTest`) cambian de firma — se reescriben con templates literales.
+- **PullToRefreshBox necesita hijo scrollable**: `EmptyStats` (Stats sin
+  snapshots) no lo es → se le agrega `verticalScroll` (mínimo).
+- **Regresión v0.22.1 (idioma → tab)**: no se toca `rememberPagerState`; la
+  verificación en emulador cubre el caso.
+- **Bandera pegada en true**: `finally` en la corutina del refresh; test
+  explícito para el caso de error.

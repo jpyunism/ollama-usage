@@ -26,6 +26,7 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -73,10 +74,16 @@ private val CHART_HEIGHT = 220.dp
 private val Y_LABELS = listOf(0.0, 50.0, 100.0)
 
 @Composable
-fun StatsTab(history: HistoryState) {
+fun StatsTab(history: HistoryState, isRefreshing: Boolean = false, onRefresh: () -> Unit = {}) {
     val snapshots = history.snapshots
     if (snapshots.isEmpty()) {
-        EmptyStats()
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            EmptyStats()
+        }
         return
     }
 
@@ -90,13 +97,18 @@ fun StatsTab(history: HistoryState) {
     val summary = summarize(snapshots, period, weeklyReset, now, selector)
     val markers = resetMarkers(snapshots, period, weeklyReset)
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = Modifier.fillMaxSize(),
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -161,6 +173,7 @@ fun StatsTab(history: HistoryState) {
                 text = stringResource(R.string.stats_current, formatPercent(current.peakPercent), periodLabel),
             )
         }
+        }
     }
 }
 
@@ -213,6 +226,7 @@ private fun EmptyStats() {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,

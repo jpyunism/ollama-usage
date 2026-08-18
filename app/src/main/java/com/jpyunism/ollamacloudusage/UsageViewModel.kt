@@ -72,6 +72,10 @@ class UsageViewModel(
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState
 
+    /** Indica un refresh en curso (pull-to-refresh/botón) sin ocultar contenido. */
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
     private val _authSource = MutableStateFlow(repository.authSource())
     val authSource: StateFlow<AuthSource> = _authSource
 
@@ -180,28 +184,39 @@ class UsageViewModel(
     /**
      * Refresca el consumo delegando en [UsageRepository]. Cancela el job
      * anterior para que refrescos rápidos no se pisen (REQ-018).
+     *
+     * Con [fromPull] = true (pull-to-refresh / botón Actualizar) el contenido
+     * visible no se reemplaza por [UiState.Loading]: la UI muestra el
+     * indicador de pull vía [isRefreshing].
      */
-    fun refresh() {
+    fun refresh(fromPull: Boolean = false) {
         if (!repository.hasAuth()) {
             _uiState.value = UiState.Idle
             return
         }
         refreshJob?.cancel()
-        _uiState.value = UiState.Loading
+        if (!fromPull) {
+            _uiState.value = UiState.Loading
+        }
+        _isRefreshing.value = true
         refreshJob = viewModelScope.launch {
-            val result = repository.refreshAndPropagate()
-            _uiState.value = result.fold(
-                onSuccess = { data ->
-                    // El pipeline ya guardó widget, notif e histórico; la UI
-                    // recarga los snapshots desde el store.
-                    _history.value = HistoryState(
-                        snapshots = repository.historySnapshots(),
-                        weeklyResetAt = data.weeklyResetAt,
-                    )
-                    UiState.Success(data, cookieStored = true, lastUpdated = repository.lastUpdated())
-                },
-                onFailure = { e -> UiState.Error(e as? UsageError ?: UsageError.Network(e.message ?: "")) },
-            )
+            try {
+                val result = repository.refreshAndPropagate()
+                _uiState.value = result.fold(
+                    onSuccess = { data ->
+                        // El pipeline ya guardó widget, notif e histórico; la UI
+                        // recarga los snapshots desde el store.
+                        _history.value = HistoryState(
+                            snapshots = repository.historySnapshots(),
+                            weeklyResetAt = data.weeklyResetAt,
+                        )
+                        UiState.Success(data, cookieStored = true, lastUpdated = repository.lastUpdated())
+                    },
+                    onFailure = { e -> UiState.Error(e as? UsageError ?: UsageError.Network(e.message ?: "")) },
+                )
+            } finally {
+                _isRefreshing.value = false
+            }
         }
     }
 

@@ -73,6 +73,7 @@ fun UsageScreen(vm: UsageViewModel) {
     val update by vm.update.collectAsStateWithLifecycle()
     val download by vm.download.collectAsStateWithLifecycle()
     val history by vm.history.collectAsStateWithLifecycle()
+    val isRefreshing by vm.isRefreshing.collectAsStateWithLifecycle()
     val pagerState = rememberPagerState(pageCount = { Tab.entries.size })
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -138,8 +139,8 @@ fun UsageScreen(vm: UsageViewModel) {
                     modifier = Modifier.fillMaxSize(),
                 ) { page ->
                     when (tabForPage(page)) {
-                        Tab.Usage -> UsageTab(vm, state)
-                        Tab.Stats -> StatsTab(history)
+                        Tab.Usage -> UsageTab(vm, state, isRefreshing)
+                        Tab.Stats -> StatsTab(history, isRefreshing, onRefresh = { vm.refresh(fromPull = true) })
                         Tab.Settings -> SettingsTab(vm, settings, onSettingsChanged)
                     }
                 }

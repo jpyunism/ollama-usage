@@ -31,6 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -66,7 +67,7 @@ import kotlin.math.abs
 
 
 @Composable
-fun UsageTab(vm: UsageViewModel, state: UiState) {
+fun UsageTab(vm: UsageViewModel, state: UiState, isRefreshing: Boolean = false) {
     val showAuthSetup by vm.showAuthSetup.collectAsStateWithLifecycle()
     val showCookieWebView by vm.showCookieWebView.collectAsStateWithLifecycle()
     if (showCookieWebView) {
@@ -94,7 +95,18 @@ fun UsageTab(vm: UsageViewModel, state: UiState) {
         // con "infinity maximum height constraints" en algunos dispositivos.
         is UiState.Error -> CookieSetup(vm, state)
         UiState.Idle -> CookieSetup(vm, state)
-        is UiState.Success -> SuccessContent(state.data, state.lastUpdated, onRefresh = { vm.refresh() }, onChangeAuth = { vm.openAuthSetup() })
+        is UiState.Success -> PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { vm.refresh(fromPull = true) },
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            SuccessContent(
+                data = state.data,
+                lastUpdated = state.lastUpdated,
+                onRefresh = { vm.refresh(fromPull = true) },
+                onChangeAuth = { vm.openAuthSetup() },
+            )
+        }
     }
 }
 

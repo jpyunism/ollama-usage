@@ -148,6 +148,70 @@ class UsageViewModelTest {
     }
 
     @Test
+    fun `refresh normal setea Loading e isRefreshing true y termina false`() = runTest {
+        val prefs = fakePrefs()
+        every { prefs.contains(PrefsKeys.COOKIE) } returns true
+        every { prefs.getString(PrefsKeys.COOKIE, null) } returns "aid=abc; __Secure-session=xyz"
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage(any()) } returns sampleData()
+        val repo = fakeRepository(prefs, fetcher, hasAuth = true)
+
+        val vm = buildVm(prefs, repo)
+        vm.refresh()
+        assertTrue("isRefreshing debe estar en true durante el refresh", vm.isRefreshing.value)
+        assertTrue("refresh normal debe setear Loading", vm.uiState.value is UiState.Loading)
+
+        testScheduler.advanceUntilIdle()
+        assertFalse("isRefreshing debe volver a false al terminar", vm.isRefreshing.value)
+        assertTrue(vm.uiState.value is UiState.Success)
+    }
+
+    @Test
+    fun `refresh silencioso no pisa el contenido visible`() = runTest {
+        val prefs = fakePrefs()
+        every { prefs.contains(PrefsKeys.COOKIE) } returns true
+        every { prefs.getString(PrefsKeys.COOKIE, null) } returns "aid=abc; __Secure-session=xyz"
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage(any()) } returns sampleData()
+        val repo = fakeRepository(prefs, fetcher, hasAuth = true)
+
+        val vm = buildVm(prefs, repo)
+        testScheduler.advanceUntilIdle()
+        assertTrue(vm.uiState.value is UiState.Success)
+
+        vm.refresh(fromPull = true)
+        assertTrue("isRefreshing debe estar en true durante el pull", vm.isRefreshing.value)
+        assertTrue(
+            "el pull no debe ocultar el contenido: ${vm.uiState.value}",
+            vm.uiState.value is UiState.Success,
+        )
+
+        testScheduler.advanceUntilIdle()
+        assertFalse("isRefreshing debe volver a false al terminar", vm.isRefreshing.value)
+        assertTrue(vm.uiState.value is UiState.Success)
+    }
+
+    @Test
+    fun `refresh silencioso con error muestra Error y no deja isRefreshing pegada`() = runTest {
+        val prefs = fakePrefs()
+        every { prefs.contains(PrefsKeys.COOKIE) } returns true
+        every { prefs.getString(PrefsKeys.COOKIE, null) } returns "aid=abc; __Secure-session=xyz"
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage(any()) } throws RuntimeException("timeout")
+        val repo = fakeRepository(prefs, fetcher, hasAuth = true)
+
+        val vm = buildVm(prefs, repo)
+        testScheduler.advanceUntilIdle()
+        assertTrue(vm.uiState.value is UiState.Error)
+
+        vm.refresh(fromPull = true)
+        assertTrue(vm.isRefreshing.value)
+        testScheduler.advanceUntilIdle()
+        assertFalse("isRefreshing no debe quedar pegada tras un error", vm.isRefreshing.value)
+        assertTrue(vm.uiState.value is UiState.Error)
+    }
+
+    @Test
     fun `clearAuth vuelve a Idle`() = runTest {
         val prefs = fakePrefs()
         every { prefs.contains(PrefsKeys.COOKIE) } returns true
