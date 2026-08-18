@@ -1,11 +1,16 @@
 package com.jpyunism.ollamacloudusage
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.jpyunism.ollamacloudusage.PrefsKeys
+import com.jpyunism.ollamacloudusage.UpdateRepository
+import com.jpyunism.ollamacloudusage.UsageRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -21,7 +26,8 @@ sealed interface UiState {
         val lastUpdated: Long? = null,
     ) : UiState
 
-    data class Error(val message: String) : UiState
+    /** Error tipado; la UI lo mapea a un string con resources. */
+    data class Error(val error: UsageError) : UiState
 }
 
 /** Configuración de alertas y pantalla de bloqueo. */
@@ -32,7 +38,7 @@ data class AlertSettings(
     val sessionAlert: Int = 80,
     val sessionCritical: Int = 95,
     val persistentEnabled: Boolean = true,
-    val refreshIntervalMinutes: Int = 60,
+    val refreshIntervalMinutes: Int = PrefsKeys.DEFAULT_REFRESH_MINUTES,
     val resetDisplayMode: ResetDisplayMode = ResetDisplayMode.COUNTDOWN,
 ) {
     companion object {
@@ -47,20 +53,26 @@ data class HistoryState(
     val weeklyResetAt: Instant? = null,
 )
 
+/**
+ * ViewModel de la pantalla principal. Delgado y sin Context: no contiene
+ * lógica de negocio — delega el refresh en [UsageRepository], el
+ * update-check en [UpdateRepository] y la persistencia en prefs. El mapeo de
+ * errores a strings vive en la UI ([UsageError] → stringResource).
+ */
 class UsageViewModel(
-    private val prefs: android.content.SharedPreferences,
-    private val scraper: UsageScraper,
+    private val prefs: SharedPreferences,
+    private val repository: UsageRepository,
+    private val updateRepository: UpdateRepository,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val reschedule: (Int) -> Unit = {},
-    private val context: android.content.Context? = null,
-    private val apiScraper: UsageScraper = OllamaApiUsage(),
-    private val historyStore: UsageHistoryStore = UsageHistoryStore(prefs),
+    private val startUpdateDownload: (UpdateInfo) -> Unit = {},
+    private val onLanguageChange: (AppLanguage) -> Unit = {},
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState
 
-    private val _authSource = MutableStateFlow(loadAuthSource())
+    private val _authSource = MutableStateFlow(repository.authSource())
     val authSource: StateFlow<AuthSource> = _authSource
 
     private val _settings = MutableStateFlow(loadSettings())
@@ -97,16 +109,18 @@ class UsageViewModel(
     private val _showCookieWebView = MutableStateFlow(false)
     val showCookieWebView: StateFlow<Boolean> = _showCookieWebView
 
+    private var refreshJob: Job? = null
+
     init {
-        if (hasAuth()) refresh()
+        if (repository.hasAuth()) refresh()
         checkForUpdate()
     }
 
     /** Guarda la cookie de sesión como método de autenticación. */
     fun saveCookie(cookie: String) {
         prefs.edit()
-            .putString(KEY_COOKIE, cookie.trim())
-            .putString(KEY_AUTH_SOURCE, AuthSource.COOKIE.name)
+            .putString(PrefsKeys.COOKIE, cookie.trim())
+            .putString(PrefsKeys.AUTH_SOURCE, AuthSource.COOKIE.name)
             .apply()
         _authSource.value = AuthSource.COOKIE
         _showAuthSetup.value = false
@@ -132,8 +146,8 @@ class UsageViewModel(
     /** Guarda la API key de Ollama Cloud como método de autenticación. */
     fun saveApiKey(apiKey: String) {
         prefs.edit()
-            .putString(KEY_API_KEY, apiKey.trim())
-            .putString(KEY_AUTH_SOURCE, AuthSource.API_KEY.name)
+            .putString(PrefsKeys.API_KEY, apiKey.trim())
+            .putString(PrefsKeys.AUTH_SOURCE, AuthSource.API_KEY.name)
             .apply()
         _authSource.value = AuthSource.API_KEY
         _showAuthSetup.value = false
@@ -141,10 +155,7 @@ class UsageViewModel(
     }
 
     /** Valor del secreto guardado para el método indicado (vacío si no existe). */
-    fun currentSecret(source: AuthSource): String = when (source) {
-        AuthSource.COOKIE -> prefs.getString(KEY_COOKIE, null).orEmpty()
-        AuthSource.API_KEY -> prefs.getString(KEY_API_KEY, null).orEmpty()
-    }
+    fun currentSecret(source: AuthSource): String = repository.currentSecret(source)
 
     /** Abre la pantalla de cambio de acceso sin tocar las credenciales guardadas. */
     fun openAuthSetup() {
@@ -158,71 +169,54 @@ class UsageViewModel(
 
     fun clearAuth() {
         prefs.edit()
-            .remove(KEY_COOKIE)
-            .remove(KEY_API_KEY)
+            .remove(PrefsKeys.COOKIE)
+            .remove(PrefsKeys.API_KEY)
             .apply()
         _uiState.value = UiState.Idle
     }
 
-    fun hasAuth(): Boolean = when (loadAuthSource()) {
-        AuthSource.COOKIE -> prefs.contains(KEY_COOKIE)
-        AuthSource.API_KEY -> prefs.contains(KEY_API_KEY)
-    }
+    fun hasAuth(): Boolean = repository.hasAuth()
 
+    /**
+     * Refresca el consumo delegando en [UsageRepository]. Cancela el job
+     * anterior para que refrescos rápidos no se pisen (REQ-018).
+     */
     fun refresh() {
-        val source = loadAuthSource()
-        val credential = when (source) {
-            AuthSource.COOKIE -> prefs.getString(KEY_COOKIE, null)
-            AuthSource.API_KEY -> prefs.getString(KEY_API_KEY, null)
-        } ?: run {
+        if (!repository.hasAuth()) {
             _uiState.value = UiState.Idle
             return
         }
-        val fetcher = if (source == AuthSource.API_KEY) apiScraper else scraper
+        refreshJob?.cancel()
         _uiState.value = UiState.Loading
-        viewModelScope.launch {
-            val result = withContext(ioDispatcher) {
-                runCatching { fetcher.fetchUsage(credential) }
-            }
+        refreshJob = viewModelScope.launch {
+            val result = repository.refreshAndPropagate()
             _uiState.value = result.fold(
-                onSuccess = {
-                    val now = System.currentTimeMillis()
-                    prefs.edit().putLong(KEY_LAST_UPDATED, now).apply()
-                    // Widget del home screen: refleja el refresh manual.
-                    context?.let { ctx -> UsageWidgetProvider.saveData(ctx, it) }
-                    // Histórico local: acumula el snapshot de este refresh.
+                onSuccess = { data ->
+                    // El pipeline ya guardó widget, notif e histórico; la UI
+                    // recarga los snapshots desde el store.
                     _history.value = HistoryState(
-                        snapshots = historyStore.record(it.sessionPercent, it.weeklyPercent),
-                        weeklyResetAt = it.weeklyResetAt,
+                        snapshots = repository.historySnapshots(),
+                        weeklyResetAt = data.weeklyResetAt,
                     )
-                    UiState.Success(it, cookieStored = true, lastUpdated = now)
+                    UiState.Success(data, cookieStored = true, lastUpdated = repository.lastUpdated())
                 },
-                onFailure = { e ->
-                    val msg = when (e) {
-                        is CookieExpiredException ->
-                            context?.getString(R.string.cookie_expired) ?: (e.message ?: "Cookie expirada")
-                        is InvalidApiKeyException ->
-                            context?.getString(R.string.api_key_invalid) ?: (e.message ?: "API key inválida")
-                        else ->
-                            context?.getString(R.string.network_error, e.message) ?: "Error de red: ${e.message}"
-                    }
-                    UiState.Error(msg)
-                },
+                onFailure = { e -> UiState.Error(e as? UsageError ?: UsageError.Network(e.message ?: "")) },
             )
         }
     }
+
     fun updateSettings(s: AlertSettings) {
         val previous = _settings.value
         _settings.value = s
         prefs.edit()
-            .putBoolean(KEY_NOTIF_ENABLED, s.notificationsEnabled)
-            .putInt(KEY_WEEKLY_ALERT, s.weeklyAlert)
-            .putInt(KEY_WEEKLY_CRITICAL, s.weeklyCritical)
-            .putInt(KEY_SESSION_ALERT, s.sessionAlert)
-            .putInt(KEY_SESSION_CRITICAL, s.sessionCritical)
-            .putBoolean(KEY_PERSISTENT_ENABLED, s.persistentEnabled)
-            .putInt(KEY_REFRESH_INTERVAL, s.refreshIntervalMinutes)
-            .putString(KEY_RESET_DISPLAY, s.resetDisplayMode.name)
+            .putBoolean(PrefsKeys.NOTIF_ENABLED, s.notificationsEnabled)
+            .putInt(PrefsKeys.WEEKLY_ALERT, s.weeklyAlert)
+            .putInt(PrefsKeys.WEEKLY_CRITICAL, s.weeklyCritical)
+            .putInt(PrefsKeys.SESSION_ALERT, s.sessionAlert)
+            .putInt(PrefsKeys.SESSION_CRITICAL, s.sessionCritical)
+            .putBoolean(PrefsKeys.PERSISTENT_ENABLED, s.persistentEnabled)
+            .putInt(PrefsKeys.REFRESH_INTERVAL, s.refreshIntervalMinutes)
+            .putString(PrefsKeys.RESET_DISPLAY, s.resetDisplayMode.name)
             .apply()
         // Si cambió la frecuencia, reprograma el worker en segundo plano.
         if (s.refreshIntervalMinutes != previous.refreshIntervalMinutes) {
@@ -232,67 +226,53 @@ class UsageViewModel(
 
     fun updateTheme(theme: AppTheme) {
         _theme.value = theme
-        prefs.edit().putString(KEY_THEME, theme.name).apply()
+        prefs.edit().putString(PrefsKeys.THEME, theme.name).apply()
     }
 
     /** Cambia el modo claro/oscuro: aplica al instante y lo guarda. */
     fun updateDarkMode(mode: AppDarkMode) {
         _darkMode.value = mode
-        prefs.edit().putString(KEY_DARK_MODE, mode.name).apply()
+        prefs.edit().putString(PrefsKeys.DARK_MODE, mode.name).apply()
     }
 
     /** Cambia el idioma de la UI: aplica al instante y lo guarda. */
     fun updateLanguage(language: AppLanguage) {
         _language.value = language
-        prefs.edit().putString(KEY_LANGUAGE, language.name).apply()
-        context?.let { LocaleHelper.apply(it, language) }
+        prefs.edit().putString(PrefsKeys.LANGUAGE, language.name).apply()
+        // Aplicar el locale es responsabilidad de la capa Android (callback
+        // inyectado por el factory con el contexto de app): el VM no
+        // referencia Context.
+        onLanguageChange(language)
     }
 
-    /**
-     * Chequea una vez por día si hay release más nuevo en GitHub.
-     * Silencioso: si no hay update o falla la red, no molesta.
-     */
+    /** Chequea una vez por día si hay release más nuevo (silencioso). */
     fun checkForUpdate() {
-        val ctx = context ?: return
-        if (!UpdateChecker.shouldCheck(ctx)) return
+        if (!updateRepository.shouldCheck()) return
         viewModelScope.launch {
-            val info = withContext(ioDispatcher) {
-                runCatching { UpdateChecker.check(ctx) }.getOrNull()
-            }
-            UpdateChecker.markChecked(ctx)
+            val info = withContext(ioDispatcher) { updateRepository.check() }
+            updateRepository.markChecked()
             if (info != null) _update.value = info
         }
     }
 
     /** Descarga e instala la actualización (servicio en primer plano con progreso). */
     fun startUpdateDownload(info: UpdateInfo) {
-        val ctx = context ?: return
         _download.value = DownloadState.Downloading(0)
-        UpdaterService.start(ctx, info.downloadUrl)
+        startUpdateDownload(info)
         viewModelScope.launch {
             UpdaterService.state.collect { state ->
                 _download.value = state
-                if (state is DownloadState.Ready || state is DownloadState.Failed) {
-                    // El servicio se detiene solo; el estado Ready/Failed queda visible
-                    // hasta que el usuario vuelva a la app o se reinicie el flujo.
-                }
             }
         }
     }
 
     /** Revisa de nuevo aunque no haya pasado el intervalo (botón manual). */
     fun checkForUpdateNow() {
-        val ctx = context ?: run {
-            _checkResult.value = UpdateCheckOutcome.Failed
-            return
-        }
         if (_checkingUpdate.value) return
         _checkingUpdate.value = true
         _checkResult.value = null
         viewModelScope.launch {
-            val info = withContext(ioDispatcher) {
-                runCatching { UpdateChecker.check(ctx) }.getOrNull()
-            }
+            val info = withContext(ioDispatcher) { updateRepository.check() }
             _checkingUpdate.value = false
             _checkResult.value = if (info != null) {
                 _update.value = info
@@ -304,76 +284,55 @@ class UsageViewModel(
     }
 
     private fun loadSettings(): AlertSettings = AlertSettings(
-        notificationsEnabled = prefs.getBoolean(KEY_NOTIF_ENABLED, true),
-        weeklyAlert = prefs.getInt(KEY_WEEKLY_ALERT, 80),
-        weeklyCritical = prefs.getInt(KEY_WEEKLY_CRITICAL, 95),
-        sessionAlert = prefs.getInt(KEY_SESSION_ALERT, 80),
-        sessionCritical = prefs.getInt(KEY_SESSION_CRITICAL, 95),
-        persistentEnabled = prefs.getBoolean(KEY_PERSISTENT_ENABLED, true),
-        refreshIntervalMinutes = prefs.getInt(KEY_REFRESH_INTERVAL, DEFAULT_REFRESH_MINUTES),
-        resetDisplayMode = prefs.getString(KEY_RESET_DISPLAY, null)
+        notificationsEnabled = prefs.getBoolean(PrefsKeys.NOTIF_ENABLED, true),
+        weeklyAlert = prefs.getInt(PrefsKeys.WEEKLY_ALERT, 80),
+        weeklyCritical = prefs.getInt(PrefsKeys.WEEKLY_CRITICAL, 95),
+        sessionAlert = prefs.getInt(PrefsKeys.SESSION_ALERT, 80),
+        sessionCritical = prefs.getInt(PrefsKeys.SESSION_CRITICAL, 95),
+        persistentEnabled = prefs.getBoolean(PrefsKeys.PERSISTENT_ENABLED, true),
+        refreshIntervalMinutes = prefs.getInt(PrefsKeys.REFRESH_INTERVAL, PrefsKeys.DEFAULT_REFRESH_MINUTES),
+        resetDisplayMode = prefs.getString(PrefsKeys.RESET_DISPLAY, null)
             ?.let { name -> ResetDisplayMode.entries.firstOrNull { it.name == name } }
             ?: ResetDisplayMode.COUNTDOWN,
     )
 
     private fun loadTheme(): AppTheme =
-        prefs.getString(KEY_THEME, null)
+        prefs.getString(PrefsKeys.THEME, null)
             ?.let { name -> AppTheme.entries.firstOrNull { it.name == name } }
             ?: AppTheme.System
 
     private fun loadDarkMode(): AppDarkMode =
-        prefs.getString(KEY_DARK_MODE, null)
+        prefs.getString(PrefsKeys.DARK_MODE, null)
             ?.let { name -> AppDarkMode.entries.firstOrNull { it.name == name } }
             ?: AppDarkMode.System
 
     private fun loadLanguage(): AppLanguage =
-        prefs.getString(KEY_LANGUAGE, null)
+        prefs.getString(PrefsKeys.LANGUAGE, null)
             ?.let { name -> AppLanguage.entries.firstOrNull { it.name == name } }
             ?: AppLanguage.System
 
-    private fun loadAuthSource(): AuthSource =
-        prefs.getString(KEY_AUTH_SOURCE, null)
-            ?.let { name -> AuthSource.entries.firstOrNull { it.name == name } }
-            ?: AuthSource.COOKIE
-
     private fun loadHistory(): HistoryState = HistoryState(
-        snapshots = historyStore.load(),
+        snapshots = repository.historySnapshots(),
         weeklyResetAt = null,
     )
 
     /** Versión instalada de la app (para mostrarla en Configuración). */
-    val appVersion: String
-        get() = context?.let(UpdateChecker::currentVersion) ?: ""
+    val appVersion: String = updateRepository.currentVersion()
 
     companion object {
-        const val KEY_COOKIE = "session_cookie"
-        const val KEY_API_KEY = "api_key"
-        const val KEY_AUTH_SOURCE = "auth_source"
-        const val KEY_LAST_UPDATED = "last_updated"
-        const val KEY_NOTIF_ENABLED = "notif_enabled"
-        const val KEY_WEEKLY_ALERT = "weekly_alert"
-        const val KEY_WEEKLY_CRITICAL = "weekly_critical"
-        const val KEY_SESSION_ALERT = "session_alert"
-        const val KEY_SESSION_CRITICAL = "session_critical"
-        const val KEY_THEME = "theme"
-        const val KEY_DARK_MODE = "dark_mode"
-        const val KEY_LANGUAGE = "language"
-        const val KEY_PERSISTENT_ENABLED = "persistent_enabled"
-        const val KEY_REFRESH_INTERVAL = "refresh_interval"
-        const val KEY_RESET_DISPLAY = "reset_display"
-        const val DEFAULT_REFRESH_MINUTES = 60
-
         fun factory(context: Context): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     val app = context.applicationContext
-                    val prefs = SecurePrefs.get(app)
+                    val container = com.jpyunism.ollamacloudusage.di.AppContainer.get(app)
                     return UsageViewModel(
-                        prefs,
-                        OllamaUsageScraper(),
+                        prefs = container.prefs,
+                        repository = container.usageRepository,
+                        updateRepository = container.updateRepository,
                         reschedule = { UsageScheduler.schedule(app, it) },
-                        context = app,
+                        startUpdateDownload = { info -> UpdaterService.start(app, info.downloadUrl, info.sha256) },
+                        onLanguageChange = { LocaleHelper.apply(app, it) },
                     ) as T
                 }
             }

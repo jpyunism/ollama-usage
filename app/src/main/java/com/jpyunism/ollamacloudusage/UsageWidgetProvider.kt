@@ -9,16 +9,15 @@ import android.content.Intent
 import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONObject
-import java.time.Duration
 import java.time.Instant
 import kotlin.math.roundToInt
 
 /**
  * Widget de home screen con el consumo actual de Ollama Cloud.
  *
- * Los datos se guardan en prefs cifradas ([saveData]) tras cada refresh en
- * segundo plano (WorkManager o servicio en primer plano). El widget solo lee
- * y renderiza — nunca hace red — y al tocarlo abre la app.
+ * Los datos se guardan en SharedPreferences claras (no son secretos) tras
+ * cada refresh en segundo plano (WorkManager o servicio en primer plano).
+ * El widget solo lee y renderiza — nunca hace red — y al tocarlo abre la app.
  */
 class UsageWidgetProvider : AppWidgetProvider() {
 
@@ -30,6 +29,11 @@ class UsageWidgetProvider : AppWidgetProvider() {
 
     companion object {
         private const val KEY_DATA = "widget_usage_json"
+        private const val PREFS_NAME = "widget_data"
+
+        /** Prefs claras del widget: evita decrypt de SecurePrefs en el main thread. */
+        private fun prefs(context: Context) =
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
         /** Persiste el último consumo para que el widget lo muestre. */
         fun saveData(context: Context, data: UsageData) {
@@ -40,7 +44,7 @@ class UsageWidgetProvider : AppWidgetProvider() {
                 put("weeklyReset", data.weeklyResetAt?.toEpochMilli() ?: JSONObject.NULL)
                 put("sessionReset", data.sessionResetAt?.toEpochMilli() ?: JSONObject.NULL)
             }.toString()
-            SecurePrefs.get(context).edit().putString(KEY_DATA, json).apply()
+            prefs(context).edit().putString(KEY_DATA, json).apply()
         }
 
         /** Re-renderiza todos los widgets instalados con los datos guardados. */
@@ -53,7 +57,7 @@ class UsageWidgetProvider : AppWidgetProvider() {
         }
 
         private fun loadData(context: Context): UsageData? {
-            val raw = SecurePrefs.get(context).getString(KEY_DATA, null) ?: return null
+            val raw = prefs(context).getString(KEY_DATA, null) ?: return null
             return runCatching {
                 val o = JSONObject(raw)
                 UsageData(
@@ -94,12 +98,23 @@ class UsageWidgetProvider : AppWidgetProvider() {
                     context.getString(R.string.widget_week, formatPercent(data.weeklyPercent)),
                 )
                 views.setTextViewText(R.id.widget_plan, context.getString(R.string.widget_plan, data.plan))
-                val reset = data.sessionResetAt?.let { formatReset(it, ResetDisplayMode.COUNTDOWN) }
+                val reset = data.sessionResetAt?.let {
+                    formatReset(
+                        it,
+                        ResetDisplayMode.COUNTDOWN,
+                        ResetStrings(
+                            resetsSoon = context.getString(R.string.reset_soon),
+                            resetsIn = context.getString(R.string.reset_in),
+                            lessThanMin = context.getString(R.string.reset_less_than_min),
+                            resetsOn = context.getString(R.string.reset_on),
+                        ),
+                    )
+                }
                 val balance = computeBalance(
                     data.sessionPercent,
                     data.sessionResetAt,
                     Instant.now(),
-                    SESSION_DURATION,
+                    HistoryPeriod.SESSION.duration,
                 )
                 val balanceText = balanceLabel(
                     balance,
@@ -121,6 +136,5 @@ class UsageWidgetProvider : AppWidgetProvider() {
             return views
         }
 
-        private val SESSION_DURATION: Duration = Duration.ofHours(24)
     }
 }

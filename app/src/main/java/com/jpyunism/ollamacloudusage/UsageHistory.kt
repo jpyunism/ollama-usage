@@ -1,5 +1,6 @@
 package com.jpyunism.ollamacloudusage
 
+import java.time.Duration
 import kotlin.math.abs
 
 /** Un registro puntual de consumo capturado en un refresh exitoso. */
@@ -12,7 +13,11 @@ data class UsageSnapshot(
 /** Período de cuota: sesión (24 h) o semana (168 h). */
 enum class HistoryPeriod(val durationMillis: Long) {
     SESSION(24 * 60 * 60 * 1000L),
-    WEEK(7 * 24 * 60 * 60 * 1000L),
+    WEEK(7 * 24 * 60 * 60 * 1000L);
+
+    /** Duración como java.time.Duration (para computeBalance/formatReset). */
+    val duration: Duration
+        get() = Duration.ofMillis(durationMillis)
 }
 
 /** Un período de cuota (sesión o semana) con sus snapshots. */

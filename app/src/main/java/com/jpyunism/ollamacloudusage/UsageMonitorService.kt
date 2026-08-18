@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import androidx.core.content.ContextCompat
+import com.jpyunism.ollamacloudusage.PrefsKeys
+import com.jpyunism.ollamacloudusage.di.AppContainer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,14 +24,14 @@ import kotlinx.coroutines.launch
 class UsageMonitorService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var intervalMinutes = UsageScheduler.MIN_PERIODIC_MINUTES
+    private var intervalMinutes = PrefsKeys.DEFAULT_REFRESH_MINUTES
     private var consecutiveFailures = 0
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         intervalMinutes = intent?.getIntExtra(EXTRA_INTERVAL, -1)?.takeIf { it > 0 }
-            ?: prefs().getInt(UsageViewModel.KEY_REFRESH_INTERVAL, UsageScheduler.MIN_PERIODIC_MINUTES)
+            ?: SecurePrefs.get(this).getInt(PrefsKeys.REFRESH_INTERVAL, PrefsKeys.DEFAULT_REFRESH_MINUTES)
         try {
             startForeground(UsageNotifier.PERSISTENT_ID, UsageNotifier.buildPersistent(this, null))
         } catch (_: IllegalStateException) {
@@ -69,14 +71,15 @@ class UsageMonitorService : Service() {
         }
     }
 
-    /** true si el refresco fue exitoso; false si falló (activa backoff). */
+    /**
+     * true si el refresco fue exitoso; false si falló (activa backoff).
+     * Usa el pipeline único [UsageRepository.refreshAndPropagate] (REQ-003):
+     * las alertas de umbral corren también en frecuencias < 15 min.
+     */
     private suspend fun refreshOnce(): Boolean {
-        val data = runCatching { UsageWorker.fetchCurrentUsage(prefs()) }.getOrNull() ?: return false
-        // Widget del home screen: guarda el último consumo y lo re-renderiza.
-        UsageWidgetProvider.saveData(this, data)
-        UsageWidgetProvider.updateAll(this)
-        UsageNotifier.showPersistent(this, data)
-        return true
+        val repo = AppContainer.get(this).usageRepository
+        val result = repo.refreshAndPropagate()
+        return result.exceptionOrNull() == null
     }
 
     override fun onDestroy() {

@@ -1,7 +1,8 @@
 package com.jpyunism.ollamacloudusage
 
-import android.content.Context
 import android.content.SharedPreferences
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -29,16 +30,16 @@ class UsageViewModelTest {
 
     private fun fakePrefs(): SharedPreferences {
         val prefs = mockk<SharedPreferences>(relaxed = true)
-        every { prefs.getString(UsageViewModel.KEY_COOKIE, null) } returns null
-        every { prefs.contains(UsageViewModel.KEY_COOKIE) } returns false
-        every { prefs.getBoolean(UsageViewModel.KEY_NOTIF_ENABLED, true) } returns true
-        every { prefs.getBoolean(UsageViewModel.KEY_PERSISTENT_ENABLED, true) } returns true
-        every { prefs.getInt(UsageViewModel.KEY_WEEKLY_ALERT, 80) } returns 80
-        every { prefs.getInt(UsageViewModel.KEY_WEEKLY_CRITICAL, 95) } returns 95
-        every { prefs.getInt(UsageViewModel.KEY_SESSION_ALERT, 80) } returns 80
-        every { prefs.getInt(UsageViewModel.KEY_SESSION_CRITICAL, 95) } returns 95
-        every { prefs.getInt(UsageViewModel.KEY_REFRESH_INTERVAL, 60) } returns 60
-        every { prefs.getString(UsageViewModel.KEY_RESET_DISPLAY, null) } returns null
+        every { prefs.getString(PrefsKeys.COOKIE, null) } returns null
+        every { prefs.contains(PrefsKeys.COOKIE) } returns false
+        every { prefs.getBoolean(PrefsKeys.NOTIF_ENABLED, true) } returns true
+        every { prefs.getBoolean(PrefsKeys.PERSISTENT_ENABLED, true) } returns true
+        every { prefs.getInt(PrefsKeys.WEEKLY_ALERT, 80) } returns 80
+        every { prefs.getInt(PrefsKeys.WEEKLY_CRITICAL, 95) } returns 95
+        every { prefs.getInt(PrefsKeys.SESSION_ALERT, 80) } returns 80
+        every { prefs.getInt(PrefsKeys.SESSION_CRITICAL, 95) } returns 95
+        every { prefs.getInt(PrefsKeys.REFRESH_INTERVAL, 60) } returns 60
+        every { prefs.getString(PrefsKeys.RESET_DISPLAY, null) } returns null
         every { prefs.edit() } returns mockk(relaxed = true)
         return prefs
     }
@@ -52,85 +53,110 @@ class UsageViewModelTest {
         plan = "pro",
     )
 
+    /** Repo fake que delega en un fetcher real (misma semántica que el pipeline). */
+    private fun fakeRepository(
+        prefs: SharedPreferences,
+        fetcher: UsageScraper,
+        hasAuth: Boolean,
+    ): UsageRepository = mockk<UsageRepository>(relaxed = true).apply {
+        every { this@apply.hasAuth() } returns hasAuth
+        every { this@apply.authSource() } returns AuthSource.COOKIE
+        every { this@apply.currentSecret(any()) } returns ""
+        coEvery { this@apply.refreshAndPropagate() } coAnswers {
+            runCatching { fetcher.fetchUsage("") }.fold(
+                onSuccess = { Result.success(it) },
+                onFailure = { Result.failure(UsageError.fromThrowable(it)) },
+            )
+        }
+    }
+
     /** Crea un VM cuyo Main y dispatcher de IO comparten el scheduler del test. */
     private fun TestScope.buildVm(
         prefs: SharedPreferences,
-        scraper: UsageScraper,
+        repository: UsageRepository = mockk(relaxed = true),
+        updateRepository: UpdateRepository = mockk(relaxed = true),
     ): UsageViewModel {
         val dispatcher = StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
-        return UsageViewModel(prefs, scraper, dispatcher)
+        return UsageViewModel(
+            prefs = prefs,
+            repository = repository,
+            updateRepository = updateRepository,
+            ioDispatcher = dispatcher,
+        )
     }
 
     @Test
     fun `sin auth queda en Idle`() = runTest {
-        val vm = buildVm(fakePrefs(), mockk(relaxed = true))
+        val repo = mockk<UsageRepository>(relaxed = true)
+        every { repo.hasAuth() } returns false
+        val vm = buildVm(fakePrefs(), repo)
         assertEquals(UiState.Idle, vm.uiState.value)
         assertTrue(!vm.hasAuth())
     }
 
     @Test
     fun `refresh con cookie exitosa produce Success`() = runTest {
-        val scraper = mockk<UsageScraper>()
-        every { scraper.fetchUsage(any()) } returns sampleData()
-
         val prefs = fakePrefs()
-        every { prefs.contains(UsageViewModel.KEY_COOKIE) } returns true
-        every { prefs.getString(UsageViewModel.KEY_COOKIE, null) } returns "aid=abc; __Secure-session=xyz"
+        every { prefs.contains(PrefsKeys.COOKIE) } returns true
+        every { prefs.getString(PrefsKeys.COOKIE, null) } returns "aid=abc; __Secure-session=xyz"
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage(any()) } returns sampleData()
+        val repo = fakeRepository(prefs, fetcher, hasAuth = true)
 
-        val vm = buildVm(prefs, scraper)
+        val vm = buildVm(prefs, repo)
         testScheduler.advanceUntilIdle()
 
         val state = vm.uiState.value
         assertTrue("expected Success got $state", state is UiState.Success)
         assertEquals(41.7, (state as UiState.Success).data.weeklyPercent, 0.001)
-        verify { scraper.fetchUsage("aid=abc; __Secure-session=xyz") }
+        verify { fetcher.fetchUsage(any()) }
     }
 
     @Test
-    fun `cookie expirada produce Error`() = runTest {
-        val scraper = mockk<UsageScraper>()
-        every { scraper.fetchUsage(any()) } throws CookieExpiredException()
-
+    fun `cookie expirada produce Error tipado CookieExpired`() = runTest {
         val prefs = fakePrefs()
-        every { prefs.contains(UsageViewModel.KEY_COOKIE) } returns true
-        every { prefs.getString(UsageViewModel.KEY_COOKIE, null) } returns "cookie"
+        every { prefs.contains(PrefsKeys.COOKIE) } returns true
+        every { prefs.getString(PrefsKeys.COOKIE, null) } returns "cookie"
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage(any()) } throws CookieExpiredException()
+        val repo = fakeRepository(prefs, fetcher, hasAuth = true)
 
-        val vm = buildVm(prefs, scraper)
+        val vm = buildVm(prefs, repo)
         testScheduler.advanceUntilIdle()
 
         val state = vm.uiState.value
         assertTrue(state is UiState.Error)
-        assertTrue((state as UiState.Error).message.contains("expiró"))
+        assertEquals(UsageError.CookieExpired, (state as UiState.Error).error)
     }
 
     @Test
-    fun `error de red produce Error`() = runTest {
-        val scraper = mockk<UsageScraper>()
-        every { scraper.fetchUsage(any()) } throws RuntimeException("timeout")
-
+    fun `error de red produce Error tipado Network`() = runTest {
         val prefs = fakePrefs()
-        every { prefs.contains(UsageViewModel.KEY_COOKIE) } returns true
-        every { prefs.getString(UsageViewModel.KEY_COOKIE, null) } returns "cookie"
+        every { prefs.contains(PrefsKeys.COOKIE) } returns true
+        every { prefs.getString(PrefsKeys.COOKIE, null) } returns "cookie"
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage(any()) } throws RuntimeException("timeout")
+        val repo = fakeRepository(prefs, fetcher, hasAuth = true)
 
-        val vm = buildVm(prefs, scraper)
+        val vm = buildVm(prefs, repo)
         testScheduler.advanceUntilIdle()
 
         val state = vm.uiState.value
         assertTrue(state is UiState.Error)
-        assertTrue((state as UiState.Error).message.contains("Error de red"))
+        assertEquals(UsageError.Network("timeout"), (state as UiState.Error).error)
     }
 
     @Test
     fun `clearAuth vuelve a Idle`() = runTest {
-        val scraper = mockk<UsageScraper>()
-        every { scraper.fetchUsage(any()) } returns sampleData()
-
         val prefs = fakePrefs()
-        every { prefs.contains(UsageViewModel.KEY_COOKIE) } returns true
-        every { prefs.getString(UsageViewModel.KEY_COOKIE, null) } returns "cookie"
+        every { prefs.contains(PrefsKeys.COOKIE) } returns true
+        every { prefs.getString(PrefsKeys.COOKIE, null) } returns "cookie"
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage(any()) } returns sampleData()
+        val repo = fakeRepository(prefs, fetcher, hasAuth = true)
 
-        val vm = buildVm(prefs, scraper)
+        val vm = buildVm(prefs, repo)
         testScheduler.advanceUntilIdle()
         assertTrue(vm.uiState.value is UiState.Success)
 
@@ -150,9 +176,9 @@ class UsageViewModelTest {
         val vm = buildVm(prefs, mockk(relaxed = true))
         vm.saveApiKey("sk-test")
 
-        verify { editor.putString(UsageViewModel.KEY_API_KEY, "sk-test") }
-        verify { editor.putString(UsageViewModel.KEY_AUTH_SOURCE, AuthSource.API_KEY.name) }
-        verify(exactly = 0) { editor.remove(UsageViewModel.KEY_COOKIE) }
+        verify { editor.putString(PrefsKeys.API_KEY, "sk-test") }
+        verify { editor.putString(PrefsKeys.AUTH_SOURCE, AuthSource.API_KEY.name) }
+        verify(exactly = 0) { editor.remove(PrefsKeys.COOKIE) }
     }
 
     @Test
@@ -165,9 +191,9 @@ class UsageViewModelTest {
         val vm = buildVm(prefs, mockk(relaxed = true))
         vm.saveCookie("aid=abc; __Secure-session=xyz")
 
-        verify { editor.putString(UsageViewModel.KEY_COOKIE, "aid=abc; __Secure-session=xyz") }
-        verify { editor.putString(UsageViewModel.KEY_AUTH_SOURCE, AuthSource.COOKIE.name) }
-        verify(exactly = 0) { editor.remove(UsageViewModel.KEY_API_KEY) }
+        verify { editor.putString(PrefsKeys.COOKIE, "aid=abc; __Secure-session=xyz") }
+        verify { editor.putString(PrefsKeys.AUTH_SOURCE, AuthSource.COOKIE.name) }
+        verify(exactly = 0) { editor.remove(PrefsKeys.API_KEY) }
     }
 
     // ─────────── Captura de cookie vía WebView ───────────
@@ -201,34 +227,48 @@ class UsageViewModelTest {
 
         assertFalse(vm.showCookieWebView.value)
         assertFalse(vm.showAuthSetup.value)
-        verify { editor.putString(UsageViewModel.KEY_COOKIE, "aid=abc; __Secure-session=xyz") }
-        verify { editor.putString(UsageViewModel.KEY_AUTH_SOURCE, AuthSource.COOKIE.name) }
+        verify { editor.putString(PrefsKeys.COOKIE, "aid=abc; __Secure-session=xyz") }
+        verify { editor.putString(PrefsKeys.AUTH_SOURCE, AuthSource.COOKIE.name) }
     }
 
     @Test
     fun `currentSecret devuelve el secreto guardado del metodo indicado`() = runTest {
-        val prefs = fakePrefs()
-        every { prefs.getString(UsageViewModel.KEY_API_KEY, null) } returns "sk-guardada"
-        every { prefs.getString(UsageViewModel.KEY_COOKIE, null) } returns "cookie-guardada"
+        val repo = mockk<UsageRepository>(relaxed = true)
+        every { repo.currentSecret(AuthSource.API_KEY) } returns "sk-guardada"
+        every { repo.currentSecret(AuthSource.COOKIE) } returns "cookie-guardada"
 
-        val vm = buildVm(prefs, mockk(relaxed = true))
+        val vm = buildVm(fakePrefs(), repo)
         assertEquals("sk-guardada", vm.currentSecret(AuthSource.API_KEY))
         assertEquals("cookie-guardada", vm.currentSecret(AuthSource.COOKIE))
     }
 
     @Test
     fun `currentSecret devuelve vacio si no hay secreto`() = runTest {
-        val vm = buildVm(fakePrefs(), mockk(relaxed = true))
+        val repo = mockk<UsageRepository>(relaxed = true)
+        every { repo.currentSecret(any()) } returns ""
+        val vm = buildVm(fakePrefs(), repo)
         assertEquals("", vm.currentSecret(AuthSource.API_KEY))
         assertEquals("", vm.currentSecret(AuthSource.COOKIE))
     }
 
     @Test
-    fun `checkForUpdateNow sin contexto falla con Failed`() = runTest {
-        val vm = buildVm(fakePrefs(), mockk(relaxed = true))
+    fun `checkForUpdateNow con repo que devuelve update marca Available`() = runTest {
+        val updateRepo = mockk<UpdateRepository>(relaxed = true)
+        every { updateRepo.check() } returns UpdateInfo("9.9.9", "https://example.com/app.apk", null)
+        val vm = buildVm(fakePrefs(), mockk(relaxed = true), updateRepo)
         vm.checkForUpdateNow()
         testScheduler.advanceUntilIdle()
-        assertEquals(UpdateCheckOutcome.Failed, vm.checkResult.value)
+        assertEquals(UpdateCheckOutcome.Available(UpdateInfo("9.9.9", "https://example.com/app.apk", null)), vm.checkResult.value)
+    }
+
+    @Test
+    fun `checkForUpdateNow sin update marca UpToDate`() = runTest {
+        val updateRepo = mockk<UpdateRepository>(relaxed = true)
+        every { updateRepo.check() } returns null
+        val vm = buildVm(fakePrefs(), mockk(relaxed = true), updateRepo)
+        vm.checkForUpdateNow()
+        testScheduler.advanceUntilIdle()
+        assertEquals(UpdateCheckOutcome.UpToDate, vm.checkResult.value)
     }
 
     // ─────────── Configuración de alertas ───────────
@@ -280,14 +320,14 @@ class UsageViewModelTest {
         assertEquals(30, s.refreshIntervalMinutes)
         assertEquals(ResetDisplayMode.DATE, s.resetDisplayMode)
 
-        verify { editor.putBoolean(UsageViewModel.KEY_NOTIF_ENABLED, false) }
-        verify { editor.putInt(UsageViewModel.KEY_WEEKLY_ALERT, 70) }
-        verify { editor.putInt(UsageViewModel.KEY_WEEKLY_CRITICAL, 90) }
-        verify { editor.putInt(UsageViewModel.KEY_SESSION_ALERT, 60) }
-        verify { editor.putInt(UsageViewModel.KEY_SESSION_CRITICAL, 85) }
-        verify { editor.putBoolean(UsageViewModel.KEY_PERSISTENT_ENABLED, false) }
-        verify { editor.putInt(UsageViewModel.KEY_REFRESH_INTERVAL, 30) }
-        verify { editor.putString(UsageViewModel.KEY_RESET_DISPLAY, "DATE") }
+        verify { editor.putBoolean(PrefsKeys.NOTIF_ENABLED, false) }
+        verify { editor.putInt(PrefsKeys.WEEKLY_ALERT, 70) }
+        verify { editor.putInt(PrefsKeys.WEEKLY_CRITICAL, 90) }
+        verify { editor.putInt(PrefsKeys.SESSION_ALERT, 60) }
+        verify { editor.putInt(PrefsKeys.SESSION_CRITICAL, 85) }
+        verify { editor.putBoolean(PrefsKeys.PERSISTENT_ENABLED, false) }
+        verify { editor.putInt(PrefsKeys.REFRESH_INTERVAL, 30) }
+        verify { editor.putString(PrefsKeys.RESET_DISPLAY, "DATE") }
     }
 
     @Test
@@ -300,8 +340,9 @@ class UsageViewModelTest {
 
         var rescheduled = -1
         val vm = UsageViewModel(
-            prefs,
-            mockk(relaxed = true),
+            prefs = prefs,
+            repository = mockk(relaxed = true),
+            updateRepository = mockk(relaxed = true),
             ioDispatcher = StandardTestDispatcher(testScheduler),
             reschedule = { rescheduled = it },
         )
@@ -313,11 +354,11 @@ class UsageViewModelTest {
     @Test
     fun `settings cargan valores guardados`() = runTest {
         val prefs = fakePrefs()
-        every { prefs.getBoolean(UsageViewModel.KEY_NOTIF_ENABLED, true) } returns false
-        every { prefs.getInt(UsageViewModel.KEY_WEEKLY_ALERT, 80) } returns 65
-        every { prefs.getInt(UsageViewModel.KEY_WEEKLY_CRITICAL, 95) } returns 88
-        every { prefs.getInt(UsageViewModel.KEY_SESSION_ALERT, 80) } returns 55
-        every { prefs.getInt(UsageViewModel.KEY_SESSION_CRITICAL, 95) } returns 82
+        every { prefs.getBoolean(PrefsKeys.NOTIF_ENABLED, true) } returns false
+        every { prefs.getInt(PrefsKeys.WEEKLY_ALERT, 80) } returns 65
+        every { prefs.getInt(PrefsKeys.WEEKLY_CRITICAL, 95) } returns 88
+        every { prefs.getInt(PrefsKeys.SESSION_ALERT, 80) } returns 55
+        every { prefs.getInt(PrefsKeys.SESSION_CRITICAL, 95) } returns 82
 
         val vm = buildVm(prefs, mockk(relaxed = true))
         val s = vm.settings.value
@@ -331,7 +372,7 @@ class UsageViewModelTest {
     @Test
     fun `modo de reset guardado se carga al iniciar`() = runTest {
         val prefs = fakePrefs()
-        every { prefs.getString(UsageViewModel.KEY_RESET_DISPLAY, null) } returns "DATE"
+        every { prefs.getString(PrefsKeys.RESET_DISPLAY, null) } returns "DATE"
 
         val vm = buildVm(prefs, mockk(relaxed = true))
         assertEquals(ResetDisplayMode.DATE, vm.settings.value.resetDisplayMode)
@@ -340,7 +381,7 @@ class UsageViewModelTest {
     @Test
     fun `modo de reset invalido cae a COUNTDOWN`() = runTest {
         val prefs = fakePrefs()
-        every { prefs.getString(UsageViewModel.KEY_RESET_DISPLAY, null) } returns "NoExiste"
+        every { prefs.getString(PrefsKeys.RESET_DISPLAY, null) } returns "NoExiste"
 
         val vm = buildVm(prefs, mockk(relaxed = true))
         assertEquals(ResetDisplayMode.COUNTDOWN, vm.settings.value.resetDisplayMode)
@@ -365,13 +406,13 @@ class UsageViewModelTest {
         vm.updateTheme(AppTheme.Emerald)
 
         assertEquals(AppTheme.Emerald, vm.theme.value)
-        verify { editor.putString(UsageViewModel.KEY_THEME, "Emerald") }
+        verify { editor.putString(PrefsKeys.THEME, "Emerald") }
     }
 
     @Test
     fun `tema guardado se carga al iniciar`() = runTest {
         val prefs = fakePrefs()
-        every { prefs.getString(UsageViewModel.KEY_THEME, null) } returns "Rose"
+        every { prefs.getString(PrefsKeys.THEME, null) } returns "Rose"
 
         val vm = buildVm(prefs, mockk(relaxed = true))
         assertEquals(AppTheme.Rose, vm.theme.value)
@@ -380,7 +421,7 @@ class UsageViewModelTest {
     @Test
     fun `tema invalido en prefs cae a Sistema`() = runTest {
         val prefs = fakePrefs()
-        every { prefs.getString(UsageViewModel.KEY_THEME, null) } returns "NoExiste"
+        every { prefs.getString(PrefsKeys.THEME, null) } returns "NoExiste"
 
         val vm = buildVm(prefs, mockk(relaxed = true))
         assertEquals(AppTheme.System, vm.theme.value)
@@ -403,13 +444,13 @@ class UsageViewModelTest {
         vm.updateDarkMode(AppDarkMode.Dark)
 
         assertEquals(AppDarkMode.Dark, vm.darkMode.value)
-        verify { editor.putString(UsageViewModel.KEY_DARK_MODE, "Dark") }
+        verify { editor.putString(PrefsKeys.DARK_MODE, "Dark") }
     }
 
     @Test
     fun `modo oscuro guardado se carga al iniciar`() = runTest {
         val prefs = fakePrefs()
-        every { prefs.getString(UsageViewModel.KEY_DARK_MODE, null) } returns "Light"
+        every { prefs.getString(PrefsKeys.DARK_MODE, null) } returns "Light"
 
         val vm = buildVm(prefs, mockk(relaxed = true))
         assertEquals(AppDarkMode.Light, vm.darkMode.value)
@@ -418,7 +459,7 @@ class UsageViewModelTest {
     @Test
     fun `modo oscuro invalido en prefs cae a Sistema`() = runTest {
         val prefs = fakePrefs()
-        every { prefs.getString(UsageViewModel.KEY_DARK_MODE, null) } returns "NoExiste"
+        every { prefs.getString(PrefsKeys.DARK_MODE, null) } returns "NoExiste"
 
         val vm = buildVm(prefs, mockk(relaxed = true))
         assertEquals(AppDarkMode.System, vm.darkMode.value)
@@ -431,23 +472,33 @@ class UsageViewModelTest {
     }
 
     @Test
-    fun `updateLanguage persiste y actualiza`() = runTest {
+    fun `updateLanguage persiste, actualiza y aplica el locale via callback`() = runTest {
         val prefs = fakePrefs()
         val editor = mockk<SharedPreferences.Editor>(relaxed = true)
         every { editor.putString(any(), any()) } returns editor
         every { prefs.edit() } returns editor
 
-        val vm = buildVm(prefs, mockk(relaxed = true))
+        var applied: AppLanguage? = null
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        val vm = UsageViewModel(
+            prefs = prefs,
+            repository = mockk(relaxed = true),
+            updateRepository = mockk(relaxed = true),
+            ioDispatcher = dispatcher,
+            onLanguageChange = { applied = it },
+        )
         vm.updateLanguage(AppLanguage.English)
 
         assertEquals(AppLanguage.English, vm.language.value)
-        verify { editor.putString(UsageViewModel.KEY_LANGUAGE, "English") }
+        assertEquals(AppLanguage.English, applied)
+        verify { editor.putString(PrefsKeys.LANGUAGE, "English") }
     }
 
     @Test
     fun `idioma guardado se carga al iniciar`() = runTest {
         val prefs = fakePrefs()
-        every { prefs.getString(UsageViewModel.KEY_LANGUAGE, null) } returns "Spanish"
+        every { prefs.getString(PrefsKeys.LANGUAGE, null) } returns "Spanish"
 
         val vm = buildVm(prefs, mockk(relaxed = true))
         assertEquals(AppLanguage.Spanish, vm.language.value)

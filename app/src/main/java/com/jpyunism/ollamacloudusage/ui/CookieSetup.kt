@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import com.jpyunism.ollamacloudusage.AuthSource
 import com.jpyunism.ollamacloudusage.R
 import com.jpyunism.ollamacloudusage.UiState
+import com.jpyunism.ollamacloudusage.UsageError
 import com.jpyunism.ollamacloudusage.UsageViewModel
 
 /** Setup inicial o cambio de acceso: elegir cómo autenticar (API key o cookie). */
@@ -209,7 +210,13 @@ fun CookieSetup(vm: UsageViewModel, state: UiState) {
                     )
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        state.message,
+                        when (val err = state.error) {
+                            UsageError.CookieExpired -> stringResource(R.string.cookie_expired)
+                            UsageError.InvalidApiKey -> stringResource(R.string.api_key_invalid)
+                            UsageError.NoAuth -> stringResource(R.string.connect_account)
+                            is UsageError.Network ->
+                                stringResource(R.string.network_error, err.detail.ifBlank { stringResource(R.string.unknown_error) })
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                     )

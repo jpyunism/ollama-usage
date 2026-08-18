@@ -46,8 +46,10 @@ import com.jpyunism.ollamacloudusage.BalanceStatus
 import com.jpyunism.ollamacloudusage.ModelUsage
 import com.jpyunism.ollamacloudusage.R
 import com.jpyunism.ollamacloudusage.ResetDisplayMode
+import com.jpyunism.ollamacloudusage.ResetStrings
 import com.jpyunism.ollamacloudusage.UiState
 import com.jpyunism.ollamacloudusage.UsageData
+import com.jpyunism.ollamacloudusage.HistoryPeriod
 import com.jpyunism.ollamacloudusage.UsageViewModel
 import com.jpyunism.ollamacloudusage.balanceLabel
 import com.jpyunism.ollamacloudusage.computeBalance
@@ -62,8 +64,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 
-private val SESSION_DURATION: Duration = Duration.ofHours(24)
-private val WEEK_DURATION: Duration = Duration.ofHours(168)
 
 @Composable
 fun UsageTab(vm: UsageViewModel, state: UiState) {
@@ -113,8 +113,8 @@ private fun SuccessContent(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Header(data, lastUpdated)
-        UsageMeterCard(stringResource(R.string.session_usage), data.sessionPercent, data.sessionModels, data.sessionResetAt, SESSION_DURATION)
-        UsageMeterCard(stringResource(R.string.weekly_usage), data.weeklyPercent, data.weeklyModels, data.weeklyResetAt, WEEK_DURATION)
+        UsageMeterCard(stringResource(R.string.session_usage), data.sessionPercent, data.sessionModels, data.sessionResetAt, HistoryPeriod.SESSION.duration)
+        UsageMeterCard(stringResource(R.string.weekly_usage), data.weeklyPercent, data.weeklyModels, data.weeklyResetAt, HistoryPeriod.WEEK.duration)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = onRefresh, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -183,7 +183,16 @@ private fun UsageMeterCard(
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        formatReset(resetAt, ResetDisplayMode.COUNTDOWN)?.replaceFirstChar { it.uppercase() }
+                        formatReset(
+                            resetAt,
+                            ResetDisplayMode.COUNTDOWN,
+                            ResetStrings(
+                                resetsSoon = stringResource(R.string.reset_soon),
+                                resetsIn = stringResource(R.string.reset_in),
+                                lessThanMin = stringResource(R.string.reset_less_than_min),
+                                resetsOn = stringResource(R.string.reset_on),
+                            ),
+                        )?.replaceFirstChar { it.uppercase() }
                             ?: stringResource(R.string.resets_at, resetAt.atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
