@@ -52,7 +52,9 @@ class UsageRepositoryTest {
         calls: MutableList<String>,
         history: UsageHistoryStore = mockk(relaxed = true),
     ): UsageRepository {
-        every { history.load() } returns emptyList()
+        if (!history.toString().contains("relaxed")) {
+            // no-op
+        }
         return UsageRepository(
             context = mockk<Context>(relaxed = true),
             prefs = prefs,
@@ -147,5 +149,52 @@ class UsageRepositoryTest {
 
         assertEquals(UsageError.NoAuth, result.exceptionOrNull())
         assertTrue(calls.isEmpty())
+    }
+
+    // ─── Alerta temprana de ritmo (Feature A, REQ-001..003) ───
+
+    /** Editor mockk que registra los valores escritos, para verificar el guard por período. */
+    private fun editorRecording(written: MutableMap<String, Any?>): SharedPreferences.Editor {
+        val editor = mockk<SharedPreferences.Editor>(relaxed = true)
+        every { editor.putLong(any(), any()) } answers {
+            written[firstArg()] = secondArg()
+            editor
+        }
+        return editor
+    }
+
+    @Test
+    fun `proyeccion sobre 100 dispara alerta de ritmo una vez por periodo`() = runTest {
+        val prefs = prefsWith()
+        // Ancla semanal real que usará el repo (fallback: próximo domingo 21:00 CLT).
+        val nowReal = System.currentTimeMillis()
+        val anchor = fallbackResetAnchor(HistoryPeriod.WEEK, nowReal)!!
+        val start = anchor - HistoryPeriod.WEEK.durationMillis
+        // Subida fuerte dentro del período: proyecta > 100 al fin del período.
+        val snaps = listOf(
+            UsageSnapshot(start, sessionPercent = 0.0, weeklyPercent = 0.0),
+            UsageSnapshot(start + 1000, sessionPercent = 90.0, weeklyPercent = 90.0),
+        )
+        val history = mockk<UsageHistoryStore>()
+        every { history.load() } returns snaps
+        every { history.record(any(), any()) } returns snaps
+        every { history.clear() } returns Unit
+        val written = mutableMapOf<String, Any?>()
+        every { prefs.edit() } returns editorRecording(written)
+
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage("sk-test") } returns sampleData().copy(
+            sessionPercent = 10.0,
+            weeklyPercent = 10.0,
+        )
+        val calls = mutableListOf<String>()
+        val repo = buildRepo(prefs, fetcher, calls, history)
+
+        val result = repo.refreshAndPropagate()
+
+        assertTrue(result.isSuccess)
+        assertTrue("alert" in calls)
+        // Guard: guarda el start del período semanal notificado.
+        assertEquals(start, written[PrefsKeys.LAST_PACE_PERIOD_WEEK])
     }
 }

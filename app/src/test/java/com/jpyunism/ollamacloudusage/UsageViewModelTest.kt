@@ -75,6 +75,7 @@ class UsageViewModelTest {
         prefs: SharedPreferences,
         repository: UsageRepository = mockk(relaxed = true),
         updateRepository: UpdateRepository = mockk(relaxed = true),
+        historyStore: UsageHistoryStore = mockk(relaxed = true),
     ): UsageViewModel {
         val dispatcher = StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
@@ -83,6 +84,7 @@ class UsageViewModelTest {
             repository = repository,
             updateRepository = updateRepository,
             ioDispatcher = dispatcher,
+            historyStoreProvider = { historyStore },
         )
     }
 
@@ -409,6 +411,7 @@ class UsageViewModelTest {
             updateRepository = mockk(relaxed = true),
             ioDispatcher = StandardTestDispatcher(testScheduler),
             reschedule = { rescheduled = it },
+            historyStoreProvider = { mockk(relaxed = true) },
         )
         vm.updateSettings(vm.settings.value.copy(refreshIntervalMinutes = 30))
 
@@ -551,6 +554,7 @@ class UsageViewModelTest {
             updateRepository = mockk(relaxed = true),
             ioDispatcher = dispatcher,
             onLanguageChange = { applied = it },
+            historyStoreProvider = { mockk(relaxed = true) },
         )
         vm.updateLanguage(AppLanguage.English)
 

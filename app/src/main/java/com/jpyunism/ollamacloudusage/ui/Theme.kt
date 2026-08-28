@@ -14,6 +14,21 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import com.jpyunism.ollamacloudusage.AppDarkMode
 import com.jpyunism.ollamacloudusage.AppTheme
+import com.jpyunism.ollamacloudusage.TrafficLight
+import com.jpyunism.ollamacloudusage.TrafficLightLevel
+import com.jpyunism.ollamacloudusage.TrafficLightColor
+
+/**
+ * Colores semánticos del semáforo de consumo (Feature C) como Compose Color.
+ * Los valores viven en [TrafficLightColor] (fuente única, compartida con el
+ * widget vía RemoteViews); M3 no tiene semáforo en su palette — excepción
+ * justificada a la regla de solo M3 (precedente: paleta hardcodeada del widget).
+ */
+val TrafficLightColors: Map<TrafficLightLevel, Color> = mapOf(
+    TrafficLightLevel.GREEN to Color(TrafficLightColor.GREEN),
+    TrafficLightLevel.AMBER to Color(TrafficLightColor.AMBER),
+    TrafficLightLevel.RED to Color(TrafficLightColor.RED),
+)
 
 /** Genera el esquema claro a partir del color semilla. */
 private fun lightScheme(seed: Color): ColorScheme = lightColorScheme(

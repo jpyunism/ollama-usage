@@ -140,6 +140,11 @@
     <string name="session_alert_title">Sesión al %1$s%%</string>
     <string name="session_alert_message">La sesión de Ollama Cloud está al %1$s%%. Se resetea pronto.</string>
 
+    <!-- Pace alerts (alerta temprana de ritmo, proyección cruza 100%) -->
+    <string name="pace_alert_title_weekly">Ritmo semanal acelerado</string>
+    <string name="pace_alert_title_session">Ritmo de sesión acelerado</string>
+    <string name="pace_alert_message">A este ritmo llegarás al 100%% antes del reset (proyección: %1$s%%). Considera reducir el uso.</string>
+
     <!-- Errors -->
     <string name="cookie_expired">Cookie expirada</string>
     <string name="api_key_invalid">API key inválida o expirada. Crea una nueva en ollama.com/settings/keys.</string>
@@ -157,6 +162,7 @@
     <string name="widget_session">%1$s%%</string>
     <string name="widget_session_label">Sesión</string>
     <string name="widget_plan">Plan %1$s</string>
+    <string name="widget_week_label">Semana</string>
 
     <!-- Updates -->
     <string name="update_available">Nueva versión %1$s disponible</string>
@@ -172,6 +178,14 @@
     <string name="update_install_permission">Habilitar instalación</string>
     <string name="section_update">Actualización</string>
     <string name="update_section_description">Revisa manualmente si hay una versión nueva publicada.</string>
+    <string name="backup_title">Backup del historial</string>
+    <string name="backup_description">Exporta tus snapshots a un archivo JSON o restaura desde uno previo (se combinan sin duplicados).</string>
+    <string name="backup_export">Exportar</string>
+    <string name="backup_import">Importar</string>
+    <string name="backup_export_ok">Backup exportado correctamente.</string>
+    <string name="backup_export_error">No se pudo escribir el archivo de backup.</string>
+    <string name="backup_import_ok">Historial restaurado y combinado.</string>
+    <string name="backup_import_error">Archivo inválido o corrupto: historial sin cambios.</string>
     <string name="version_current">Versión %1$s</string>
     <string name="update_auto_hint">La app revisa automáticamente una vez al día.</string>
     <string name="update_up_to_date">Estás al día (v%1$s)</string>

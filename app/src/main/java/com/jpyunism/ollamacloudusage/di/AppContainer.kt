@@ -51,6 +51,9 @@ class AppContainer(context: Context) {
         appContext.packageManager.getPackageInfo(appContext.packageName, 0).versionName ?: "0"
     }.getOrElse { "0" }
 
+    /** Store del histórico compartido (mismo prefs que el repository). */
+    val historyStore: UsageHistoryStore by lazy { UsageHistoryStore(prefs) }
+
     /** Intervalo de refresco guardado. */
     val refreshInterval: Int
         get() = prefs.getInt(PrefsKeys.REFRESH_INTERVAL, PrefsKeys.DEFAULT_REFRESH_MINUTES)

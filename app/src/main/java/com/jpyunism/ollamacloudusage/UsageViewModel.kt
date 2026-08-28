@@ -68,6 +68,7 @@ class UsageViewModel(
     private val reschedule: (Int) -> Unit = {},
     private val startUpdateDownload: (UpdateInfo) -> Unit = {},
     private val onLanguageChange: (AppLanguage) -> Unit = {},
+    private val historyStoreProvider: () -> UsageHistoryStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
@@ -209,7 +210,8 @@ class UsageViewModel(
                         // recarga los snapshots desde el store.
                         _history.value = HistoryState(
                             snapshots = repository.historySnapshots(),
-                            weeklyResetAt = data.weeklyResetAt,
+                            weeklyResetAt = data.weeklyResetAt
+                                ?: repository.detectedWeeklyAnchor()?.let(Instant::ofEpochMilli),
                             sessionResetAt = data.sessionResetAt,
                         )
                         UiState.Success(data, cookieStored = true, lastUpdated = repository.lastUpdated())
@@ -261,6 +263,25 @@ class UsageViewModel(
         // referencia Context.
         onLanguageChange(language)
     }
+
+    /**
+     * Importa snapshots desde un JSON de backup (Feature B) y refresca el
+     * StateFlow del histórico. Devuelve el resultado (null = archivo
+     * corrupto/inválido, historial sin cambios).
+     */
+    suspend fun importSnapshots(json: String): Boolean {
+        val imported = UsageHistoryStore.parseSnapshots(json)
+        if (imported.isEmpty()) return false
+        val store = historyStoreProvider()
+        val merged = kotlinx.coroutines.withContext(ioDispatcher) {
+            store.mergeSnapshots(imported)
+        }
+        _history.value = _history.value.copy(snapshots = merged)
+        return true
+    }
+
+    /** JSON de exportación del historial actual (Feature B). */
+    fun exportSnapshots(): String = UsageHistoryStore.encodeSnapshots(repository.historySnapshots())
 
     /** Chequea una vez por día si hay release más nuevo (silencioso). */
     fun checkForUpdate() {
@@ -350,6 +371,7 @@ class UsageViewModel(
                         reschedule = { UsageScheduler.schedule(app, it) },
                         startUpdateDownload = { info -> UpdaterService.start(app, info.downloadUrl, info.sha256) },
                         onLanguageChange = { LocaleHelper.apply(app, it) },
+                        historyStoreProvider = { container.historyStore },
                     ) as T
                 }
             }

@@ -29,6 +29,16 @@ object PrefsKeys {
     const val LAST_NOTIFIED_WEEKLY = "last_notified_weekly"
     const val LAST_NOTIFIED_SESSION = "last_notified_session"
 
+    // Pace alert (alerta temprana de ritmo): guarda el start del último
+    // período que ya disparó la notificación de proyección > 100%.
+    const val LAST_PACE_PERIOD_WEEK = "last_pace_period_week"
+    const val LAST_PACE_PERIOD_SESSION = "last_pace_period_session"
+
+    // Anclas de reset detectadas/persistidas (Feature D; con API key no hay
+    // resets reales y se usa el fallback del domingo 21:00 si no hay ancla).
+    const val WEEKLY_RESET_ANCHOR = "weekly_reset_anchor"
+    const val SESSION_RESET_ANCHOR = "session_reset_anchor"
+
     // Defaults
     const val DEFAULT_REFRESH_MINUTES = 60
 }

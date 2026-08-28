@@ -57,6 +57,7 @@ import com.jpyunism.ollamacloudusage.computeBalance
 import com.jpyunism.ollamacloudusage.formatPercent
 import com.jpyunism.ollamacloudusage.formatReset
 import com.jpyunism.ollamacloudusage.groupModels
+import com.jpyunism.ollamacloudusage.TrafficLight
 import com.jpyunism.ollamacloudusage.othersGroup
 import com.jpyunism.ollamacloudusage.sortedByUsage
 import java.time.Duration
@@ -100,9 +101,14 @@ fun UsageTab(vm: UsageViewModel, state: UiState, isRefreshing: Boolean = false) 
             onRefresh = { vm.refresh(fromPull = true) },
             modifier = Modifier.fillMaxSize(),
         ) {
+            // Umbrales del semáforo = los mismos de las alertas (prefs,
+            // default 80/95); el semáforo es visual, no depende de NOTIF_ENABLED.
+            val alertSettings by vm.settings.collectAsStateWithLifecycle()
             SuccessContent(
                 data = state.data,
                 lastUpdated = state.lastUpdated,
+                alertThreshold = alertSettings.weeklyAlert,
+                criticalThreshold = alertSettings.weeklyCritical,
                 onRefresh = { vm.refresh(fromPull = true) },
                 onChangeAuth = { vm.openAuthSetup() },
             )
@@ -114,6 +120,8 @@ fun UsageTab(vm: UsageViewModel, state: UiState, isRefreshing: Boolean = false) 
 private fun SuccessContent(
     data: UsageData,
     lastUpdated: Long?,
+    alertThreshold: Int,
+    criticalThreshold: Int,
     onRefresh: () -> Unit,
     onChangeAuth: () -> Unit,
 ) {
@@ -125,8 +133,8 @@ private fun SuccessContent(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Header(data, lastUpdated)
-        UsageMeterCard(stringResource(R.string.session_usage), data.sessionPercent, data.sessionModels, data.sessionResetAt, HistoryPeriod.SESSION.duration)
-        UsageMeterCard(stringResource(R.string.weekly_usage), data.weeklyPercent, data.weeklyModels, data.weeklyResetAt, HistoryPeriod.WEEK.duration)
+        UsageMeterCard(stringResource(R.string.session_usage), data.sessionPercent, data.sessionModels, data.sessionResetAt, HistoryPeriod.SESSION.duration, alertThreshold, criticalThreshold)
+        UsageMeterCard(stringResource(R.string.weekly_usage), data.weeklyPercent, data.weeklyModels, data.weeklyResetAt, HistoryPeriod.WEEK.duration, alertThreshold, criticalThreshold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = onRefresh, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -167,6 +175,8 @@ private fun UsageMeterCard(
     models: List<ModelUsage>,
     resetAt: Instant?,
     duration: Duration,
+    alertThreshold: Int,
+    criticalThreshold: Int,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -182,11 +192,7 @@ private fun UsageMeterCard(
                     stringResource(R.string.percent_used, formatPercent(percent)),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = when {
-                        percent >= 95 -> MaterialTheme.colorScheme.error
-                        percent >= 80 -> MaterialTheme.colorScheme.secondary
-                        else -> MaterialTheme.colorScheme.primary
-                    },
+                    color = TrafficLightColors.getValue(TrafficLight.paceColor(percent, alertThreshold, criticalThreshold)),
                 )
             }
             Spacer(Modifier.height(10.dp))

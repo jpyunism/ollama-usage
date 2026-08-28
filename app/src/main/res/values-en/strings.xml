@@ -140,6 +140,11 @@
     <string name="session_alert_title">Session at %1$s%%</string>
     <string name="session_alert_message">Your Ollama Cloud session is at %1$s%%. It resets soon.</string>
 
+    <!-- Pace alerts (early pace warning, projection crosses 100%) -->
+    <string name="pace_alert_title_weekly">Weekly pace too fast</string>
+    <string name="pace_alert_title_session">Session pace too fast</string>
+    <string name="pace_alert_message">At this pace you will hit 100%% before the reset (projection: %1$s%%). Consider reducing usage.</string>
+
     <!-- Errors -->
     <string name="cookie_expired">Cookie expired</string>
     <string name="api_key_invalid">Invalid or expired API key. Create a new one at ollama.com/settings/keys.</string>
@@ -157,6 +162,7 @@
     <string name="widget_session">%1$s%%</string>
     <string name="widget_session_label">Session</string>
     <string name="widget_plan">Plan %1$s</string>
+    <string name="widget_week_label">Week</string>
 
     <!-- Updates -->
     <string name="update_available">New version %1$s available</string>
@@ -172,6 +178,14 @@
     <string name="update_install_permission">Enable installation</string>
     <string name="section_update">Update</string>
     <string name="update_section_description">Manually check for a new published version.</string>
+    <string name="backup_title">History backup</string>
+    <string name="backup_description">Export your snapshots to a JSON file or restore from a previous one (merged without duplicates).</string>
+    <string name="backup_export">Export</string>
+    <string name="backup_import">Import</string>
+    <string name="backup_export_ok">Backup exported successfully.</string>
+    <string name="backup_export_error">Could not write the backup file.</string>
+    <string name="backup_import_ok">History restored and merged.</string>
+    <string name="backup_import_error">Invalid or corrupted file: history unchanged.</string>
     <string name="version_current">Version %1$s</string>
     <string name="update_auto_hint">The app checks automatically once a day.</string>
     <string name="update_up_to_date">You are up to date (v%1$s)</string>
