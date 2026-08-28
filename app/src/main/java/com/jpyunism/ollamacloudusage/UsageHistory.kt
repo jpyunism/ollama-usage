@@ -10,6 +10,8 @@ data class UsageSnapshot(
     val timestampMillis: Long,
     val sessionPercent: Double,
     val weeklyPercent: Double,
+    /** Desglose % por modelo del período semanal (Feature C, issue #20); null en snapshots antiguos. */
+    val models: Map<String, Double>? = null,
 )
 
 /** Período de cuota: sesión (24 h) o semana (168 h). */
@@ -258,6 +260,10 @@ fun linearProjection(
         toPercent = slope * (end - x0) + intercept,
     )
 }
+
+/** % de un modelo en un snapshot; null si el snapshot no tiene desglose o el modelo no está. */
+fun modelPercent(snapshot: UsageSnapshot, model: String): Double? =
+    snapshot.models?.get(model)
 
 /**
  * Ancla de reset sintetizada cuando la fuente de datos no la entrega

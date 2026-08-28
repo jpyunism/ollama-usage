@@ -98,8 +98,13 @@ class UsageRepository(
             persistentHider(context)
         }
 
-        // Histórico local: acumula el snapshot de este refresh.
-        historyStore.record(data.sessionPercent, data.weeklyPercent)
+        // Histórico local: acumula el snapshot de este refresh (con desglose
+        // por modelo semanal, Feature C REQ-120/122).
+        historyStore.record(
+            data.sessionPercent,
+            data.weeklyPercent,
+            models = data.weeklyModels.associate { it.model to it.percent },
+        )
 
         // Ancla semanal automática (Feature D, issue #15): si la fuente no
         // entrega weeklyResetAt real (método API key), se detecta el reset

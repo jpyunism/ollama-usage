@@ -33,8 +33,13 @@ class UsageHistoryStore(
     /**
      * Registra un snapshot de consumo. Aplica dedupe y límite FIFO.
      * Devuelve la lista resultante (para actualizar el StateFlow).
+     * [models] = desglose % por modelo semanal (Feature C, opcional).
      */
-    fun record(sessionPercent: Double, weeklyPercent: Double): List<UsageSnapshot> {
+    fun record(
+        sessionPercent: Double,
+        weeklyPercent: Double,
+        models: Map<String, Double>? = null,
+    ): List<UsageSnapshot> {
         val ts = now()
         val current = load()
 
@@ -42,12 +47,13 @@ class UsageHistoryStore(
         if (last != null &&
             last.sessionPercent == sessionPercent &&
             last.weeklyPercent == weeklyPercent &&
+            last.models == models &&
             ts - last.timestampMillis < DEDUPE_MINUTES * 60_000L
         ) {
             return current
         }
 
-        val updated = (current + UsageSnapshot(ts, sessionPercent, weeklyPercent))
+        val updated = (current + UsageSnapshot(ts, sessionPercent, weeklyPercent, models))
             .takeLast(MAX_SNAPSHOTS)
         save(updated)
         return updated
@@ -88,16 +94,20 @@ class UsageHistoryStore(
         /** Clave de histórico por cuenta (multi-cuenta, Feature A). */
         fun keyForAccount(accountId: String): String = "usage_history_$accountId"
 
-        /** Serializa snapshots a JSON: [{"t":ms,"s":pct,"w":pct}, ...]. */
+        /** Serializa snapshots a JSON: [{"t":ms,"s":pct,"w":pct,"m":{...}}, ...]. */
         fun encodeSnapshots(snapshots: List<UsageSnapshot>): String {
             val arr = JSONArray()
             snapshots.forEach { s ->
-                arr.put(
-                    JSONObject()
-                        .put("t", s.timestampMillis)
-                        .put("s", s.sessionPercent)
-                        .put("w", s.weeklyPercent),
-                )
+                val o = JSONObject()
+                    .put("t", s.timestampMillis)
+                    .put("s", s.sessionPercent)
+                    .put("w", s.weeklyPercent)
+                s.models?.let { models ->
+                    val m = JSONObject()
+                    models.forEach { (name, pct) -> m.put(name, pct) }
+                    o.put("m", m)
+                }
+                arr.put(o)
             }
             return arr.toString()
         }
@@ -108,11 +118,19 @@ class UsageHistoryStore(
             buildList {
                 for (i in 0 until arr.length()) {
                     val o = arr.getJSONObject(i)
+                    val models: Map<String, Double>? = when (val m = o.opt("m")) {
+                        null -> null
+                        is JSONObject -> buildMap {
+                            for (k in m.keys()) put(k, m.getDouble(k))
+                        }
+                        else -> null
+                    }
                     add(
                         UsageSnapshot(
                             timestampMillis = o.getLong("t"),
                             sessionPercent = o.getDouble("s"),
                             weeklyPercent = o.getDouble("w"),
+                            models = models,
                         ),
                     )
                 }

@@ -134,7 +134,7 @@ class UsageRepositoryTest {
 
         repo.refreshAndPropagate()
 
-        verify { history.record(85.0, 92.0) }
+        verify { history.record(85.0, 92.0, any()) }
         verify { editor.putLong(PrefsKeys.LAST_UPDATED, any()) }
     }
 
@@ -248,7 +248,7 @@ class UsageRepositoryTest {
 
         repo.refreshAndPropagate()
 
-        verify { historyMock.record(any(), any()) }
+        verify { historyMock.record(any(), any(), any()) }
     }
 
     @Test
@@ -265,7 +265,7 @@ class UsageRepositoryTest {
         )
         val history = mockk<UsageHistoryStore>()
         every { history.load() } returns snaps
-        every { history.record(any(), any()) } returns snaps
+        every { history.record(any(), any(), any()) } returns snaps
         every { history.clear() } returns Unit
         val written = mutableMapOf<String, Any?>()
         every { prefs.edit() } returns editorRecording(written)
