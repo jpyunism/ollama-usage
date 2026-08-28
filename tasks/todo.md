@@ -16,9 +16,9 @@
 - [x] C3 Aplicar en UsageTab y barra del widget
 
 ## Feature D — Ancla semanal automática (#15)
-- [ ] D1 (RED) tests detectWeeklyReset (caída ≥15pp ≤4h, gradual → null)
-- [ ] D2 (GREEN) detectWeeklyReset() en UsageHistory.kt
-- [ ] D3 Persistencia + uso del ancla en repo/UI
+- [x] D1 (RED) tests detectWeeklyReset (caída ≥15pp ≤4h, gradual → null)
+- [x] D2 (GREEN) detectWeeklyReset() en UsageHistory.kt
+- [x] D3 Persistencia + uso del ancla en repo/UI
 
 ## Feature E — Widget 2×1 (#17)
 - [ ] E1 widget_compact_info.xml + manifest + widget_compact.xml
