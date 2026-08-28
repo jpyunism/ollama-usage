@@ -35,6 +35,9 @@ class OllamaUsageApp : Application() {
         Handler(Looper.getMainLooper()).post {
             UsageNotifier.ensureChannels(this)
             UsageScheduler.schedule(this, interval)
+            // Resumen diario programado (Feature B lote 2): reprograma en cada
+            // arranque de la app (cubre reinicio del dispositivo, REQ-114).
+            DailySummaryWorker.schedule(this)
         }
     }
 }

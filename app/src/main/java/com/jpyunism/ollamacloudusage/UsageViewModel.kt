@@ -40,6 +40,10 @@ data class AlertSettings(
     val persistentEnabled: Boolean = true,
     val refreshIntervalMinutes: Int = PrefsKeys.DEFAULT_REFRESH_MINUTES,
     val resetDisplayMode: ResetDisplayMode = ResetDisplayMode.COUNTDOWN,
+    // Resumen diario programado (Feature B lote 2)
+    val dailySummaryEnabled: Boolean = false,
+    val dailySummaryHour: Int = 21,
+    val dailySummaryMinute: Int = 0,
 ) {
     companion object {
         const val MIN_THRESHOLD = 50
@@ -68,6 +72,7 @@ class UsageViewModel(
     private val reschedule: (Int) -> Unit = {},
     private val startUpdateDownload: (UpdateInfo) -> Unit = {},
     private val onLanguageChange: (AppLanguage) -> Unit = {},
+    private val onDailySummaryChanged: () -> Unit = {},
     private val historyStoreProvider: () -> UsageHistoryStore,
 ) : ViewModel() {
 
@@ -247,11 +252,34 @@ class UsageViewModel(
             .putBoolean(PrefsKeys.PERSISTENT_ENABLED, s.persistentEnabled)
             .putInt(PrefsKeys.REFRESH_INTERVAL, s.refreshIntervalMinutes)
             .putString(PrefsKeys.RESET_DISPLAY, s.resetDisplayMode.name)
+            .putBoolean(PrefsKeys.DAILY_SUMMARY_ENABLED, s.dailySummaryEnabled)
+            .putInt(PrefsKeys.DAILY_SUMMARY_HOUR, s.dailySummaryHour)
+            .putInt(PrefsKeys.DAILY_SUMMARY_MINUTE, s.dailySummaryMinute)
             .apply()
         // Si cambió la frecuencia, reprograma el worker en segundo plano.
         if (s.refreshIntervalMinutes != previous.refreshIntervalMinutes) {
             reschedule(s.refreshIntervalMinutes)
         }
+    }
+
+    /**
+     * Actualiza el resumen diario (Feature B lote 2): persiste y programa el
+     * worker (callback inyectado para no referenciar Context en el VM).
+     */
+    fun updateDailySummary(enabled: Boolean, hour: Int? = null, minute: Int? = null) {
+        val current = _settings.value
+        val new = current.copy(
+            dailySummaryEnabled = enabled,
+            dailySummaryHour = hour ?: current.dailySummaryHour,
+            dailySummaryMinute = minute ?: current.dailySummaryMinute,
+        )
+        _settings.value = new
+        prefs.edit()
+            .putBoolean(PrefsKeys.DAILY_SUMMARY_ENABLED, new.dailySummaryEnabled)
+            .putInt(PrefsKeys.DAILY_SUMMARY_HOUR, new.dailySummaryHour)
+            .putInt(PrefsKeys.DAILY_SUMMARY_MINUTE, new.dailySummaryMinute)
+            .apply()
+        onDailySummaryChanged()
     }
 
     fun updateTheme(theme: AppTheme) {
@@ -382,6 +410,9 @@ class UsageViewModel(
         resetDisplayMode = prefs.getString(PrefsKeys.RESET_DISPLAY, null)
             ?.let { name -> ResetDisplayMode.entries.firstOrNull { it.name == name } }
             ?: ResetDisplayMode.COUNTDOWN,
+        dailySummaryEnabled = prefs.getBoolean(PrefsKeys.DAILY_SUMMARY_ENABLED, false),
+        dailySummaryHour = prefs.getInt(PrefsKeys.DAILY_SUMMARY_HOUR, 21),
+        dailySummaryMinute = prefs.getInt(PrefsKeys.DAILY_SUMMARY_MINUTE, 0),
     )
 
     private fun loadTheme(): AppTheme =
@@ -421,6 +452,7 @@ class UsageViewModel(
                         reschedule = { UsageScheduler.schedule(app, it) },
                         startUpdateDownload = { info -> UpdaterService.start(app, info.downloadUrl, info.sha256) },
                         onLanguageChange = { LocaleHelper.apply(app, it) },
+                        onDailySummaryChanged = { com.jpyunism.ollamacloudusage.DailySummaryWorker.schedule(app) },
                         historyStoreProvider = { container.historyStore },
                     ) as T
                 }

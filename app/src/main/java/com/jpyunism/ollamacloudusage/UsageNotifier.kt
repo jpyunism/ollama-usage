@@ -145,6 +145,24 @@ object UsageNotifier {
         )
 
     private const val UPDATE_NOTIFICATION_ID = 1003
+    const val DAILY_SUMMARY_NOTIFICATION_ID = 1004
+
+    /** Resumen diario programado (Feature B lote 2): % semana/sesión + proyección. */
+    @SuppressLint("MissingPermission") // canNotify() verifica el permiso antes
+    fun notifyDailySummary(context: Context, text: String) {
+        if (!canNotify(context)) return
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_notify_chat)
+            .setContentTitle(context.getString(R.string.daily_summary_title))
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setContentIntent(openApp(context))
+            .setAutoCancel(true)
+            .build()
+        runCatching {
+            NotificationManagerCompat.from(context).notify(DAILY_SUMMARY_NOTIFICATION_ID, notification)
+        }
+    }
 
     /** Avisa que hay una versión nueva publicada; el tap abre la app. */
     @SuppressLint("MissingPermission") // canNotify() verifica el permiso antes

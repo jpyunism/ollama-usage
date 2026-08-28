@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ManageAccounts
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Restore
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -50,6 +51,8 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -288,6 +291,9 @@ fun SettingsTab(
                 )
             }
         }
+
+        // Resumen diario programado (Feature B lote 2, issue #19)
+        DailySummaryCard(vm)
 
         // Frecuencia de refresco
         Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
@@ -914,4 +920,78 @@ private fun AccountTextDialog(
             OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         },
     )
+}
+
+/**
+ * Card del resumen diario programado (Feature B lote 2, issue #19):
+ * switch + hora con time picker (Material3 TimePicker en diálogo).
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun DailySummaryCard(vm: UsageViewModel) {
+    val settings by vm.settings.collectAsStateWithLifecycle()
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconBox(Icons.Outlined.Schedule)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.daily_summary), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        stringResource(R.string.daily_summary_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = settings.dailySummaryEnabled,
+                    onCheckedChange = { vm.updateDailySummary(enabled = it) },
+                )
+            }
+            if (settings.dailySummaryEnabled) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(R.string.daily_summary_time), style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.weight(1f))
+                    FilledTonalButton(onClick = { showTimePicker = true }) {
+                        Text("%02d:%02d".format(settings.dailySummaryHour, settings.dailySummaryMinute))
+                    }
+                }
+            }
+        }
+    }
+
+    if (showTimePicker) {
+        val initial = java.time.LocalTime.of(settings.dailySummaryHour, settings.dailySummaryMinute)
+        var picked by remember { mutableStateOf(initial) }
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            title = { Text(stringResource(R.string.daily_summary_time)) },
+            text = {
+                androidx.compose.material3.TimePicker(
+                    state = rememberTimePickerState(
+                        initialHour = settings.dailySummaryHour,
+                        initialMinute = settings.dailySummaryMinute,
+                        is24Hour = true,
+                    ),
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    vm.updateDailySummary(enabled = true, hour = picked.hour, minute = picked.minute)
+                    showTimePicker = false
+                }) { Text(stringResource(R.string.save_generic)) }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showTimePicker = false }) { Text(stringResource(R.string.cancel)) }
+            },
+        )
+    }
 }

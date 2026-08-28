@@ -202,4 +202,8 @@
     <string name="accounts_apikey">API key</string>
     <string name="save_generic">Guardar</string>
     <string name="cancel">Cancelar</string>
+    <string name="daily_summary_title">Resumen diario de consumo</string>
+    <string name="daily_summary">Resumen diario</string>
+    <string name="daily_summary_description">Recibe una notificación con tu consumo cada día a la hora elegida.</string>
+    <string name="daily_summary_time">Hora</string>
 </resources>

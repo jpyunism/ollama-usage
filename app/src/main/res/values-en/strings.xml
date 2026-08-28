@@ -202,4 +202,8 @@
     <string name="accounts_apikey">API key</string>
     <string name="save_generic">Save</string>
     <string name="cancel">Cancel</string>
+    <string name="daily_summary_title">Daily usage summary</string>
+    <string name="daily_summary">Daily summary</string>
+    <string name="daily_summary_description">Get a notification with your usage every day at the chosen time.</string>
+    <string name="daily_summary_time">Time</string>
 </resources>

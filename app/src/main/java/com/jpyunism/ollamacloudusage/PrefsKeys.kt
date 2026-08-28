@@ -34,7 +34,13 @@ object PrefsKeys {
     const val LAST_PACE_PERIOD_WEEK = "last_pace_period_week"
     const val LAST_PACE_PERIOD_SESSION = "last_pace_period_session"
 
+    // Resumen diario programado (Feature B lote 2)
+    const val DAILY_SUMMARY_ENABLED = "daily_summary_enabled"
+    const val DAILY_SUMMARY_HOUR = "daily_summary_hour"
+    const val DAILY_SUMMARY_MINUTE = "daily_summary_minute"
+
     // Anclas de reset detectadas/persistidas (Feature D; con API key no hay
+    // resets reales y se usa el fallback del domingo 21:00 si no hay ancla).
     // resets reales y se usa el fallback del domingo 21:00 si no hay ancla).
     const val WEEKLY_RESET_ANCHOR = "weekly_reset_anchor"
     const val SESSION_RESET_ANCHOR = "session_reset_anchor"
