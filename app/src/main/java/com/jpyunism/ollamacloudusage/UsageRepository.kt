@@ -99,7 +99,59 @@ class UsageRepository(
         if (prefs.getBoolean(PrefsKeys.NOTIF_ENABLED, true)) {
             checkWeeklyThreshold(data)
             checkSessionThreshold(data)
+            checkPaceAlerts()
         }
+    }
+
+    /**
+     * Alerta temprana de ritmo (Feature A): notifica cuando la proyección del
+     * período cruza 100% antes del reset. Una sola vez por período (guard en
+     * prefs con el `start` del período notificado).
+     */
+    private fun checkPaceAlerts() {
+        val snapshots = historyStore.load()
+
+        fun check(period: HistoryPeriod, lastKey: String, titleRes: Int) {
+            val anchor = dataAnchor(period) ?: fallbackResetAnchor(period, now())
+            val alert = paceAlert(snapshots, period, anchor, now()) { p -> selectorOf(period, p) } ?: return
+            val lastPeriod = prefs.getLong(lastKey, Long.MIN_VALUE)
+            if (lastPeriod == alert.periodStart) return // ya notificado este período
+            prefs.edit().putLong(lastKey, alert.periodStart).apply()
+            alertNotifier(
+                context,
+                context.getString(titleRes),
+                context.getString(R.string.pace_alert_message, formatPercent(alert.toPercent)),
+            )
+        }
+
+        check(
+            HistoryPeriod.WEEK,
+            PrefsKeys.LAST_PACE_PERIOD_WEEK,
+            R.string.pace_alert_title_weekly,
+        )
+        check(
+            HistoryPeriod.SESSION,
+            PrefsKeys.LAST_PACE_PERIOD_SESSION,
+            R.string.pace_alert_title_session,
+        )
+    }
+
+    /** Ancla real del período si la fuente la entrega (cookie/scraper); null con API key. */
+    private fun dataAnchor(period: HistoryPeriod): Long? {
+        // El ancla real llega por refresh anterior; el histórico no la guarda.
+        // Se usa el fallback salvo que exista ancla persistida (Feature D).
+        return prefs.getLong(prefsKeyAnchor(period), 0L).takeIf { it > 0 }
+    }
+
+    private fun prefsKeyAnchor(period: HistoryPeriod): String = when (period) {
+        HistoryPeriod.WEEK -> PrefsKeys.WEEKLY_RESET_ANCHOR
+        HistoryPeriod.SESSION -> PrefsKeys.SESSION_RESET_ANCHOR
+    }
+
+    /** Selector de % según el período. */
+    private fun selectorOf(period: HistoryPeriod, s: UsageSnapshot): Double = when (period) {
+        HistoryPeriod.WEEK -> s.weeklyPercent
+        HistoryPeriod.SESSION -> s.sessionPercent
     }
 
     private fun checkWeeklyThreshold(data: UsageData) {

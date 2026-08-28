@@ -233,10 +233,17 @@ fun linearProjection(
 
     val last = snapshotsInPeriod.last()
     val n = snapshotsInPeriod.size.toDouble()
-    val sumX = snapshotsInPeriod.sumOf { it.timestampMillis.toDouble() }
+    // Centrar X en el último snapshot antes de la regresión: los timestamps
+    // absolutos (~1e12 ms) con fórmula de sumas directas sufren cancelación
+    // catastrófica en `n*sumX2 - sumX²` (el denominador real puede ser
+    // ~1e6 frente a términos de ~1e24 → se pierde la señal y la pendiente
+    // sale corrupta o cero). Centrar reduce los términos a magnitudes de
+    // minutos/horas y mantiene el resultado numéricamente estable.
+    val x0 = last.timestampMillis.toDouble()
+    val sumX = snapshotsInPeriod.sumOf { it.timestampMillis.toDouble() - x0 }
     val sumY = snapshotsInPeriod.sumOf { selector(it) }
-    val sumXY = snapshotsInPeriod.sumOf { it.timestampMillis.toDouble() * selector(it) }
-    val sumX2 = snapshotsInPeriod.sumOf { it.timestampMillis.toDouble() * it.timestampMillis.toDouble() }
+    val sumXY = snapshotsInPeriod.sumOf { (it.timestampMillis.toDouble() - x0) * selector(it) }
+    val sumX2 = snapshotsInPeriod.sumOf { (it.timestampMillis.toDouble() - x0) * (it.timestampMillis.toDouble() - x0) }
 
     val denom = n * sumX2 - sumX * sumX
     // Con ≥2 snapshots de timestamps distintos el denominador es > 0.
@@ -248,7 +255,7 @@ fun linearProjection(
         fromTimestamp = last.timestampMillis,
         fromPercent = selector(last),
         toTimestamp = end,
-        toPercent = slope * end + intercept,
+        toPercent = slope * (end - x0) + intercept,
     )
 }
 
@@ -284,4 +291,31 @@ private fun nextSundayAt21(now: Long, zone: ZoneId): Long {
         candidate = candidate.plusDays(7)
     }
     return candidate.toInstant().toEpochMilli()
+}
+
+/**
+ * Alerta temprana de ritmo (issue #24): si la proyección lineal del período
+ * actual cruza el 100% antes del reset, la cuota se agotará a mitad de
+ * período y conviene avisar sin esperar el umbral de consumo (80/95).
+ *
+ * Devuelve [PaceAlert] con el inicio del período (clave del guard de
+ * "una vez por período") y el % proyectado al reset; null si no hay datos
+ * suficientes (ancla, ≥ 2 snapshots) o la proyección no supera 100.
+ */
+data class PaceAlert(
+    val periodStart: Long,
+    val toPercent: Double,
+)
+
+fun paceAlert(
+    snapshots: List<UsageSnapshot>,
+    period: HistoryPeriod,
+    resetAnchor: Long?,
+    now: Long,
+    selector: (UsageSnapshot) -> Double,
+): PaceAlert? {
+    val cp = currentPeriod(snapshots, period, resetAnchor, now, selector) ?: return null
+    val proj = cp.projection ?: return null
+    if (proj.toPercent <= 100.0) return null
+    return PaceAlert(periodStart = cp.start, toPercent = proj.toPercent)
 }

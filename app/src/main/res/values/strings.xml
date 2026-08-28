@@ -140,6 +140,11 @@
     <string name="session_alert_title">Sesión al %1$s%%</string>
     <string name="session_alert_message">La sesión de Ollama Cloud está al %1$s%%. Se resetea pronto.</string>
 
+    <!-- Pace alerts (alerta temprana de ritmo, proyección cruza 100%) -->
+    <string name="pace_alert_title_weekly">Ritmo semanal acelerado</string>
+    <string name="pace_alert_title_session">Ritmo de sesión acelerado</string>
+    <string name="pace_alert_message">A este ritmo llegarás al 100%% antes del reset (proyección: %1$s%%). Considera reducir el uso.</string>
+
     <!-- Errors -->
     <string name="cookie_expired">Cookie expirada</string>
     <string name="api_key_invalid">API key inválida o expirada. Crea una nueva en ollama.com/settings/keys.</string>
