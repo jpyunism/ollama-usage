@@ -21,8 +21,8 @@
 - [x] D3 Persistencia + uso del ancla en repo/UI
 
 ## Feature E — Widget 2×1 (#17)
-- [ ] E1 widget_compact_info.xml + manifest + widget_compact.xml
-- [ ] E2 UsageWidgetProvider bind por variante + updateAll ambas + semáforo
+- [x] E1 widget_compact_info.xml + manifest + widget_compact.xml
+- [x] E2 UsageWidgetProvider bind por variante + updateAll ambas + semáforo
 - [ ] E3 Verificación emulador de ambos widgets
 
 ## Cierre
