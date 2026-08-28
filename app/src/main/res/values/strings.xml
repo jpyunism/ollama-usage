@@ -177,6 +177,14 @@
     <string name="update_install_permission">Habilitar instalación</string>
     <string name="section_update">Actualización</string>
     <string name="update_section_description">Revisa manualmente si hay una versión nueva publicada.</string>
+    <string name="backup_title">Backup del historial</string>
+    <string name="backup_description">Exporta tus snapshots a un archivo JSON o restaura desde uno previo (se combinan sin duplicados).</string>
+    <string name="backup_export">Exportar</string>
+    <string name="backup_import">Importar</string>
+    <string name="backup_export_ok">Backup exportado correctamente.</string>
+    <string name="backup_export_error">No se pudo escribir el archivo de backup.</string>
+    <string name="backup_import_ok">Historial restaurado y combinado.</string>
+    <string name="backup_import_error">Archivo inválido o corrupto: historial sin cambios.</string>
     <string name="version_current">Versión %1$s</string>
     <string name="update_auto_hint">La app revisa automáticamente una vez al día.</string>
     <string name="update_up_to_date">Estás al día (v%1$s)</string>

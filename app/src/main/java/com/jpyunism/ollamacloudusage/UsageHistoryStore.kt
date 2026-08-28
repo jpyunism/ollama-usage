@@ -56,6 +56,25 @@ class UsageHistoryStore(
         prefs.edit().remove(KEY_HISTORY).apply()
     }
 
+    /**
+     * Mergea [imported] con el historial actual (Feature B): dedupe por
+     * timestamp exacto (el existente gana), orden por timestamp y cap FIFO
+     * [MAX_SNAPSHOTS]. Persiste el resultado y lo devuelve.
+     * [current] inyecta el historial existente (testeable sin framework).
+     */
+    fun mergeSnapshots(
+        imported: List<UsageSnapshot>,
+        currentProvider: () -> List<UsageSnapshot> = { load() },
+    ): List<UsageSnapshot> {
+        val current = currentProvider()
+        val merged = (current + imported)
+            .distinctBy { it.timestampMillis }
+            .sortedBy { it.timestampMillis }
+            .takeLast(MAX_SNAPSHOTS)
+        save(merged)
+        return merged
+    }
+
     private fun save(snapshots: List<UsageSnapshot>) {
         prefs.edit().putString(KEY_HISTORY, encodeSnapshots(snapshots)).apply()
     }
