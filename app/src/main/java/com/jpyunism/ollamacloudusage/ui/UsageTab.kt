@@ -16,7 +16,9 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
@@ -31,13 +33,21 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -55,6 +65,8 @@ import com.jpyunism.ollamacloudusage.UiState
 import com.jpyunism.ollamacloudusage.UsageData
 import com.jpyunism.ollamacloudusage.HistoryPeriod
 import com.jpyunism.ollamacloudusage.UsageViewModel
+import com.jpyunism.ollamacloudusage.UsageSnapshot
+import com.jpyunism.ollamacloudusage.modelPercent
 import com.jpyunism.ollamacloudusage.balanceLabel
 import com.jpyunism.ollamacloudusage.computeBalance
 import com.jpyunism.ollamacloudusage.formatPercent
@@ -99,7 +111,10 @@ fun UsageTab(vm: UsageViewModel, state: UiState, isRefreshing: Boolean = false) 
         // con "infinity maximum height constraints" en algunos dispositivos.
         is UiState.Error -> CookieSetup(vm, state)
         UiState.Idle -> CookieSetup(vm, state)
-        is UiState.Success -> PullToRefreshBox(
+        is UiState.Success -> {
+            // Feature C (issue #20): bottom sheet con la evolución del modelo.
+            var modelSheet by remember { mutableStateOf<String?>(null) }
+            PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = { vm.refresh(fromPull = true) },
             modifier = Modifier.fillMaxSize(),
@@ -109,6 +124,7 @@ fun UsageTab(vm: UsageViewModel, state: UiState, isRefreshing: Boolean = false) 
             val alertSettings by vm.settings.collectAsStateWithLifecycle()
             val accounts by vm.accounts.collectAsStateWithLifecycle()
             val activeAccountId by vm.activeAccountId.collectAsStateWithLifecycle()
+            val historySnapshots by vm.history.collectAsStateWithLifecycle()
             SuccessContent(
                 data = state.data,
                 lastUpdated = state.lastUpdated,
@@ -117,9 +133,18 @@ fun UsageTab(vm: UsageViewModel, state: UiState, isRefreshing: Boolean = false) 
                 accounts = accounts,
                 activeAccountId = activeAccountId,
                 onSelectAccount = { vm.switchAccount(it) },
+                onModelClick = { modelSheet = it },
                 onRefresh = { vm.refresh(fromPull = true) },
                 onChangeAuth = { vm.openAuthSetup() },
             )
+            modelSheet?.let { name ->
+                ModelEvolutionSheet(
+                    modelName = name,
+                    snapshots = historySnapshots.snapshots,
+                    onDismiss = { modelSheet = null },
+                )
+            }
+            }
         }
     }
 }
@@ -133,6 +158,7 @@ private fun SuccessContent(
     accounts: List<Account>,
     activeAccountId: String?,
     onSelectAccount: (String) -> Unit,
+    onModelClick: (String) -> Unit = {},
     onRefresh: () -> Unit,
     onChangeAuth: () -> Unit,
 ) {
@@ -148,8 +174,8 @@ private fun SuccessContent(
             // Switcher de cuentas (Feature A): solo aparece con más de una.
             AccountSwitcherRow(accounts, activeAccountId, onSelectAccount)
         }
-        UsageMeterCard(stringResource(R.string.session_usage), data.sessionPercent, data.sessionModels, data.sessionResetAt, HistoryPeriod.SESSION.duration, alertThreshold, criticalThreshold)
-        UsageMeterCard(stringResource(R.string.weekly_usage), data.weeklyPercent, data.weeklyModels, data.weeklyResetAt, HistoryPeriod.WEEK.duration, alertThreshold, criticalThreshold)
+        UsageMeterCard(stringResource(R.string.session_usage), data.sessionPercent, data.sessionModels, data.sessionResetAt, HistoryPeriod.SESSION.duration, alertThreshold, criticalThreshold, onModelClick)
+        UsageMeterCard(stringResource(R.string.weekly_usage), data.weeklyPercent, data.weeklyModels, data.weeklyResetAt, HistoryPeriod.WEEK.duration, alertThreshold, criticalThreshold, onModelClick)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = onRefresh, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -212,6 +238,7 @@ private fun UsageMeterCard(
     duration: Duration,
     alertThreshold: Int,
     criticalThreshold: Int,
+    onModelClick: (String) -> Unit = {},
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -280,7 +307,11 @@ private fun UsageMeterCard(
                 val others = othersGroup(sortedByUsage(models))
                 sortedByUsage(models).forEach { m ->
                     Row(
-                        Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp)
+                            // Feature C (issue #20): tap en el modelo → evolución.
+                            .clickable { onModelClick(m.model) },
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -362,3 +393,73 @@ private val palette = listOf(
 
 private fun modelColor(model: String): Color =
     palette[abs(model.hashCode()) % palette.size]
+
+/**
+ * Bottom sheet con la evolución del % de un modelo sobre el histórico
+ * (Feature C, issue #20). Reusa el criterio de dibujo de UsageChart pero
+ * simplificado: línea del % del modelo en los snapshots que lo reportan.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun ModelEvolutionSheet(
+    modelName: String,
+    snapshots: List<UsageSnapshot>,
+    onDismiss: () -> Unit,
+) {
+    val points = snapshots.mapNotNull { s ->
+        modelPercent(s, modelName)?.let { s.timestampMillis to it }
+    }
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.padding(16.dp).padding(bottom = 24.dp)) {
+            Text(modelName, style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(4.dp))
+            if (points.size < 2) {
+                Text(
+                    stringResource(R.string.model_history_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 24.dp),
+                )
+            } else {
+                Spacer(Modifier.height(12.dp))
+                ModelEvolutionChart(points)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(
+                        R.string.model_history_current,
+                        formatPercent(points.last().second),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+/** Gráfico de línea simple (Canvas) de la evolución del % de un modelo. */
+@Composable
+private fun ModelEvolutionChart(points: List<Pair<Long, Double>>) {
+    val lineColor = MaterialTheme.colorScheme.primary
+    val gridColor = MaterialTheme.colorScheme.outlineVariant
+    Canvas(Modifier.fillMaxWidth().height(140.dp)) {
+        val w = size.width
+        val h = size.height
+        val minX = points.first().first.toFloat()
+        val maxX = points.last().first.toFloat()
+        val rangeX = (maxX - minX).coerceAtLeast(1f)
+        // Escala Y: 0..100 fijo (los % de modelos no deberían superar 100).
+        fun x(t: Long) = ((t - minX) / rangeX) * w
+        fun y(pct: Double) = h - (pct.toFloat().coerceIn(0f, 100f) / 100f) * h
+        // Grid 0/50/100
+        listOf(0f, 0.5f, 1f).forEach { f ->
+            drawLine(gridColor, Offset(0f, h * f), Offset(w, h * f), strokeWidth = 1.dp.toPx())
+        }
+        val path = Path()
+        points.forEachIndexed { i, (t, pct) ->
+            val p = Offset(x(t), y(pct))
+            if (i == 0) path.moveTo(p.x, p.y) else path.lineTo(p.x, p.y)
+        }
+        drawPath(path, lineColor, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round))
+    }
+}
