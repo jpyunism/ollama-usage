@@ -294,6 +294,35 @@ private fun nextSundayAt21(now: Long, zone: ZoneId): Long {
 }
 
 /**
+ * Detección automática del ancla de reset semanal (issue #15): si el % semanal
+ * cae ≥ 15 puntos porcentuales entre dos snapshots consecutivos separados
+ * ≤ 4 h, se asume que Ollama reseteó la cuota en el timestamp del snapshot
+ * bajo (el consumo natural nunca baja el %; solo el reset lo hace).
+ *
+ * Devuelve el timestamp (ms) del reset MÁS RECIENTE detectado en el histórico,
+ * o null si no hay ninguno. Función pura, testeada en JVM.
+ *
+ * Falsos positivos mitigados: la caída debe ser brusca (≥ 15 pp) y reciente
+ * (≤ 4 h entre snapshots); una caída gradual en varios snapshots no detecta.
+ */
+fun detectWeeklyReset(snapshots: List<UsageSnapshot>): Long? {
+    if (snapshots.size < 2) return null
+    val DROP_POINTS = 15.0
+    val MAX_GAP_MILLIS = 4 * 60 * 60 * 1000L
+    var lastReset: Long? = null
+    for (i in 1 until snapshots.size) {
+        val prev = snapshots[i - 1]
+        val cur = snapshots[i]
+        val gap = cur.timestampMillis - prev.timestampMillis
+        val drop = prev.weeklyPercent - cur.weeklyPercent
+        if (gap in 1..MAX_GAP_MILLIS && drop >= DROP_POINTS) {
+            lastReset = cur.timestampMillis
+        }
+    }
+    return lastReset
+}
+
+/**
  * Alerta temprana de ritmo (issue #24): si la proyección lineal del período
  * actual cruza el 100% antes del reset, la cuota se agotará a mitad de
  * período y conviene avisar sin esperar el umbral de consumo (80/95).

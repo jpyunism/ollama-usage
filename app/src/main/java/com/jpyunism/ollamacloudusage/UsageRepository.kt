@@ -95,6 +95,12 @@ class UsageRepository(
         // Histórico local: acumula el snapshot de este refresh.
         historyStore.record(data.sessionPercent, data.weeklyPercent)
 
+        // Ancla semanal automática (Feature D, issue #15): si la fuente no
+        // entrega weeklyResetAt real (método API key), se detecta el reset
+        // real del histórico y se persiste. El override de la fuente real
+        // siempre gana (REQ-032).
+        updateWeeklyAnchor(data)
+
         // Alertas de umbral — solo si el usuario las activó.
         if (prefs.getBoolean(PrefsKeys.NOTIF_ENABLED, true)) {
             checkWeeklyThreshold(data)
@@ -142,6 +148,24 @@ class UsageRepository(
         // Se usa el fallback salvo que exista ancla persistida (Feature D).
         return prefs.getLong(prefsKeyAnchor(period), 0L).takeIf { it > 0 }
     }
+
+    /**
+     * Detecta y persiste el ancla semanal (Feature D). Solo aplica cuando la
+     * fuente no entrega `weeklyResetAt` real (API key); con cookie/scraper el
+     * valor real manda y aquí no se toca nada (REQ-032). Si la detección
+     * encuentra un reset más reciente que el guardado, actualiza el prefs.
+     */
+    private fun updateWeeklyAnchor(data: UsageData) {
+        if (data.weeklyResetAt != null) return
+        val detected = detectWeeklyReset(historyStore.load()) ?: return
+        val saved = prefs.getLong(PrefsKeys.WEEKLY_RESET_ANCHOR, 0L)
+        if (detected > saved) {
+            prefs.edit().putLong(PrefsKeys.WEEKLY_RESET_ANCHOR, detected).apply()
+        }
+    }
+
+    /** Ancla semanal detectada automáticamente (para la UI), o null. */
+    fun detectedWeeklyAnchor(): Long? = prefs.getLong(PrefsKeys.WEEKLY_RESET_ANCHOR, 0L).takeIf { it > 0 }
 
     private fun prefsKeyAnchor(period: HistoryPeriod): String = when (period) {
         HistoryPeriod.WEEK -> PrefsKeys.WEEKLY_RESET_ANCHOR

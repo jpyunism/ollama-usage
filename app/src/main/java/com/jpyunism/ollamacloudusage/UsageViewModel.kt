@@ -210,7 +210,8 @@ class UsageViewModel(
                         // recarga los snapshots desde el store.
                         _history.value = HistoryState(
                             snapshots = repository.historySnapshots(),
-                            weeklyResetAt = data.weeklyResetAt,
+                            weeklyResetAt = data.weeklyResetAt
+                                ?: repository.detectedWeeklyAnchor()?.let(Instant::ofEpochMilli),
                             sessionResetAt = data.sessionResetAt,
                         )
                         UiState.Success(data, cookieStored = true, lastUpdated = repository.lastUpdated())
