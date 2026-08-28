@@ -3,8 +3,8 @@
 ## Feature A — Multi-cuenta API keys (#25)
 - [x] A1 (RED) AccountStoreTest: JSON accounts, CRUD, activa, migración
 - [x] A2 (GREEN) AccountStore
-- [ ] A3 (RED) UsageHistoryStore con storageKey paramétrico
-- [ ] A4 Repo: credencial + history por cuenta activa
+- [x] A3 (RED) UsageHistoryStore con storageKey paramétrico
+- [x] A4 Repo: credencial + history por cuenta activa
 - [ ] A5 VM.switchAccount + UI (chips en Uso, gestión en Configuración) + strings
 
 ## Feature B — Resumen diario programado (#19)

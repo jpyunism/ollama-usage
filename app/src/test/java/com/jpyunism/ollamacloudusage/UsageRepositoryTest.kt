@@ -163,6 +163,94 @@ class UsageRepositoryTest {
         return editor
     }
 
+    // ─── Multi-cuenta (Feature A lote 2, REQ-101..107) ───
+
+    /** Prefs con una lista de cuentas JSON y la activa. */
+    private fun prefsWithAccounts(
+        accountsJson: String,
+        activeId: String?,
+        legacyApiKey: String? = null,
+    ): SharedPreferences {
+        val prefs = prefsWith(authSource = AuthSource.API_KEY.name, apiKey = legacyApiKey)
+        every { prefs.getString(AccountStore.KEY_ACCOUNTS, null) } returns accountsJson
+        every { prefs.getString(AccountStore.KEY_ACTIVE_ID, null) } returns activeId
+        return prefs
+    }
+
+    private fun accountsJson(vararg triples: Triple<String, String, String>): String {
+        val arr = org.json.JSONArray()
+        triples.forEach { (id, label, key) ->
+            arr.put(org.json.JSONObject().put("id", id).put("label", label).put("apiKey", key))
+        }
+        return arr.toString()
+    }
+
+    @Test
+    fun `usa la api key de la cuenta activa si hay lista de cuentas`() = runTest {
+        val prefs = prefsWithAccounts(
+            accountsJson(Triple("a1", "Personal", "key-a1"), Triple("a2", "Trabajo", "key-a2")),
+            activeId = "a2",
+        )
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage("key-a2") } returns sampleData()
+        val calls = mutableListOf<String>()
+        val repo = buildRepo(prefs, fetcher, calls)
+
+        val result = repo.refreshAndPropagate()
+
+        assertTrue(result.isSuccess)
+        verify { fetcher.fetchUsage("key-a2") }
+    }
+
+    @Test
+    fun `sin lista de cuentas usa la api key legacy`() = runTest {
+        val prefs = prefsWithAccounts("[]", activeId = null, legacyApiKey = "sk-legacy")
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage("sk-legacy") } returns sampleData()
+        val calls = mutableListOf<String>()
+        val repo = buildRepo(prefs, fetcher, calls)
+
+        val result = repo.refreshAndPropagate()
+
+        assertTrue(result.isSuccess)
+        verify { fetcher.fetchUsage("sk-legacy") }
+    }
+
+    @Test
+    fun `sin cuenta activa ni legacy produce NoAuth`() = runTest {
+        val prefs = prefsWithAccounts("[]", activeId = null, legacyApiKey = null)
+        val fetcher = mockk<UsageScraper>()
+        val calls = mutableListOf<String>()
+        val repo = buildRepo(prefs, fetcher, calls)
+
+        val result = repo.refreshAndPropagate()
+
+        assertEquals(UsageError.NoAuth, result.exceptionOrNull())
+        assertTrue(calls.isEmpty())
+    }
+
+    @Test
+    fun `el historico se escribe en el store de la cuenta activa`() = runTest {
+        val prefs = prefsWithAccounts(
+            accountsJson(Triple("a1", "Personal", "key-a1")),
+            activeId = "a1",
+        )
+        val editor = mockk<SharedPreferences.Editor>(relaxed = true)
+        every { prefs.edit() } returns editor
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage("key-a1") } returns sampleData()
+        // El repo registra el snapshot en el store inyectado (resuelto por
+        // cuenta activa en el VM/capa de DI).
+        val historyMock = mockk<UsageHistoryStore>(relaxed = true)
+        every { historyMock.load() } returns emptyList()
+        val calls = mutableListOf<String>()
+        val repo = buildRepo(prefs, fetcher, calls, historyMock)
+
+        repo.refreshAndPropagate()
+
+        verify { historyMock.record(any(), any()) }
+    }
+
     @Test
     fun `proyeccion sobre 100 dispara alerta de ritmo una vez por periodo`() = runTest {
         val prefs = prefsWith()

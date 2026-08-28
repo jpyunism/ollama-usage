@@ -21,11 +21,12 @@ import org.json.JSONObject
 class UsageHistoryStore(
     private val prefs: SharedPreferences,
     private val now: () -> Long = System::currentTimeMillis,
+    private val storageKey: String = KEY_HISTORY,
 ) {
 
     /** Snapshots guardados, ordenados por timestamp ascendente. */
     fun load(): List<UsageSnapshot> {
-        val raw = prefs.getString(KEY_HISTORY, null) ?: return emptyList()
+        val raw = prefs.getString(storageKey, null) ?: return emptyList()
         return parseSnapshots(raw)
     }
 
@@ -53,7 +54,7 @@ class UsageHistoryStore(
     }
 
     fun clear() {
-        prefs.edit().remove(KEY_HISTORY).apply()
+        prefs.edit().remove(storageKey).apply()
     }
 
     /**
@@ -76,13 +77,16 @@ class UsageHistoryStore(
     }
 
     private fun save(snapshots: List<UsageSnapshot>) {
-        prefs.edit().putString(KEY_HISTORY, encodeSnapshots(snapshots)).apply()
+        prefs.edit().putString(storageKey, encodeSnapshots(snapshots)).apply()
     }
 
     companion object {
         const val KEY_HISTORY = "usage_history"
         const val MAX_SNAPSHOTS = 600
         const val DEDUPE_MINUTES = 15L
+
+        /** Clave de histórico por cuenta (multi-cuenta, Feature A). */
+        fun keyForAccount(accountId: String): String = "usage_history_$accountId"
 
         /** Serializa snapshots a JSON: [{"t":ms,"s":pct,"w":pct}, ...]. */
         fun encodeSnapshots(snapshots: List<UsageSnapshot>): String {

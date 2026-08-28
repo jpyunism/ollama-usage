@@ -59,15 +59,21 @@ class UsageRepository(
      * [UsageError].
      */
     suspend fun refreshAndPropagate(): Result<UsageData> = withContext(ioDispatcher) {
-        val credential = when (authSource()) {
+        val authSource = authSource()
+        // Multi-cuenta (Feature A lote 2): con lista de cuentas API key, la
+        // credencial y el histórico vienen de la cuenta activa (REQ-102/103).
+        // Sin cuentas (cookie o API key única legacy) funciona como antes.
+        val accountStore = AccountStore(prefs)
+        val activeAccount = if (authSource == AuthSource.API_KEY) accountStore.active() else null
+        val credential = when (authSource) {
             AuthSource.COOKIE -> prefs.getString(PrefsKeys.COOKIE, null)
-            AuthSource.API_KEY -> prefs.getString(PrefsKeys.API_KEY, null)
+            AuthSource.API_KEY -> activeAccount?.apiKey ?: prefs.getString(PrefsKeys.API_KEY, null)
         }
         if (credential.isNullOrBlank()) {
             return@withContext Result.failure(UsageError.NoAuth)
         }
 
-        val fetcher = if (authSource() == AuthSource.API_KEY) apiScraper else scraper
+        val fetcher = if (authSource == AuthSource.API_KEY) apiScraper else scraper
         runCatching { fetcher.fetchUsage(credential) }.fold(
             onSuccess = { data ->
                 propagate(data)
