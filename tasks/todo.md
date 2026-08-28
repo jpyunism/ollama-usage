@@ -5,7 +5,7 @@
 - [x] A2 (GREEN) AccountStore
 - [x] A3 (RED) UsageHistoryStore con storageKey paramétrico
 - [x] A4 Repo: credencial + history por cuenta activa
-- [ ] A5b UI (chips en Uso, gestión en Configuración) + strings
+- [x] A5b UI (chips en Uso, gestión en Configuración) + strings
 
 ## Feature B — Resumen diario programado (#19)
 - [ ] B1 (RED) nextDailyRunMillis + dailySummaryText
