@@ -14,21 +14,21 @@
 - [x] B4 Settings switch + time picker + reprogramación + strings
 
 ## Feature C — Histórico por modelo (#20)
-- [ ] C1 (RED) tests snapshot.models + serialización m + dedupe
-- [ ] C2 (GREEN) UsageSnapshot.models + encode/parse + record + modelPercent
-- [ ] C3 UI bottom sheet evolución por modelo + strings
+- [x] C1 (RED) tests snapshot.models + serialización m + dedupe
+- [x] C2 (GREEN) UsageSnapshot.models + encode/parse + record + modelPercent
+- [x] C3 UI bottom sheet evolución por modelo + strings
 
 ## Feature D — Comparativa semana anterior (#18)
-- [ ] D1 (RED) comparisonSeries (últimos 2 períodos, horas vs %, recorte)
-- [ ] D2 (GREEN) función pura
-- [ ] D3 Overlay en UsageChart + toggle + solo WEEK
+- [x] D1 (RED) comparisonSeries (últimos 2 períodos, horas vs %, recorte)
+- [x] D2 (GREEN) función pura
+- [x] D3 Overlay en UsageChart + toggle + solo WEEK
 
 ## Feature E — Compartir consumo (#22)
-- [ ] E1 (RED) shareSummaryText
-- [ ] E2 (GREEN) función pura + strings
-- [ ] E3 Botón Share: clipboard + ACTION_SEND + snackbar
+- [x] E1 (RED) shareSummaryText
+- [x] E2 (GREEN) función pura + strings
+- [x] E3 Botón Share: clipboard + ACTION_SEND + snackbar
 
 ## Cierre
-- [ ] V1 Suite completa + lint + assembleRelease
-- [ ] V2 Validación emulador test64 (AGENTS.md)
-- [ ] V3 Release v0.32.0 (versionCode 44) + APK + screenshots + Telegram
+- [x] V1 Suite completa + lint + assembleRelease
+- [x] V2 Validación emulador test64 (AGENTS.md)
+- [x] V3 Release v0.32.0 (versionCode 44) + APK + screenshots + Telegram
