@@ -11,9 +11,9 @@
 - [x] B3 UI export/import SAF en SettingsTab + feedback + strings
 
 ## Feature C — Semáforo (#28)
-- [ ] C1 (RED) TrafficLightTest (bordes y umbrales)
-- [ ] C2 (GREEN) TrafficLight.kt + colores Theme.kt
-- [ ] C3 Aplicar en UsageTab y barra del widget
+- [x] C1 (RED) TrafficLightTest (bordes y umbrales)
+- [x] C2 (GREEN) TrafficLight.kt + colores Theme.kt
+- [x] C3 Aplicar en UsageTab y barra del widget
 
 ## Feature D — Ancla semanal automática (#15)
 - [ ] D1 (RED) tests detectWeeklyReset (caída ≥15pp ≤4h, gradual → null)
