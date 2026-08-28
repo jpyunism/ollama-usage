@@ -108,8 +108,11 @@ fun StatsTab(history: HistoryState, isRefreshing: Boolean = false, onRefresh: ()
     val current = currentPeriod(snapshots, period, anchor, now, selector)
     // Feature D (#18): comparativa semana anterior, default ON; solo WEEK.
     var showComparison by remember { mutableStateOf(true) }
-    val (cmpCurrent, cmpPrev) = if (period == HistoryPeriod.WEEK && resetAnchor != null) {
-        comparisonSeries(snapshots, period, resetAnchor, now)
+    // El ancla puede ser sintetizada (fallback domingo 21:00) — la comparativa
+    // usa la misma que el resto del gráfico (REQ-132: "el ancla existente").
+    val cmpAnchor = resetAnchor ?: fallbackResetAnchor(HistoryPeriod.WEEK, now)
+    val (cmpCurrent, cmpPrev) = if (period == HistoryPeriod.WEEK && cmpAnchor != null) {
+        comparisonSeries(snapshots, period, cmpAnchor, now)
     } else {
         emptyList<Pair<Double, Double>>() to emptyList()
     }
