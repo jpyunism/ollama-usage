@@ -6,9 +6,9 @@
 - [x] A3 Chequeo en UsageRepository.propagate + guard por período + strings es/en
 
 ## Feature B — Backup/restore snapshots (#23)
-- [ ] B1 (RED) tests mergeSnapshots (dedupe, sort, cap 600)
-- [ ] B2 (GREEN) UsageHistoryStore.mergeSnapshots()
-- [ ] B3 UI export/import SAF en SettingsTab + feedback + strings
+- [x] B1 (RED) tests mergeSnapshots (dedupe, sort, cap 600)
+- [x] B2 (GREEN) UsageHistoryStore.mergeSnapshots()
+- [x] B3 UI export/import SAF en SettingsTab + feedback + strings
 
 ## Feature C — Semáforo (#28)
 - [ ] C1 (RED) TrafficLightTest (bordes y umbrales)
