@@ -115,6 +115,17 @@ class UsageViewModel(
     private val _showCookieWebView = MutableStateFlow(false)
     val showCookieWebView: StateFlow<Boolean> = _showCookieWebView
 
+    // ── Multi-cuenta (Feature A lote 2, issue #25) ──
+    private val accountStore = AccountStore(prefs)
+
+    /** Lista de cuentas (API keys); vacía si el usuario no usa multi-cuenta. */
+    private val _accounts = MutableStateFlow(accountStore.list())
+    val accounts: StateFlow<List<Account>> = _accounts
+
+    /** Id de la cuenta activa; null si no hay lista de cuentas. */
+    private val _activeAccountId = MutableStateFlow(accountStore.activeId())
+    val activeAccountId: StateFlow<String?> = _activeAccountId
+
     private var refreshJob: Job? = null
 
     init {
@@ -282,6 +293,45 @@ class UsageViewModel(
 
     /** JSON de exportación del historial actual (Feature B). */
     fun exportSnapshots(): String = UsageHistoryStore.encodeSnapshots(repository.historySnapshots())
+
+    // ── Multi-cuenta (Feature A lote 2, issue #25) ──
+
+    /**
+     * Cambia la cuenta activa: persiste el id y refresca inmediatamente
+     * (REQ-102). No-op si el id no existe.
+     */
+    fun switchAccount(id: String) {
+        val store = AccountStore(prefs)
+        val before = store.activeId()
+        store.setActive(id)
+        if (store.activeId() == before) return
+        _activeAccountId.value = id
+        refresh()
+    }
+
+    /** Agrega una cuenta API key; queda activa y dispara refresh (REQ-102/106). */
+    fun addAccount(label: String, apiKey: String): Account {
+        val created = AccountStore(prefs).add(label, apiKey)
+        _accounts.value = AccountStore(prefs).list()
+        _activeAccountId.value = created.id
+        refresh()
+        return created
+    }
+
+    /** Renombra una cuenta sin tocar la credencial. */
+    fun renameAccount(id: String, label: String) {
+        AccountStore(prefs).rename(id, label)
+        _accounts.value = AccountStore(prefs).list()
+    }
+
+    /** Elimina una cuenta; si era la activa, reasigna y refresca. */
+    fun removeAccount(id: String) {
+        AccountStore(prefs).remove(id)
+        val store = AccountStore(prefs)
+        _accounts.value = store.list()
+        _activeAccountId.value = store.activeId()
+        if (store.activeId() != null) refresh()
+    }
 
     /** Chequea una vez por día si hay release más nuevo (silencioso). */
     fun checkForUpdate() {
