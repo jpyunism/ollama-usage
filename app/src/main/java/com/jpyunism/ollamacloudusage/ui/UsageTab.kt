@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -43,6 +45,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.jpyunism.ollamacloudusage.Account
 import com.jpyunism.ollamacloudusage.BalanceStatus
 import com.jpyunism.ollamacloudusage.ModelUsage
 import com.jpyunism.ollamacloudusage.R
@@ -104,11 +107,16 @@ fun UsageTab(vm: UsageViewModel, state: UiState, isRefreshing: Boolean = false) 
             // Umbrales del semáforo = los mismos de las alertas (prefs,
             // default 80/95); el semáforo es visual, no depende de NOTIF_ENABLED.
             val alertSettings by vm.settings.collectAsStateWithLifecycle()
+            val accounts by vm.accounts.collectAsStateWithLifecycle()
+            val activeAccountId by vm.activeAccountId.collectAsStateWithLifecycle()
             SuccessContent(
                 data = state.data,
                 lastUpdated = state.lastUpdated,
                 alertThreshold = alertSettings.weeklyAlert,
                 criticalThreshold = alertSettings.weeklyCritical,
+                accounts = accounts,
+                activeAccountId = activeAccountId,
+                onSelectAccount = { vm.switchAccount(it) },
                 onRefresh = { vm.refresh(fromPull = true) },
                 onChangeAuth = { vm.openAuthSetup() },
             )
@@ -122,6 +130,9 @@ private fun SuccessContent(
     lastUpdated: Long?,
     alertThreshold: Int,
     criticalThreshold: Int,
+    accounts: List<Account>,
+    activeAccountId: String?,
+    onSelectAccount: (String) -> Unit,
     onRefresh: () -> Unit,
     onChangeAuth: () -> Unit,
 ) {
@@ -133,6 +144,10 @@ private fun SuccessContent(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Header(data, lastUpdated)
+        if (accounts.size > 1) {
+            // Switcher de cuentas (Feature A): solo aparece con más de una.
+            AccountSwitcherRow(accounts, activeAccountId, onSelectAccount)
+        }
         UsageMeterCard(stringResource(R.string.session_usage), data.sessionPercent, data.sessionModels, data.sessionResetAt, HistoryPeriod.SESSION.duration, alertThreshold, criticalThreshold)
         UsageMeterCard(stringResource(R.string.weekly_usage), data.weeklyPercent, data.weeklyModels, data.weeklyResetAt, HistoryPeriod.WEEK.duration, alertThreshold, criticalThreshold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -144,6 +159,26 @@ private fun SuccessContent(
             OutlinedButton(onClick = onChangeAuth, modifier = Modifier.weight(1f)) {
                 Text(stringResource(R.string.change_auth))
             }
+        }
+    }
+}
+
+@Composable
+private fun AccountSwitcherRow(
+    accounts: List<Account>,
+    activeAccountId: String?,
+    onSelectAccount: (String) -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        accounts.forEach { account ->
+            FilterChip(
+                selected = account.id == activeAccountId,
+                onClick = { onSelectAccount(account.id) },
+                label = { Text(account.label) },
+            )
         }
     }
 }

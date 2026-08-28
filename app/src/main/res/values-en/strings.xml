@@ -193,4 +193,13 @@
     <string name="update_checking">Checking…</string>
     <string name="update_check_hint">Tap the button to look for updates.</string>
     <string name="update_check">Check for updates</string>
+    <string name="accounts_title">Accounts</string>
+    <string name="accounts_description">Monitor multiple Ollama Cloud accounts and switch between them. Tap an account to activate it.</string>
+    <string name="accounts_add">Add account</string>
+    <string name="accounts_rename">Rename</string>
+    <string name="accounts_delete">Delete</string>
+    <string name="accounts_label">Name</string>
+    <string name="accounts_apikey">API key</string>
+    <string name="save_generic">Save</string>
+    <string name="cancel">Cancel</string>
 </resources>
