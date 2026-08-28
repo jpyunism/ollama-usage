@@ -8,10 +8,10 @@
 - [x] A5b UI (chips en Uso, gestión en Configuración) + strings
 
 ## Feature B — Resumen diario programado (#19)
-- [ ] B1 (RED) nextDailyRunMillis + dailySummaryText
-- [ ] B2 (GREEN) funciones puras
-- [ ] B3 DailySummaryWorker (delay, reprograma, fallback snapshot)
-- [ ] B4 Settings switch + time picker + reprogramación + strings
+- [x] B1 (RED) nextDailyRunMillis + dailySummaryText
+- [x] B2 (GREEN) funciones puras
+- [x] B3 DailySummaryWorker (delay, reprograma, fallback snapshot)
+- [x] B4 Settings switch + time picker + reprogramación + strings
 
 ## Feature C — Histórico por modelo (#20)
 - [ ] C1 (RED) tests snapshot.models + serialización m + dedupe
