@@ -208,4 +208,6 @@
     <string name="daily_summary_time">Time</string>
     <string name="model_history_empty">Not enough data for this model yet.</string>
     <string name="model_history_current">Current: %1$s%%</string>
+    <string name="stats_comparison">Previous week</string>
+    <string name="stats_comparison_toggle">Compare previous week</string>
 </resources>

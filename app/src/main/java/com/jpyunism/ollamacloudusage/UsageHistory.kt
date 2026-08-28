@@ -354,3 +354,41 @@ fun paceAlert(
     if (proj.toPercent <= 100.0) return null
     return PaceAlert(periodStart = cp.start, toPercent = proj.toPercent)
 }
+
+/**
+ * Comparativa semana actual vs anterior (Feature D, issue #18).
+ *
+ * Devuelve un par de series alineadas por tiempo transcurrido desde el
+ * inicio de su propio período: cada punto es (horasDesdeInicio, % semanal).
+ * La serie "actual" son los snapshots del período en curso (según el ancla
+ * de reset) y la "previa" se recorta a las horas transcurridas de la actual
+ * para que ambos trazos sean comparables en el mismo eje X.
+ */
+fun comparisonSeries(
+    snapshots: List<UsageSnapshot>,
+    period: HistoryPeriod,
+    resetAnchor: Long,
+    now: Long,
+): Pair<List<Pair<Double, Double>>, List<Pair<Double, Double>>> {
+    val d = period.durationMillis
+    val groups = periodsFor(snapshots, period, resetAnchor)
+    if (groups.isEmpty()) return emptyList<Pair<Double, Double>>() to emptyList()
+
+    // Próximo reset estrictamente futuro (mismo criterio que currentPeriod).
+    var end = resetAnchor
+    while (end <= now) end += d
+    val currentStart = end - d
+    val elapsedHours = { ts: Long, start: Long -> (ts - start) / 3_600_000.0 }
+
+    val current = groups.lastOrNull { it.start == currentStart }
+        ?.snapshots.orEmpty()
+        .map { elapsedHours(it.timestampMillis, currentStart) to it.weeklyPercent }
+
+    val prevStart = currentStart - d
+    val prev = groups.lastOrNull { it.start == prevStart }
+        ?.snapshots.orEmpty()
+        .filter { elapsedHours(it.timestampMillis, prevStart) <= elapsedHours(now, currentStart) } // recorte a las horas transcurridas de la actual
+        .map { elapsedHours(it.timestampMillis, prevStart) to it.weeklyPercent }
+
+    return current to prev
+}

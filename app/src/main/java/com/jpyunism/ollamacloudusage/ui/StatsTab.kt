@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -60,6 +61,7 @@ import com.jpyunism.ollamacloudusage.PeriodBar
 import com.jpyunism.ollamacloudusage.CurrentPeriod
 import com.jpyunism.ollamacloudusage.R
 import com.jpyunism.ollamacloudusage.UsageSnapshot
+import com.jpyunism.ollamacloudusage.comparisonSeries
 import com.jpyunism.ollamacloudusage.currentPeriod
 import com.jpyunism.ollamacloudusage.fallbackResetAnchor
 import com.jpyunism.ollamacloudusage.formatPercent
@@ -104,6 +106,14 @@ fun StatsTab(history: HistoryState, isRefreshing: Boolean = false, onRefresh: ()
     val summary = summarize(snapshots, period, anchor, now, selector)
     val markers = resetMarkers(snapshots, period, resetAnchor)
     val current = currentPeriod(snapshots, period, anchor, now, selector)
+    // Feature D (#18): comparativa semana anterior, default ON; solo WEEK.
+    var showComparison by remember { mutableStateOf(true) }
+    val (cmpCurrent, cmpPrev) = if (period == HistoryPeriod.WEEK && resetAnchor != null) {
+        comparisonSeries(snapshots, period, resetAnchor, now)
+    } else {
+        emptyList<Pair<Double, Double>>() to emptyList()
+    }
+    val comparison = if (showComparison && cmpPrev.size >= 2) cmpPrev else null
 
     PullToRefreshBox(
         isRefreshing = isRefreshing,
@@ -142,17 +152,33 @@ fun StatsTab(history: HistoryState, isRefreshing: Boolean = false, onRefresh: ()
                     selector = selector,
                     markers = markers,
                     current = current,
+                    comparison = comparison,
                 )
                 current?.let { cp ->
                     val idealLabel = stringResource(R.string.stats_ideal)
                     val projLabel = cp.projection?.let {
                         stringResource(R.string.stats_projection, formatPercent(it.toPercent))
                     }
+                    val comparisonLabel = stringResource(R.string.stats_comparison)
                     ChartLegend(
                         showIdeal = cp.snapshotCount > 0,
                         idealLabel = idealLabel,
                         projectionLabel = projLabel,
+                        comparisonLabel = comparison.takeIf { cmpPrev.size >= 2 }?.let { comparisonLabel },
                     )
+                }
+                // Toggle comparativa (REQ-131): visible solo si hay datos previos.
+                if (cmpPrev.size >= 2) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        FilterChip(
+                            selected = showComparison,
+                            onClick = { showComparison = !showComparison },
+                            label = { Text(stringResource(R.string.stats_comparison_toggle)) },
+                        )
+                    }
                 }
             }
         }
@@ -285,6 +311,7 @@ private fun UsageChart(
     selector: (UsageSnapshot) -> Double,
     markers: List<Long>,
     current: CurrentPeriod?,
+    comparison: List<Pair<Double, Double>>? = null,
 ) {
     var tooltip by remember { mutableStateOf<UsageSnapshot?>(null) }
     val lineColor = MaterialTheme.colorScheme.primary
@@ -296,6 +323,7 @@ private fun UsageChart(
     val projectionColor = MaterialTheme.colorScheme.secondary
     val dangerColor = MaterialTheme.colorScheme.error
     val density = LocalDensity.current
+    val comparisonColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     // Fin del eje X: último snapshot, o el fin de la proyección si existe.
     val xEnd = current?.projection?.toTimestamp?.coerceAtLeast(snapshots.last().timestampMillis)
@@ -391,6 +419,30 @@ private fun UsageChart(
                 ),
             )
             drawPath(linePath, color = lineColor, style = Stroke(width = with(density) { 2.dp.toPx() }, cap = StrokeCap.Round))
+        }
+
+        // Overlay comparativa: semana anterior punteada gris (Feature D #18).
+        // Eje X en horas desde el inicio del período: se mapea al eje real
+        // usando current.start como inicio de la semana actual.
+        if (comparison != null && comparison.size >= 2 && current != null) {
+            fun xForHours(h: Double): Float =
+                xFor(current.start + (h * 3_600_000.0).toLong())
+            val cmpPath = Path()
+            comparison.forEachIndexed { i, (h, pct) ->
+                val p = Offset(xForHours(h), yFor(pct))
+                if (i == 0) cmpPath.moveTo(p.x, p.y) else cmpPath.lineTo(p.x, p.y)
+            }
+            drawPath(
+                cmpPath,
+                color = comparisonColor,
+                style = Stroke(
+                    width = with(density) { 2.dp.toPx() },
+                    cap = StrokeCap.Round,
+                    pathEffect = PathEffect.dashPathEffect(
+                        floatArrayOf(with(density) { 6.dp.toPx() }, with(density) { 6.dp.toPx() }),
+                    ),
+                ),
+            )
         }
 
         // Puntos de los snapshots
@@ -627,6 +679,7 @@ private fun ChartLegend(
     showIdeal: Boolean,
     idealLabel: String,
     projectionLabel: String?,
+    comparisonLabel: String? = null,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
@@ -645,6 +698,13 @@ private fun ChartLegend(
                 color = MaterialTheme.colorScheme.secondary,
                 label = projectionLabel,
                 dashed = false,
+            )
+        }
+        if (comparisonLabel != null) {
+            LegendItem(
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                label = comparisonLabel,
+                dashed = true,
             )
         }
     }
