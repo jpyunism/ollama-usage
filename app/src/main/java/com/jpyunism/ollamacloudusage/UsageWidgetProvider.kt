@@ -19,13 +19,19 @@ import kotlin.math.roundToInt
  * cada refresh en segundo plano (WorkManager o servicio en primer plano).
  * El widget solo lee y renderiza — nunca hace red — y al tocarlo abre la app.
  */
-class UsageWidgetProvider : AppWidgetProvider() {
+open class UsageWidgetProvider : AppWidgetProvider() {
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         appWidgetIds.forEach { id ->
             appWidgetManager.updateAppWidget(id, buildViews(context, loadData(context)))
         }
     }
+
+    /**
+     * Variante compacta 2×1 (Feature E): mismo datos y lógica, layout propio.
+     * Declarada como receiver separado en el manifest con widget_compact_info.
+     */
+    class Compact : UsageWidgetProvider()
 
     companion object {
         private const val KEY_DATA = "widget_usage_json"
@@ -68,13 +74,15 @@ class UsageWidgetProvider : AppWidgetProvider() {
         private fun thresholds(context: Context): Pair<Int, Int> =
             prefs(context).getInt(KEY_ALERT, 80) to prefs(context).getInt(KEY_CRITICAL, 95)
 
-        /** Re-renderiza todos los widgets instalados con los datos guardados. */
+        /** Re-renderiza todos los widgets instalados (4×2 y compacto 2×1). */
         fun updateAll(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
-            val ids = manager.getAppWidgetIds(ComponentName(context, UsageWidgetProvider::class.java))
-            if (ids.isEmpty()) return
             val views = buildViews(context, loadData(context))
-            ids.forEach { id -> manager.updateAppWidget(id, views) }
+            val compactViews = buildCompactViews(context, loadData(context))
+            manager.getAppWidgetIds(ComponentName(context, UsageWidgetProvider::class.java))
+                .forEach { id -> manager.updateAppWidget(id, views) }
+            manager.getAppWidgetIds(ComponentName(context, Compact::class.java))
+                .forEach { id -> manager.updateAppWidget(id, compactViews) }
         }
 
         private fun loadData(context: Context): UsageData? {
@@ -160,6 +168,48 @@ class UsageWidgetProvider : AppWidgetProvider() {
                 val level = TrafficLight.paceColor(data.sessionPercent, alert, critical)
                 views.setInt(
                     R.id.widget_progress,
+                    "setProgressDrawable",
+                    when (level) {
+                        TrafficLightLevel.GREEN -> R.drawable.widget_progress_green
+                        TrafficLightLevel.AMBER -> R.drawable.widget_progress_amber
+                        TrafficLightLevel.RED -> R.drawable.widget_progress_red
+                    },
+                )
+            }
+            return views
+        }
+
+        /** Renderiza el widget compacto 2×1: % de semana + barra con semáforo. */
+        private fun buildCompactViews(context: Context, data: UsageData?): RemoteViews {
+            val views = RemoteViews(context.packageName, R.layout.widget_compact)
+            views.setOnClickPendingIntent(
+                R.id.widget_compact_root,
+                PendingIntent.getActivity(
+                    context,
+                    0,
+                    Intent(context, MainActivity::class.java),
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                ),
+            )
+            if (data == null) {
+                views.setTextViewText(R.id.widget_compact_percent, context.getString(R.string.checking_usage))
+                views.setViewVisibility(R.id.widget_compact_progress, View.GONE)
+            } else {
+                views.setTextViewText(
+                    R.id.widget_compact_percent,
+                    context.getString(R.string.widget_session, formatPercent(data.weeklyPercent)),
+                )
+                views.setProgressBar(
+                    R.id.widget_compact_progress,
+                    100,
+                    data.weeklyPercent.roundToInt().coerceIn(0, 100),
+                    false,
+                )
+                views.setViewVisibility(R.id.widget_compact_progress, View.VISIBLE)
+                val (alert, critical) = thresholds(context)
+                val level = TrafficLight.paceColor(data.weeklyPercent, alert, critical)
+                views.setInt(
+                    R.id.widget_compact_progress,
                     "setProgressDrawable",
                     when (level) {
                         TrafficLightLevel.GREEN -> R.drawable.widget_progress_green

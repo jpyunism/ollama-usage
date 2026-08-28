@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget compacto 2×1 (Feature E, issue #17): % de semana grande + barra.
+     Vistas XML clásicas vía RemoteViews — excepción justificada a la regla
+     de solo Material 3 (los AppWidgets no soportan Compose). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_compact_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/widget_week_label"
+            android:textAllCaps="true"
+            android:textColor="@color/widget_text_secondary"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.12" />
+
+        <TextView
+            android:id="@+id/widget_compact_percent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/widget_text"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/widget_compact_progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="0dp"
+        android:layout_height="10dp"
+        android:layout_weight="1"
+        android:layout_marginStart="12dp"
+        android:layout_gravity="center_vertical"
+        android:max="100"
+        android:progressDrawable="@drawable/widget_progress_green" />
+</LinearLayout>

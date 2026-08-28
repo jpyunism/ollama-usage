@@ -162,6 +162,7 @@
     <string name="widget_session">%1$s%%</string>
     <string name="widget_session_label">Sesión</string>
     <string name="widget_plan">Plan %1$s</string>
+    <string name="widget_week_label">Semana</string>
 
     <!-- Updates -->
     <string name="update_available">Nueva versión %1$s disponible</string>
