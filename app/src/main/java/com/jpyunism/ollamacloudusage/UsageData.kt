@@ -140,3 +140,19 @@ fun formatReset(
         }
     }
 }
+
+/**
+ * Resumen de consumo para compartir (Feature E, issue #22 / REQ-140).
+ * "📊 Ollama Cloud (plan): semana X% · sesión Y% · top: modelo Z%".
+ * Top = modelo con mayor % de la semana; sin modelos → se omite "top".
+ */
+fun shareSummaryText(data: UsageData): String {
+    val base = "📊 Ollama Cloud (${data.plan}): semana ${formatPercent(data.weeklyPercent)}% · " +
+        "sesión ${formatPercent(data.sessionPercent)}%"
+    val top = data.weeklyModels.maxByOrNull { it.percent }
+    return if (top != null) {
+        "$base · top: ${top.model} ${formatPercent(top.percent)}%"
+    } else {
+        base
+    }
+}

@@ -20,10 +20,15 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
@@ -70,6 +75,7 @@ import com.jpyunism.ollamacloudusage.modelPercent
 import com.jpyunism.ollamacloudusage.balanceLabel
 import com.jpyunism.ollamacloudusage.computeBalance
 import com.jpyunism.ollamacloudusage.formatPercent
+import com.jpyunism.ollamacloudusage.shareSummaryText
 import com.jpyunism.ollamacloudusage.formatReset
 import com.jpyunism.ollamacloudusage.groupModels
 import com.jpyunism.ollamacloudusage.TrafficLight
@@ -80,6 +86,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
+import kotlinx.coroutines.launch
 
 
 @Composable
@@ -114,6 +121,12 @@ fun UsageTab(vm: UsageViewModel, state: UiState, isRefreshing: Boolean = false) 
         is UiState.Success -> {
             // Feature C (issue #20): bottom sheet con la evolución del modelo.
             var modelSheet by remember { mutableStateOf<String?>(null) }
+            val context = LocalContext.current
+            val clipboardManager = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                as android.content.ClipboardManager
+            val scope = rememberCoroutineScope()
+            val snackbarHostState = remember { SnackbarHostState() }
+            val copiedMessage = stringResource(R.string.copied)
             PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = { vm.refresh(fromPull = true) },
@@ -136,7 +149,19 @@ fun UsageTab(vm: UsageViewModel, state: UiState, isRefreshing: Boolean = false) 
                 onModelClick = { modelSheet = it },
                 onRefresh = { vm.refresh(fromPull = true) },
                 onChangeAuth = { vm.openAuthSetup() },
+                onShare = {
+                    // Feature E (#22): copiar al portapapeles + share sheet.
+                    val text = shareSummaryText(state.data)
+                    clipboardManager.setPrimaryClip(android.content.ClipData.newPlainText("ollama-usage", text))
+                    val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(android.content.Intent.EXTRA_TEXT, text)
+                    }
+                    context.startActivity(android.content.Intent.createChooser(send, null))
+                    scope.launch { snackbarHostState.showSnackbar(copiedMessage) }
+                },
             )
+            SnackbarHost(snackbarHostState)
             modelSheet?.let { name ->
                 ModelEvolutionSheet(
                     modelName = name,
@@ -161,6 +186,7 @@ private fun SuccessContent(
     onModelClick: (String) -> Unit = {},
     onRefresh: () -> Unit,
     onChangeAuth: () -> Unit,
+    onShare: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -181,6 +207,11 @@ private fun SuccessContent(
                 Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(stringResource(R.string.refresh))
+            }
+            OutlinedButton(onClick = onShare, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.share))
             }
             OutlinedButton(onClick = onChangeAuth, modifier = Modifier.weight(1f)) {
                 Text(stringResource(R.string.change_auth))

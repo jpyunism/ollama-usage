@@ -210,4 +210,6 @@
     <string name="model_history_current">Current: %1$s%%</string>
     <string name="stats_comparison">Previous week</string>
     <string name="stats_comparison_toggle">Compare previous week</string>
+    <string name="share">Share</string>
+    <string name="copied">Copied to clipboard</string>
 </resources>
