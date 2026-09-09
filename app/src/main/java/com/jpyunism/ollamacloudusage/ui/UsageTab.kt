@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -59,6 +60,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jpyunism.ollamacloudusage.Account
 import com.jpyunism.ollamacloudusage.BalanceStatus
@@ -203,18 +205,34 @@ private fun SuccessContent(
         UsageMeterCard(stringResource(R.string.session_usage), data.sessionPercent, data.sessionModels, data.sessionResetAt, HistoryPeriod.SESSION.duration, alertThreshold, criticalThreshold, onModelClick)
         UsageMeterCard(stringResource(R.string.weekly_usage), data.weeklyPercent, data.weeklyModels, data.weeklyResetAt, HistoryPeriod.WEEK.duration, alertThreshold, criticalThreshold, onModelClick)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // maxLines=1 + autoSize: en pantallas angostas el texto de los
+            // botones se quebraba a mitad de palabra ("Refres h", "Change
+            // access" en 2 líneas). AutoSize reduce el texto para que cada
+            // botón quede siempre en una sola línea.
             Button(onClick = onRefresh, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.refresh))
+                Text(
+                    stringResource(R.string.refresh),
+                    maxLines = 1,
+                    autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = 14.sp),
+                )
             }
             OutlinedButton(onClick = onShare, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.share))
+                Text(
+                    stringResource(R.string.share),
+                    maxLines = 1,
+                    autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = 14.sp),
+                )
             }
             OutlinedButton(onClick = onChangeAuth, modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.change_auth))
+                Text(
+                    stringResource(R.string.change_auth),
+                    maxLines = 1,
+                    autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = 14.sp),
+                )
             }
         }
     }
