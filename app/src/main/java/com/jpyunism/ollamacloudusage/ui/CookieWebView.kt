@@ -32,6 +32,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,8 +62,8 @@ fun CookieWebView(
     onCookieCaptured: (String) -> Unit,
     onClose: () -> Unit,
 ) {
-    var status by remember { mutableStateOf(WebViewStatus.Loading) }
-    val captured = remember { mutableStateOf(false) }
+    var status by rememberSaveable { mutableStateOf(WebViewStatus.Loading) }
+    val captured = rememberSaveable { mutableStateOf(false) }
     val webViewRef = remember { mutableStateOf<WebView?>(null) }
 
     // Al salir, no dejar la sesión en el almacenamiento del WebView.

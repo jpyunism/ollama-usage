@@ -57,3 +57,13 @@ saber que hacia la app ni por que necesitaba una cookie o API key. Ahora:
   el onboarding NO lo reemplaza, solo agrega una capa para el primer launch.
 - Si el usuario falla a mitad del onboarding, la app degrada
   gracefully a Configuracion (puede seguir saltando).
+
+### Corregido (issue #64)
+
+- El estado de la UI ahora sobrevive a la rotacion del dispositivo y a la
+  muerte de proceso: se migraron los estados de `remember` a
+  `rememberSaveable` en las pestanas de uso, estadisticas y ajustes. Esto
+  incluye el filtro de periodo, la comparativa semanal, el tooltip del
+  grafico, el sheet de evolucion por modelo, los dialogos de cuentas y el
+  time picker del resumen diario. Se agrego el test instrumentado
+  `UiStateSurviveRotationTest`.

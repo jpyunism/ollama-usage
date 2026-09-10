@@ -32,6 +32,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -77,6 +79,24 @@ import java.util.Locale
 private val CHART_HEIGHT = 220.dp
 private val Y_LABELS = listOf(0.0, 50.0, 100.0)
 
+/** Saver para [UsageSnapshot] (no Bundle-serializable por su Map<String, Double>). */
+private val UsageSnapshotSaver: Saver<UsageSnapshot?, Any> = Saver(
+    save = { s ->
+        if (s == null) null
+        else listOf(s.timestampMillis, s.sessionPercent, s.weeklyPercent, s.models)
+    },
+    restore = { value ->
+        val v = value as List<*>
+        @Suppress("UNCHECKED_CAST")
+        UsageSnapshot(
+            timestampMillis = v[0] as Long,
+            sessionPercent = v[1] as Double,
+            weeklyPercent = v[2] as Double,
+            models = v[3] as? Map<String, Double>,
+        )
+    },
+)
+
 @Composable
 fun StatsTab(history: HistoryState, isRefreshing: Boolean = false, onRefresh: () -> Unit = {}) {
     val snapshots = history.snapshots
@@ -91,7 +111,7 @@ fun StatsTab(history: HistoryState, isRefreshing: Boolean = false, onRefresh: ()
         return
     }
 
-    var period by remember { mutableStateOf(HistoryPeriod.WEEK) }
+    var period by rememberSaveable { mutableStateOf(HistoryPeriod.WEEK) }
     val weeklyReset = history.weeklyResetAt?.toEpochMilli()
     val sessionReset = history.sessionResetAt?.toEpochMilli()
     val resetAnchor = if (period == HistoryPeriod.WEEK) weeklyReset else sessionReset
@@ -107,7 +127,7 @@ fun StatsTab(history: HistoryState, isRefreshing: Boolean = false, onRefresh: ()
     val markers = resetMarkers(snapshots, period, resetAnchor)
     val current = currentPeriod(snapshots, period, anchor, now, selector)
     // Feature D (#18): comparativa semana anterior, default ON; solo WEEK.
-    var showComparison by remember { mutableStateOf(true) }
+    var showComparison by rememberSaveable { mutableStateOf(true) }
     // El ancla puede ser sintetizada (fallback domingo 21:00) — la comparativa
     // usa la misma que el resto del gráfico (REQ-132: "el ancla existente").
     val cmpAnchor = resetAnchor ?: fallbackResetAnchor(HistoryPeriod.WEEK, now)
@@ -316,7 +336,7 @@ private fun UsageChart(
     current: CurrentPeriod?,
     comparison: List<Pair<Double, Double>>? = null,
 ) {
-    var tooltip by remember { mutableStateOf<UsageSnapshot?>(null) }
+    var tooltip by rememberSaveable(stateSaver = UsageSnapshotSaver) { mutableStateOf<UsageSnapshot?>(null) }
     val lineColor = MaterialTheme.colorScheme.primary
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant

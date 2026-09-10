@@ -47,6 +47,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -122,7 +123,7 @@ fun UsageTab(vm: UsageViewModel, state: UiState, isRefreshing: Boolean = false) 
         UiState.Idle -> CookieSetup(vm, state)
         is UiState.Success -> {
             // Feature C (issue #20): bottom sheet con la evolución del modelo.
-            var modelSheet by remember { mutableStateOf<String?>(null) }
+            var modelSheet by rememberSaveable { mutableStateOf<String?>(null) }
             val context = LocalContext.current
             val clipboardManager = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
                 as android.content.ClipboardManager
