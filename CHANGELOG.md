@@ -3,6 +3,40 @@
 Todas las novedades de la app, agrupadas por version. Sigue semver
 (`MAJOR.MINOR.PATCH`).
 
+## Unreleased
+
+### Refactor (issue #65): Gradle multi-module
+
+El modulo `app` (95 archivos .kt) se dividio en 9 modulos Gradle por capa
+y feature, mejorando el incremental build time y forzando boundaries
+claros entre componentes. Refactor mecanico (`git mv`), sin cambio de
+logica ni de API publica.
+
+- `:core:model` — data classes puras (UsageData, UsageHistory, Balance,
+  TrafficLight, ProjectionEngine, ResetStrings, DailySummary, PrefsKeys).
+- `:core:net` — `HttpClientFactory` (OkHttpClient builder compartido).
+- `:core:data` — repos/scrapers/stores (UsageRepository, OllamaApiUsage,
+  OllamaUsageScraper, UsageHistoryStore, AccountStore, SecurePrefs,
+  UpdateChecker, AlertEngine, UsageError), `UsageNotifier`,
+  `UsageWidgetProvider` y `AppContainer` (DI wiring).
+- `:core:notify` — services/workers (UsageMonitorService, UsageWorker,
+  UsageScheduler, DailySummaryWorker, UpdaterService, CrashReporter,
+  CrashActivity).
+- `:core:ui` — Theme, AppDarkMode/AppLanguage/AppTheme, SettingsSection
+  (IconBox/ResetModeChip) y todos los recursos compartidos (strings ES/EN,
+  colors, themes, drawables, layouts, xml).
+- `:feature:usage` — UsageScreen/UsageTab/UsageViewModel, onboarding
+  (OnboardingScreen + steps + OnboardingViewModel/OnboardingPrefs),
+  CookieSetup/CookieWebView, ProjectionCard.
+- `:feature:settings` — SettingsTab + secciones de configuracion.
+- `:feature:stats` — StatsTab.
+- `:app` — solo entry point (OllamaUsageApp, MainActivity, UsageScreen
+  orquestador) + manifest + proguard.
+
+Los tests viajan con su codigo (mismo modulo). `settings.gradle.kts`
+incluye los 9 modulos. R8 sigue generando el mapping file y el APK release
+queda firmado con el mismo cert.
+
 ## v0.35.0 (2026-09-10)
 
 ### Onboarding guiado para primera configuracion (issue #61)
