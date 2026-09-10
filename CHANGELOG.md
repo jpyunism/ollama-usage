@@ -3,7 +3,7 @@
 Todas las novedades de la app, agrupadas por version. Sigue semver
 (`MAJOR.MINOR.PATCH`).
 
-## v0.34.1 (en curso) — issue #61
+## v0.35.0 (2026-09-10)
 
 ### Onboarding guiado para primera configuracion (issue #61)
 
@@ -75,3 +75,12 @@ saber que hacia la app ni por que necesitaba una cookie o API key. Ahora:
   sesion. Solo informativa; se oculta si hay menos de 3 snapshots en el
   historico. Logica pura en `ProjectionEngine` (regresion lineal sobre los
   ultimos 7 dias), UI en `ProjectionCard`, expuesta via `UsageViewModel`.
+
+### Refactor (issue #58)
+
+- `SettingsTab.kt` (997 lineas) se dividio en secciones colapsables en
+  `ui/settings/`: `SettingsSection` (composable generico con
+  `rememberSaveable` + `animateContentSize`), `AlertSection`, `ThemeSection`,
+  `AccountsSection`, `BackupSection`, `UpdateSection`, `DailySummarySection`,
+  `RefreshSection` y `Thresholds`. `SettingsTab.kt` quedo como orquestador
+  (71 lineas). Sin cambio de funcionalidad.
