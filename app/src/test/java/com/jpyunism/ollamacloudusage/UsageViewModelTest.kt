@@ -571,4 +571,51 @@ class UsageViewModelTest {
         val vm = buildVm(prefs, mockk(relaxed = true))
         assertEquals(AppLanguage.Spanish, vm.language.value)
     }
+
+    // ─────────── Proyeccion de agotamiento (issue #54) ───────────
+
+    @Test
+    fun `Success expone la proyeccion semanal cuando hay suficientes snapshots`() = runTest {
+        val prefs = fakePrefs()
+        every { prefs.contains(PrefsKeys.COOKIE) } returns true
+        every { prefs.getString(PrefsKeys.COOKIE, null) } returns "aid=abc; __Secure-session=xyz"
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage(any()) } returns sampleData()
+        val repo = fakeRepository(prefs, fetcher, hasAuth = true)
+        // 3 snapshots crecientes -> proyeccion RISING.
+        val snapshots = listOf(
+            UsageSnapshot(1_000_000_000L, sessionPercent = 10.0, weeklyPercent = 10.0),
+            UsageSnapshot(1_003_600_000L, sessionPercent = 20.0, weeklyPercent = 20.0),
+            UsageSnapshot(1_007_200_000L, sessionPercent = 30.0, weeklyPercent = 30.0),
+        )
+        every { repo.historySnapshots() } returns snapshots
+
+        val vm = buildVm(prefs, repo)
+        testScheduler.advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertTrue("expected Success got $state", state is UiState.Success)
+        val proj = (state as UiState.Success).weeklyProjection
+        assertTrue("weeklyProjection no debe ser null", proj != null)
+        assertEquals(ProjectionEngine.Trend.RISING, proj!!.trend)
+    }
+
+    @Test
+    fun `Success con datos insuficientes no expone proyeccion`() = runTest {
+        val prefs = fakePrefs()
+        every { prefs.contains(PrefsKeys.COOKIE) } returns true
+        every { prefs.getString(PrefsKeys.COOKIE, null) } returns "aid=abc; __Secure-session=xyz"
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage(any()) } returns sampleData()
+        val repo = fakeRepository(prefs, fetcher, hasAuth = true)
+        every { repo.historySnapshots() } returns emptyList()
+
+        val vm = buildVm(prefs, repo)
+        testScheduler.advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertTrue("expected Success got $state", state is UiState.Success)
+        assertTrue((state as UiState.Success).weeklyProjection == null)
+        assertTrue(state.sessionProjection == null)
+    }
 }

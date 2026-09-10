@@ -74,6 +74,7 @@ import com.jpyunism.ollamacloudusage.UsageData
 import com.jpyunism.ollamacloudusage.HistoryPeriod
 import com.jpyunism.ollamacloudusage.UsageViewModel
 import com.jpyunism.ollamacloudusage.UsageSnapshot
+import com.jpyunism.ollamacloudusage.ProjectionEngine
 import com.jpyunism.ollamacloudusage.modelPercent
 import com.jpyunism.ollamacloudusage.balanceLabel
 import com.jpyunism.ollamacloudusage.computeBalance
@@ -144,6 +145,8 @@ fun UsageTab(vm: UsageViewModel, state: UiState, isRefreshing: Boolean = false) 
             SuccessContent(
                 data = state.data,
                 lastUpdated = state.lastUpdated,
+                weeklyProjection = state.weeklyProjection,
+                sessionProjection = state.sessionProjection,
                 alertThreshold = alertSettings.weeklyAlert,
                 criticalThreshold = alertSettings.weeklyCritical,
                 accounts = accounts,
@@ -181,6 +184,8 @@ fun UsageTab(vm: UsageViewModel, state: UiState, isRefreshing: Boolean = false) 
 private fun SuccessContent(
     data: UsageData,
     lastUpdated: Long?,
+    weeklyProjection: ProjectionEngine.Result?,
+    sessionProjection: ProjectionEngine.Result?,
     alertThreshold: Int,
     criticalThreshold: Int,
     accounts: List<Account>,
@@ -199,6 +204,21 @@ private fun SuccessContent(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Header(data, lastUpdated)
+        // Proyeccion de agotamiento (issue #54): solo si hay datos suficientes.
+        if (weeklyProjection != null) {
+            ProjectionCard(
+                title = stringResource(R.string.projection_weekly_title),
+                result = weeklyProjection,
+                resetAt = data.weeklyResetAt,
+            )
+        }
+        if (sessionProjection != null) {
+            ProjectionCard(
+                title = stringResource(R.string.projection_session_title),
+                result = sessionProjection,
+                resetAt = data.sessionResetAt,
+            )
+        }
         if (accounts.size > 1) {
             // Switcher de cuentas (Feature A): solo aparece con más de una.
             AccountSwitcherRow(accounts, activeAccountId, onSelectAccount)

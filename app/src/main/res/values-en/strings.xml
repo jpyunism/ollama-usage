@@ -252,4 +252,18 @@
     <!-- Settings sections (issue #58) -->
     <string name="expand">Expand</string>
     <string name="collapse">Collapse</string>
+
+    <!-- Projection (issue #54) -->
+    <string name="projection_title">Projection</string>
+    <string name="projection_weekly_title">Weekly quota</string>
+    <string name="projection_session_title">Session</string>
+    <string name="projection_rising">At this rate you will run out of quota in %1$s</string>
+    <string name="projection_stable">Usage is holding steady</string>
+    <string name="projection_falling">Usage is going down</string>
+    <string name="projection_session_reset">Your session resets in %1$s. You will reach %2$s%%.</string>
+    <string name="projection_days">%1$s days</string>
+    <string name="projection_hours">%1$s h</string>
+    <string name="projection_trend_rising">Usage rising</string>
+    <string name="projection_trend_stable">Usage steady</string>
+    <string name="projection_trend_falling">Usage falling</string>
 </resources>

@@ -24,6 +24,10 @@ sealed interface UiState {
         val data: UsageData,
         val cookieStored: Boolean,
         val lastUpdated: Long? = null,
+        /** Proyeccion de agotamiento semanal (issue #54); null si hay datos insuficientes. */
+        val weeklyProjection: ProjectionEngine.Result? = null,
+        /** Proyeccion de agotamiento de sesion (issue #54); null si hay datos insuficientes. */
+        val sessionProjection: ProjectionEngine.Result? = null,
     ) : UiState
 
     /** Error tipado; la UI lo mapea a un string con resources. */
@@ -224,13 +228,21 @@ class UsageViewModel(
                     onSuccess = { data ->
                         // El pipeline ya guardó widget, notif e histórico; la UI
                         // recarga los snapshots desde el store.
-                        _history.value = HistoryState(
+                        val history = HistoryState(
                             snapshots = repository.historySnapshots(),
                             weeklyResetAt = data.weeklyResetAt
                                 ?: repository.detectedWeeklyAnchor()?.let(Instant::ofEpochMilli),
                             sessionResetAt = data.sessionResetAt,
                         )
-                        UiState.Success(data, cookieStored = true, lastUpdated = repository.lastUpdated())
+                        _history.value = history
+                        val (weekly, session) = computeProjections(history)
+                        UiState.Success(
+                            data,
+                            cookieStored = true,
+                            lastUpdated = repository.lastUpdated(),
+                            weeklyProjection = weekly,
+                            sessionProjection = session,
+                        )
                     },
                     onFailure = { e -> UiState.Error(e as? UsageError ?: UsageError.Network(e.message ?: "")) },
                 )
@@ -434,6 +446,30 @@ class UsageViewModel(
         snapshots = repository.historySnapshots(),
         weeklyResetAt = null,
     )
+
+    /**
+     * Calcula las proyecciones de agotamiento (issue #54) para semana y
+     * sesion a partir del historico. Devuelve null si hay datos insuficientes
+     * (<3 snapshots) o no se puede calcular el ritmo.
+     */
+    private fun computeProjections(
+        history: HistoryState,
+    ): Pair<ProjectionEngine.Result?, ProjectionEngine.Result?> {
+        val now = Instant.now()
+        val weekly = ProjectionEngine.project(
+            snapshots = history.snapshots,
+            resetAt = history.weeklyResetAt,
+            now = now,
+            selector = { it.weeklyPercent },
+        )
+        val session = ProjectionEngine.project(
+            snapshots = history.snapshots,
+            resetAt = history.sessionResetAt,
+            now = now,
+            selector = { it.sessionPercent },
+        )
+        return weekly to session
+    }
 
     /** Versión instalada de la app (para mostrarla en Configuración). */
     val appVersion: String = updateRepository.currentVersion()

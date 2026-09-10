@@ -252,4 +252,18 @@
     <!-- Settings sections (issue #58) -->
     <string name="expand">Expandir</string>
     <string name="collapse">Colapsar</string>
+
+    <!-- Projection (issue #54) -->
+    <string name="projection_title">Proyección</string>
+    <string name="projection_weekly_title">Cuota semanal</string>
+    <string name="projection_session_title">Sesión</string>
+    <string name="projection_rising">Al ritmo actual, agotarás la cuota en %1$s</string>
+    <string name="projection_stable">El consumo se mantiene estable</string>
+    <string name="projection_falling">El consumo está bajando</string>
+    <string name="projection_session_reset">Tu sesión se reinicia en %1$s. Llegarás al %2$s%%.</string>
+    <string name="projection_days">%1$s días</string>
+    <string name="projection_hours">%1$s h</string>
+    <string name="projection_trend_rising">Consumo en aumento</string>
+    <string name="projection_trend_stable">Consumo estable</string>
+    <string name="projection_trend_falling">Consumo en descenso</string>
 </resources>
