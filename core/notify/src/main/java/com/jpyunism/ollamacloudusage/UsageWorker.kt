@@ -30,8 +30,10 @@ class UsageWorker(
         // Check de nueva versión (una vez por día, silencioso si no hay).
         if (UpdateChecker.shouldCheck(appContext)) {
             val info = runCatching { UpdateChecker.check(appContext) }.getOrNull()
-            UpdateChecker.markChecked(appContext)
             if (info != null) {
+                // Solo marcar como revisado si el check fue exitoso; si fallo,
+                // no se marca para que el proximo ciclo reintente (issue #76).
+                UpdateChecker.markChecked(appContext)
                 // Notifica al usuario que hay una versión nueva disponible.
                 UsageNotifier.notifyUpdateAvailable(appContext, info.versionName)
             }
