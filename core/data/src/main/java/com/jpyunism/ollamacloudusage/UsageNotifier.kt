@@ -27,6 +27,13 @@ object UsageNotifier {
     private const val NOTIFICATION_ID = 1001
     const val PERSISTENT_ID = 1002
 
+    // IDs por tipo de alerta de umbral (issue #73): cada tipo tiene su propio
+    // ID para que dos alertas disparadas en el mismo ciclo no se sobreescriban.
+    const val WEEKLY_ALERT_ID = 1007
+    const val SESSION_ALERT_ID = 1008
+    const val PACE_WEEKLY_ID = 1009
+    const val PACE_SESSION_ID = 1012
+
     fun ensureChannels(context: Context) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -52,7 +59,7 @@ object UsageNotifier {
     }
 
     @SuppressLint("MissingPermission") // canNotify() verifica el permiso antes
-    fun notifyLimit(context: Context, title: String, message: String) {
+    fun notifyLimit(context: Context, title: String, message: String, notificationId: Int = NOTIFICATION_ID) {
         if (!canNotify(context)) return
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_notify_error)
@@ -65,7 +72,7 @@ object UsageNotifier {
             .build()
 
         runCatching {
-            NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
+            NotificationManagerCompat.from(context).notify(notificationId, notification)
         }
     }
 

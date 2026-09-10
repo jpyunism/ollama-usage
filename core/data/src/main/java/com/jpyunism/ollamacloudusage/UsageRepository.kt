@@ -34,7 +34,7 @@ class UsageRepository(
     private val widgetUpdater: (Context) -> Unit = { UsageWidgetProvider.updateAll(it) },
     private val persistentShower: (Context, UsageData) -> Unit = UsageNotifier::showPersistent,
     private val persistentHider: (Context) -> Unit = UsageNotifier::hidePersistent,
-    private val alertNotifier: (Context, String, String) -> Unit = UsageNotifier::notifyLimit,
+    private val alertNotifier: (Context, String, String, Int) -> Unit = UsageNotifier::notifyLimit,
 ) {
 
     /**
@@ -148,7 +148,7 @@ class UsageRepository(
     private fun checkPaceAlerts() {
         val snapshots = historyStore.load()
 
-        fun check(period: HistoryPeriod, lastKey: String, titleRes: Int) {
+        fun check(period: HistoryPeriod, lastKey: String, titleRes: Int, notificationId: Int) {
             val anchor = dataAnchor(period) ?: fallbackResetAnchor(period, now())
             val alert = paceAlert(snapshots, period, anchor, now()) { p -> selectorOf(period, p) } ?: return
             val lastPeriod = prefs.getLong(lastKey, Long.MIN_VALUE)
@@ -158,6 +158,7 @@ class UsageRepository(
                 context,
                 context.getString(titleRes),
                 context.getString(R.string.pace_alert_message, formatPercent(alert.toPercent)),
+                notificationId,
             )
         }
 
@@ -165,11 +166,13 @@ class UsageRepository(
             HistoryPeriod.WEEK,
             PrefsKeys.LAST_PACE_PERIOD_WEEK,
             R.string.pace_alert_title_weekly,
+            UsageNotifier.PACE_WEEKLY_ID,
         )
         check(
             HistoryPeriod.SESSION,
             PrefsKeys.LAST_PACE_PERIOD_SESSION,
             R.string.pace_alert_title_session,
+            UsageNotifier.PACE_SESSION_ID,
         )
     }
 
@@ -226,6 +229,7 @@ class UsageRepository(
                 context,
                 title,
                 context.getString(R.string.weekly_alert_message, formatPercent(pct)),
+                UsageNotifier.WEEKLY_ALERT_ID,
             )
         }
     }
@@ -242,6 +246,7 @@ class UsageRepository(
                 context,
                 context.getString(R.string.session_alert_title, formatPercent(pct)),
                 context.getString(R.string.session_alert_message, formatPercent(pct)),
+                UsageNotifier.SESSION_ALERT_ID,
             )
         }
     }
