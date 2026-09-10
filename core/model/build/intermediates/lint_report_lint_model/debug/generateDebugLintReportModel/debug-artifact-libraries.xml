@@ -1,0 +1,10 @@
+<libraries>
+  <library
+      name="org.jetbrains.kotlin:kotlin-stdlib:2.4.10@jar"
+      jars="/home/jyunis/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.4.10/8943c84ddc6d5cc00a10dbc3736c397066eeaab5/kotlin-stdlib-2.4.10.jar"
+      resolved="org.jetbrains.kotlin:kotlin-stdlib:2.4.10"/>
+  <library
+      name="org.jetbrains:annotations:13.0@jar"
+      jars="/home/jyunis/.gradle/caches/modules-2/files-2.1/org.jetbrains/annotations/13.0/919f0dfe192fb4e063e7dacadee7f8bb9a2672a9/annotations-13.0.jar"
+      resolved="org.jetbrains:annotations:13.0"/>
+</libraries>

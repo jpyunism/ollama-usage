@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.jpyunism.ollamacloudusage.GroupModelsTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-09-10T11:56:22.500Z" hostname="server" time="0.003">
+  <properties/>
+  <testcase name="label custom de Otros se usa" classname="com.jpyunism.ollamacloudusage.GroupModelsTest" time="0.001"/>
+  <testcase name="groupModels ordena segmentos por percent descendente" classname="com.jpyunism.ollamacloudusage.GroupModelsTest" time="0.0"/>
+  <testcase name="modelos bajo umbral se agrupan en Otros con suma y conteo" classname="com.jpyunism.ollamacloudusage.GroupModelsTest" time="0.001"/>
+  <testcase name="othersGroup es consistente con groupModels" classname="com.jpyunism.ollamacloudusage.GroupModelsTest" time="0.0"/>
+  <testcase name="othersGroup devuelve null con un solo modelo bajo umbral" classname="com.jpyunism.ollamacloudusage.GroupModelsTest" time="0.0"/>
+  <testcase name="sortedByUsage con lista vacia devuelve vacio" classname="com.jpyunism.ollamacloudusage.GroupModelsTest" time="0.0"/>
+  <testcase name="lista vacia devuelve vacio" classname="com.jpyunism.ollamacloudusage.GroupModelsTest" time="0.0"/>
+  <testcase name="umbral custom se respeta" classname="com.jpyunism.ollamacloudusage.GroupModelsTest" time="0.0"/>
+  <testcase name="othersGroup devuelve null con lista vacia" classname="com.jpyunism.ollamacloudusage.GroupModelsTest" time="0.0"/>
+  <testcase name="un solo modelo devuelve un segmento" classname="com.jpyunism.ollamacloudusage.GroupModelsTest" time="0.0"/>
+  <testcase name="othersGroup respeta umbral custom" classname="com.jpyunism.ollamacloudusage.GroupModelsTest" time="0.0"/>
+  <testcase name="un solo modelo bajo umbral se mantiene individual" classname="com.jpyunism.ollamacloudusage.GroupModelsTest" time="0.001"/>
+  <testcase name="todos bajo umbral no agrupa" classname="com.jpyunism.ollamacloudusage.GroupModelsTest" time="0.0"/>
+  <testcase name="modelo exactamente en el umbral se mantiene individual" classname="com.jpyunism.ollamacloudusage.GroupModelsTest" time="0.0"/>
+  <testcase name="othersGroup devuelve null si todos estan bajo umbral" classname="com.jpyunism.ollamacloudusage.GroupModelsTest" time="0.0"/>
+  <testcase name="othersGroup devuelve los modelos bajo umbral cuando hay 2 o mas y hay grandes" classname="com.jpyunism.ollamacloudusage.GroupModelsTest" time="0.0"/>
+  <testcase name="segmentos individuales conservan colorKey y modelCount 1" classname="com.jpyunism.ollamacloudusage.GroupModelsTest" time="0.0"/>
+  <testcase name="sortedByUsage desempata por requests descendente" classname="com.jpyunism.ollamacloudusage.GroupModelsTest" time="0.0"/>
+  <testcase name="sortedByUsage ordena por percent descendente" classname="com.jpyunism.ollamacloudusage.GroupModelsTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

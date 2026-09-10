@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.jpyunism.ollamacloudusage.ResetFormatTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-09-10T11:56:22.521Z" hostname="server" time="0.014">
+  <properties/>
+  <testcase name="countdown con reset ya pasado" classname="com.jpyunism.ollamacloudusage.ResetFormatTest" time="0.0"/>
+  <testcase name="countdown con menos de un minuto" classname="com.jpyunism.ollamacloudusage.ResetFormatTest" time="0.0"/>
+  <testcase name="countdown en ingles con dias" classname="com.jpyunism.ollamacloudusage.ResetFormatTest" time="0.002"/>
+  <testcase name="null devuelve null en ambos modos" classname="com.jpyunism.ollamacloudusage.ResetFormatTest" time="0.0"/>
+  <testcase name="date en ingles muestra fecha y hora local" classname="com.jpyunism.ollamacloudusage.ResetFormatTest" time="0.005"/>
+  <testcase name="countdown con horas y minutos" classname="com.jpyunism.ollamacloudusage.ResetFormatTest" time="0.0"/>
+  <testcase name="date muestra fecha y hora local" classname="com.jpyunism.ollamacloudusage.ResetFormatTest" time="0.004"/>
+  <testcase name="countdown en ingles con reset ya pasado" classname="com.jpyunism.ollamacloudusage.ResetFormatTest" time="0.0"/>
+  <testcase name="countdown en ingles con horas y minutos" classname="com.jpyunism.ollamacloudusage.ResetFormatTest" time="0.0"/>
+  <testcase name="countdown con dias" classname="com.jpyunism.ollamacloudusage.ResetFormatTest" time="0.0"/>
+  <testcase name="countdown con minutos" classname="com.jpyunism.ollamacloudusage.ResetFormatTest" time="0.001"/>
+  <testcase name="countdown en ingles con minutos" classname="com.jpyunism.ollamacloudusage.ResetFormatTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,9 @@
+com.jpyunism.ollamacloudusage.core.model-pngs-0 /home/jyunis/.nanobot/worktrees/ollama-cloud-usage/refactor-gradle-multimodule/core/model/build/generated/res/pngs/release
+com.jpyunism.ollamacloudusage.core.model-updated_navigation_xml-1 /home/jyunis/.nanobot/worktrees/ollama-cloud-usage/refactor-gradle-multimodule/core/model/build/generated/updated_navigation_xml/release
+com.jpyunism.ollamacloudusage.core.model-mergeReleaseResources-2 /home/jyunis/.nanobot/worktrees/ollama-cloud-usage/refactor-gradle-multimodule/core/model/build/intermediates/incremental/release/mergeReleaseResources/merged.dir
+com.jpyunism.ollamacloudusage.core.model-mergeReleaseResources-3 /home/jyunis/.nanobot/worktrees/ollama-cloud-usage/refactor-gradle-multimodule/core/model/build/intermediates/incremental/release/mergeReleaseResources/stripped.dir
+com.jpyunism.ollamacloudusage.core.model-release-4 /home/jyunis/.nanobot/worktrees/ollama-cloud-usage/refactor-gradle-multimodule/core/model/build/intermediates/merged_res/release/mergeReleaseResources
+com.jpyunism.ollamacloudusage.core.model-release-5 /home/jyunis/.nanobot/worktrees/ollama-cloud-usage/refactor-gradle-multimodule/core/model/build/intermediates/packaged_res/release/packageReleaseResources
+com.jpyunism.ollamacloudusage.core.model-main-6 /home/jyunis/.nanobot/worktrees/ollama-cloud-usage/refactor-gradle-multimodule/core/model/src/main/res
+com.jpyunism.ollamacloudusage.core.model-release-7 /home/jyunis/.nanobot/worktrees/ollama-cloud-usage/refactor-gradle-multimodule/core/model/src/release/res
+gradleHome-0 /home/jyunis/.gradle

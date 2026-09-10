@@ -1,0 +1,32 @@
+<variant
+    name="debug"
+    package="com.jpyunism.ollamacloudusage.core.model"
+    minSdkVersion="26"
+    targetSdkVersion="37.0"
+    debuggable="true"
+    mergedManifest="build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml"
+    proguardFiles="build/intermediates/default_proguard_files/global/proguard-android-optimize.txt-9.4.0"
+    partialResultsDir="build/intermediates/lint_partial_results/debug/lintAnalyzeDebug/out"
+    desugaredMethodsFiles="/home/jyunis/.gradle/caches/9.7.1/transforms/1e3306ad6e31158ae4db2045ff7c8201/transformed/D8BackportedDesugaredMethods.txt">
+  <buildFeatures/>
+  <sourceProviders>
+    <sourceProvider
+        manifests="src/main/AndroidManifest.xml"
+        javaDirectories="src/main/java:src/debug/java:src/main/kotlin:src/debug/kotlin"
+        resDirectories="src/main/res:src/debug/res"
+        assetsDirectories="src/main/assets:src/debug/assets"
+        keepRulesDirectories="src/main/keepRules:src/debug/keepRules"
+        aarKeepRulesDirectories="src/main/aarKeepRules:src/debug/aarKeepRules"/>
+  </sourceProviders>
+  <testSourceProviders>
+  </testSourceProviders>
+  <testFixturesSourceProviders>
+  </testFixturesSourceProviders>
+  <artifact
+      classOutputs="build/intermediates/javac/debug/compileDebugJavaWithJavac/classes:build/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes:build/intermediates/compile_r_class_jar/debug/generateDebugRFile/R.jar"
+      type="MAIN"
+      applicationId="com.jpyunism.ollamacloudusage.core.model"
+      generatedSourceFolders="build/generated/ap_generated_sources/debug/out"
+      desugaredMethodsFiles="/home/jyunis/.gradle/caches/9.7.1/transforms/1e3306ad6e31158ae4db2045ff7c8201/transformed/D8BackportedDesugaredMethods.txt">
+  </artifact>
+</variant>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.jpyunism.ollamacloudusage.DailySummaryTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-09-10T11:56:22.483Z" hostname="server" time="0.012">
+  <properties/>
+  <testcase name="porcentajes con un decimal" classname="com.jpyunism.ollamacloudusage.DailySummaryTest" time="0.007"/>
+  <testcase name="hora exactamente ahora programa para manana" classname="com.jpyunism.ollamacloudusage.DailySummaryTest" time="0.002"/>
+  <testcase name="sin datos no hay texto" classname="com.jpyunism.ollamacloudusage.DailySummaryTest" time="0.0"/>
+  <testcase name="hora futura de hoy" classname="com.jpyunism.ollamacloudusage.DailySummaryTest" time="0.0"/>
+  <testcase name="resumen con proyeccion" classname="com.jpyunism.ollamacloudusage.DailySummaryTest" time="0.001"/>
+  <testcase name="resumen con semana y sesion sin proyeccion" classname="com.jpyunism.ollamacloudusage.DailySummaryTest" time="0.001"/>
+  <testcase name="hora ya pasada corre mañana" classname="com.jpyunism.ollamacloudusage.DailySummaryTest" time="0.0"/>
+  <testcase name="minutos se respetan" classname="com.jpyunism.ollamacloudusage.DailySummaryTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.jpyunism.ollamacloudusage.ProjectionEngineTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-09-10T11:56:22.512Z" hostname="server" time="0.003">
+  <properties/>
+  <testcase name="menos de 3 snapshots devuelve null" classname="com.jpyunism.ollamacloudusage.ProjectionEngineTest" time="0.0"/>
+  <testcase name="usa solo los ultimos 7 dias de snapshots" classname="com.jpyunism.ollamacloudusage.ProjectionEngineTest" time="0.002"/>
+  <testcase name="percentAtReset con reset en el futuro usa el ritmo" classname="com.jpyunism.ollamacloudusage.ProjectionEngineTest" time="0.0"/>
+  <testcase name="percentAtReset se clampea a 0 cuando el ritmo es negativo" classname="com.jpyunism.ollamacloudusage.ProjectionEngineTest" time="0.0"/>
+  <testcase name="percentAtReset se clampea a 100 cuando el ritmo lo sobrepasa" classname="com.jpyunism.ollamacloudusage.ProjectionEngineTest" time="0.0"/>
+  <testcase name="selector de sesion usa sessionPercent" classname="com.jpyunism.ollamacloudusage.ProjectionEngineTest" time="0.001"/>
+  <testcase name="sin resetAt percentAtReset es null" classname="com.jpyunism.ollamacloudusage.ProjectionEngineTest" time="0.0"/>
+  <testcase name="varianza cero produce STABLE y hoursToTarget null" classname="com.jpyunism.ollamacloudusage.ProjectionEngineTest" time="0.0"/>
+  <testcase name="ritmo creciente produce RISING y hoursToTarget positivo" classname="com.jpyunism.ollamacloudusage.ProjectionEngineTest" time="0.0"/>
+  <testcase name="ritmo decreciente produce FALLING y hoursToTarget null" classname="com.jpyunism.ollamacloudusage.ProjectionEngineTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
