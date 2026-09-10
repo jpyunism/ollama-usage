@@ -16,6 +16,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ManageAccounts
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jpyunism.ollamacloudusage.Account
+import com.jpyunism.ollamacloudusage.ApiKeyValidation
 import com.jpyunism.ollamacloudusage.UsageViewModel
 
 /**
@@ -96,6 +98,8 @@ fun AccountsSection(vm: UsageViewModel) {
             labelLabel = stringResource(R.string.accounts_label),
             keyLabel = stringResource(R.string.accounts_apikey),
             confirmText = stringResource(R.string.accounts_add),
+            validation = vm.apiKeyValidation.collectAsStateWithLifecycle().value,
+            onKeyChange = { vm.validateApiKey(it) },
             onConfirm = { label, key ->
                 if (label.isNotBlank() && key.isNotBlank()) vm.addAccount(label.trim(), key.trim())
                 showAdd = false
@@ -129,6 +133,8 @@ private fun AccountTextDialog(
     confirmText: String,
     initialLabel: String = "",
     initialKey: String = "",
+    validation: ApiKeyValidation = ApiKeyValidation.Idle,
+    onKeyChange: (String) -> Unit = {},
     onConfirm: (String, String) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -148,19 +154,66 @@ private fun AccountTextDialog(
                 if (keyLabel.isNotEmpty()) {
                     OutlinedTextField(
                         value = apiKey,
-                        onValueChange = { apiKey = it },
+                        onValueChange = {
+                            apiKey = it
+                            onKeyChange(it)
+                        },
                         label = { Text(keyLabel) },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                     )
+                    ApiKeyValidationFeedback(validation)
                 }
             }
         },
         confirmButton = {
-            Button(onClick = { onConfirm(label, apiKey) }) { Text(confirmText) }
+            Button(
+                onClick = { onConfirm(label, apiKey) },
+                enabled = if (keyLabel.isNotEmpty()) {
+                    label.isNotBlank() && apiKey.isNotBlank() && validation == ApiKeyValidation.Valid
+                } else {
+                    label.isNotBlank()
+                },
+            ) { Text(confirmText) }
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         },
     )
+}
+
+/**
+ * Feedback visual de la validacion en vivo de la API key (issue #63):
+ * spinner mientras valida, verde si es valida, rojo si es invalida y
+ * neutro/accionable si no se pudo concluir (offline).
+ */
+@Composable
+private fun ApiKeyValidationFeedback(validation: ApiKeyValidation) {
+    when (validation) {
+        ApiKeyValidation.Idle -> Unit
+        ApiKeyValidation.InProgress -> Row(verticalAlignment = Alignment.CenterVertically) {
+            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                stringResource(R.string.api_key_validating),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        ApiKeyValidation.Valid -> Text(
+            stringResource(R.string.api_key_valid),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        ApiKeyValidation.Invalid -> Text(
+            stringResource(R.string.api_key_invalid_live),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+        ApiKeyValidation.Inconclusive -> Text(
+            stringResource(R.string.api_key_inconclusive),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
