@@ -12,6 +12,9 @@ object PrefsKeys {
     const val AUTH_SOURCE = "auth_source"
     const val LAST_UPDATED = "last_updated"
 
+    // Onboarding (issue #61). NO es un secreto: se guarda en claro.
+    const val ONBOARDING_COMPLETED = "onboarding_completed"
+
     // Settings
     const val NOTIF_ENABLED = "notif_enabled"
     const val WEEKLY_ALERT = "weekly_alert"

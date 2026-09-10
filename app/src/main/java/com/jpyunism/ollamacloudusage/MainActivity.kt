@@ -10,6 +10,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -17,6 +21,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jpyunism.ollamacloudusage.PrefsKeys
 import com.jpyunism.ollamacloudusage.di.AppContainer
 import com.jpyunism.ollamacloudusage.ui.OllamaUsageTheme
+import com.jpyunism.ollamacloudusage.ui.OnboardingScreen
 import com.jpyunism.ollamacloudusage.ui.UsageScreen
 
 class MainActivity : ComponentActivity() {
@@ -48,9 +53,26 @@ class MainActivity : ComponentActivity() {
             val theme by vm.theme.collectAsStateWithLifecycle()
             val darkMode by vm.darkMode.collectAsStateWithLifecycle()
 
+            // Gate de onboarding (issue #61): si el usuario nunca completo el
+            // onboarding, mostramos OnboardingScreen en lugar de UsageScreen.
+            // rememberSaveable (no remember) para sobrevivir rotacion, segun
+            // issue #64.
+            val onboardingPrefs = remember {
+                OnboardingPrefs(SecurePrefs.get(applicationContext))
+            }
+            var onboardingCompleted by rememberSaveable {
+                mutableStateOf(onboardingPrefs.isCompleted())
+            }
+
             OllamaUsageTheme(theme = theme, darkMode = darkMode) {
                 Surface(modifier = Modifier) {
-                    UsageScreen(vm)
+                    if (onboardingCompleted) {
+                        UsageScreen(vm)
+                    } else {
+                        OnboardingScreen(
+                            onFinished = { onboardingCompleted = true },
+                        )
+                    }
                 }
             }
         }

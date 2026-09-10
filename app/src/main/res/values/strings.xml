@@ -212,4 +212,40 @@
     <string name="stats_comparison_toggle">Comparar semana anterior</string>
     <string name="share">Compartir</string>
     <string name="copied">Copiado al portapapeles</string>
+
+    <!-- Onboarding guiado (issue #61) -->
+    <string name="onboarding_title">Configura tu cuenta</string>
+    <string name="onboarding_skip">Saltar</string>
+    <string name="onboarding_back">Volver</string>
+    <string name="onboarding_next">Siguiente</string>
+    <string name="onboarding_continue">Continuar</string>
+
+    <!-- Paso 1: Bienvenida -->
+    <string name="onboarding_welcome_title">Bienvenido a Ollama Usage</string>
+    <string name="onboarding_welcome_subtitle">Monitorea tu consumo de Ollama Cloud y recibe alertas cuando te acercas al limite.</string>
+    <string name="onboarding_welcome_bullet1">Consulta tu uso semanal y por sesion</string>
+    <string name="onboarding_welcome_bullet2">Recibe alertas antes de agotar la cuota</string>
+    <string name="onboarding_welcome_bullet3">Configuracion en menos de 60 segundos</string>
+
+    <!-- Paso 2: Elegir metodo -->
+    <string name="onboarding_method_title">Como quieres autenticarte?</string>
+    <string name="onboarding_method_subtitle">Puedes cambiarlo mas tarde en Configuracion.</string>
+    <string name="onboarding_method_webview">Iniciar sesion en ollama.com</string>
+    <string name="onboarding_method_webview_desc">Abrimos la pagina de Ollama y capturamos la cookie automaticamente. Recomendado si no tienes una API key a mano.</string>
+    <string name="onboarding_method_apikey">Pegar API key</string>
+    <string name="onboarding_method_apikey_desc">Crea una en ollama.com/settings/keys y pegala aqui. Es mas estable y no expira por sesiones.</string>
+    <string name="onboarding_method_webview_button">Abrir pagina de Ollama</string>
+    <string name="onboarding_method_apikey_label">API key</string>
+    <string name="onboarding_method_apikey_placeholder">ollama_...</string>
+
+    <!-- Paso 3: Validar -->
+    <string name="onboarding_validate_title">Listo para empezar</string>
+    <string name="onboarding_validate_subtitle_api_key">Valida tu API key contra ollama.com antes de continuar.</string>
+    <string name="onboarding_validate_subtitle_webview">Detectaremos la cookie automaticamente al iniciar sesion.</string>
+    <string name="onboarding_validate_button">Validar API key</string>
+    <string name="onboarding_validate_validating">Validando contra ollama.com…</string>
+    <string name="onboarding_validate_success">API key valida. Todo listo.</string>
+    <string name="onboarding_validate_cookie_success">Cookie capturada. Todo listo.</string>
+    <string name="onboarding_validate_error_invalid">La API key no es valida. Revisa que la copiaste completa.</string>
+    <string name="onboarding_validate_error_inconclusive">No pudimos confirmar la API key ahora (problema de red o del servidor). Puedes continuar y reintentarlo mas tarde.</string>
 </resources>
