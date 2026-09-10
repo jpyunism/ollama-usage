@@ -28,8 +28,9 @@ class OllamaUsageApp : Application() {
             ?.let { name -> AppLanguage.entries.firstOrNull { it.name == name } }
             ?: AppLanguage.System
         LocaleHelper.apply(this, language)
-        // Elimina archivos de formatos anteriores (cookie en claro / prefs viejas).
-        SecurePrefs.purgeLegacy(this)
+        // Migra los secretos del formato legacy (cookie/API key en claro) al
+        // formato cifrado actual, y solo después borra los archivos viejos.
+        SecurePrefs.migrateLegacy(this)
         // Crea los canales de notificación y programa el refresh de fondo.
         val interval = prefs.getInt(PrefsKeys.REFRESH_INTERVAL, PrefsKeys.DEFAULT_REFRESH_MINUTES)
         // Notificación proactiva de reset de sesión (issue #57): conecta el

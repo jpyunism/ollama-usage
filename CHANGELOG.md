@@ -20,6 +20,17 @@ segunda reemplazaba a la primera. Ahora cada tipo de alerta tiene su propio ID:
 pasa el ID correcto segun el tipo. Si semana y sesion cruzan umbral en el mismo
 ciclo, el usuario ve ambas notificaciones.
 
+### Fix: cookie/API key se pierde tras update (issue #75)
+
+`SecurePrefs.purgeLegacy()` borraba el XML legacy (`ollama_usage`, cookie/API
+key en claro) antes de migrar al formato cifrado (`ollama_usage_secure_v2`).
+Los usuarios que aún no habían migrado perdían la cookie: el viejo se borraba
+y el nuevo cifrado no existía todavía.
+
+Ahora `migrateLegacy()` lee el valor legacy con SharedPreferences, lo cifra y
+lo guarda en el formato actual, y solo después borra los archivos de formatos
+anteriores. La migración no sobreescribe un secreto ya presente en el destino.
+
 ## v0.36.0 (2026-09-10)
 
 ### Validacion en vivo de API key (issue #63)

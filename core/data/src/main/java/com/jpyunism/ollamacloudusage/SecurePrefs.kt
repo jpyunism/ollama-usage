@@ -3,10 +3,10 @@ package com.jpyunism.ollamacloudusage
 import android.content.Context
 import android.content.SharedPreferences
 import android.provider.Settings
-import android.util.Base64
 import java.io.File
 import java.security.MessageDigest
 import java.security.SecureRandom
+import java.util.Base64
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
@@ -47,21 +47,55 @@ object SecurePrefs {
         return EncryptedPrefs(base, SecretCipher(context))
     }
 
-    /** Elimina archivos de formatos anteriores (cookie en claro y prefs cifradas viejas). */
-    fun purgeLegacy(context: Context) {
+    /**
+     * Migra los secretos del formato legacy (cookie/API key en claro en
+     * `ollama_usage`) al formato cifrado actual (`ollama_usage_secure_v2`).
+     *
+     * Antes esto borraba directo el XML legacy, lo que hacía perder la cookie
+     * a los usuarios que aún no habían migrado: el viejo se borraba y el
+     * nuevo cifrado no existía todavía (issue #75). Ahora se lee el valor
+     * legacy, se cifra y se guarda en el nuevo, y SOLO después se borran los
+     * archivos de formatos anteriores.
+     *
+     * Se usa SharedPreferences (no File.delete()) para leer el viejo, y la
+     * escritura pasa por [EncryptedPrefs] para cifrar los secretos.
+     */
+    fun migrateLegacy(context: Context) {
         runCatching {
-            // Borra directo los archivos XML: leer `legacy.all` (getAll) fuerza
-            // a descifrar TODOS los secretos en el main thread durante el
-            // arranque tras un update — la causa más probable del arranque
-            // "pegado" (SettingsProvider/Keystore ocupados justo tras instalar).
+            val legacy = context.getSharedPreferences(LEGACY_NAME, Context.MODE_PRIVATE)
+            migrateSecrets(legacy, get(context))
+            // Solo después de migrar, borra los archivos de formatos anteriores
+            // (cookie en claro y prefs cifradas viejas).
             File(context.applicationInfo.dataDir, "shared_prefs/$LEGACY_NAME.xml").delete()
             File(context.applicationInfo.dataDir, "shared_prefs/$OLD_ENCRYPTED_NAME.xml").delete()
         }
     }
+
+    /**
+     * Copia los secretos del formato legacy (en claro) al destino cifrado.
+     * Función pura testeable: recibe las prefs legacy y el destino (que cifra
+     * al escribir). Devuelve true si migró algún secreto.
+     */
+    internal fun migrateSecrets(
+        legacy: SharedPreferences,
+        target: SharedPreferences,
+    ): Boolean {
+        val editor = target.edit()
+        var changed = false
+        SECRET_KEYS.forEach { key ->
+            val value = legacy.getString(key, null)
+            if (value != null && !target.contains(key)) {
+                editor.putString(key, value)
+                changed = true
+            }
+        }
+        if (changed) editor.apply()
+        return changed
+    }
 }
 
 /** Cifra/descifra secretos con AES-256-GCM; clave derivada del ANDROID_ID. */
-private class SecretCipher(context: Context) {
+internal class SecretCipher(private val keyProvider: () -> SecretKeySpec) {
 
     // La clave se deriva de forma PERZOSA y se cachea por proceso: leer
     // ANDROID_ID es una query al content resolver que, si se hace en el
@@ -69,18 +103,20 @@ private class SecretCipher(context: Context) {
     // ocupado), puede bloquear la app y dejarla "pegada" sin iniciar.
     // Con lazy, la primera crypto real ocurre en background (refresh/worker),
     // nunca en attachBaseContext/onCreate.
-    private val key: SecretKeySpec by lazy { deriveKeyFor(context) }
+    private val key: SecretKeySpec by lazy { keyProvider() }
+
+    constructor(context: Context) : this({ deriveKeyFor(context) })
 
     fun encrypt(plain: String): String {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         val iv = ByteArray(12).also { SecureRandom().nextBytes(it) }
         cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(128, iv))
         val ct = cipher.doFinal(plain.toByteArray(Charsets.UTF_8))
-        return Base64.encodeToString(iv + ct, Base64.NO_WRAP)
+        return Base64.getEncoder().encodeToString(iv + ct)
     }
 
     fun decrypt(encoded: String): String? = runCatching {
-        val raw = Base64.decode(encoded, Base64.NO_WRAP)
+        val raw = Base64.getDecoder().decode(encoded)
         val iv = raw.copyOfRange(0, 12)
         val ct = raw.copyOfRange(12, raw.size)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -115,7 +151,7 @@ internal fun deriveKey(androidId: String): SecretKeySpec {
 }
 
 /** Wrapper que cifra solo [SecurePrefs.SECRET_KEYS]; el resto pasa directo. */
-private class EncryptedPrefs(
+internal class EncryptedPrefs(
     private val base: SharedPreferences,
     private val cipher: SecretCipher,
 ) : SharedPreferences by base {
