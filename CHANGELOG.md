@@ -5,6 +5,20 @@ Todas las novedades de la app, agrupadas por version. Sigue semver
 
 ## Unreleased
 
+### Validacion en vivo de API key (issue #63)
+
+Al pegar una API key en el flujo de Configuracion (agregar cuenta o cambiar
+acceso), la app la valida en vivo contra ollama.com antes de guardar:
+
+- Spinner mientras valida.
+- "API key valida" en verde cuando el ping responde 2xx.
+- "API key invalida o sin permisos" en rojo cuando responde 401.
+- Degrada a "no se pudo validar" (no concluyente) si hay timeout/red/servidor.
+- El boton Guardar queda deshabilitado hasta que la validacion pase.
+
+Reutiliza `OllamaApiKeyValidator` (timeout 5s) y aplica el mismo patron de
+feedback en el dialogo de agregar cuenta y en el setup de acceso.
+
 ### Refactor (issue #65): Gradle multi-module
 
 El modulo `app` (95 archivos .kt) se dividio en 9 modulos Gradle por capa

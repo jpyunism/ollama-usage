@@ -34,6 +34,18 @@ sealed interface UiState {
     data class Error(val error: UsageError) : UiState
 }
 
+/**
+ * Estado de la validacion en vivo de una API key (issue #63).
+ * La UI lo mapea a strings/colores; [Inconclusive] degrada graceful offline.
+ */
+sealed interface ApiKeyValidation {
+    data object Idle : ApiKeyValidation
+    data object InProgress : ApiKeyValidation
+    data object Valid : ApiKeyValidation
+    data object Invalid : ApiKeyValidation
+    data object Inconclusive : ApiKeyValidation
+}
+
 /** Configuración de alertas y pantalla de bloqueo. */
 data class AlertSettings(
     val notificationsEnabled: Boolean = true,
@@ -78,6 +90,7 @@ class UsageViewModel(
     private val onLanguageChange: (AppLanguage) -> Unit = {},
     private val onDailySummaryChanged: () -> Unit = {},
     private val historyStoreProvider: () -> UsageHistoryStore,
+    private val apiKeyValidator: OllamaApiKeyValidator = OllamaApiKeyValidator(),
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
@@ -123,6 +136,12 @@ class UsageViewModel(
 
     private val _showCookieWebView = MutableStateFlow(false)
     val showCookieWebView: StateFlow<Boolean> = _showCookieWebView
+
+    /** Estado de la validacion en vivo de la API key pegada (issue #63). */
+    private val _apiKeyValidation = MutableStateFlow<ApiKeyValidation>(ApiKeyValidation.Idle)
+    val apiKeyValidation: StateFlow<ApiKeyValidation> = _apiKeyValidation
+
+    private var apiKeyValidationJob: Job? = null
 
     // ── Multi-cuenta (Feature A lote 2, issue #25) ──
     private val accountStore = AccountStore(prefs)
@@ -182,6 +201,34 @@ class UsageViewModel(
 
     /** Valor del secreto guardado para el método indicado (vacío si no existe). */
     fun currentSecret(source: AuthSource): String = repository.currentSecret(source)
+
+    /**
+     * Valida en vivo una API key contra ollama.com (issue #63) ANTES de
+     * guardarla. Cancela la validacion previa si el usuario sigue pegando.
+     * Degrada a [ApiKeyValidation.Inconclusive] offline (timeout/red).
+     */
+    fun validateApiKey(apiKey: String) {
+        apiKeyValidationJob?.cancel()
+        if (apiKey.isBlank()) {
+            _apiKeyValidation.value = ApiKeyValidation.Idle
+            return
+        }
+        _apiKeyValidation.value = ApiKeyValidation.InProgress
+        apiKeyValidationJob = viewModelScope.launch {
+            val result = apiKeyValidator.validate(apiKey)
+            _apiKeyValidation.value = when (result) {
+                OllamaApiKeyValidator.Result.Valid -> ApiKeyValidation.Valid
+                OllamaApiKeyValidator.Result.Invalid -> ApiKeyValidation.Invalid
+                OllamaApiKeyValidator.Result.Inconclusive -> ApiKeyValidation.Inconclusive
+            }
+        }
+    }
+
+    /** Resetea la validacion en vivo (p. ej. al cerrar el setup). */
+    fun resetApiKeyValidation() {
+        apiKeyValidationJob?.cancel()
+        _apiKeyValidation.value = ApiKeyValidation.Idle
+    }
 
     /** Abre la pantalla de cambio de acceso sin tocar las credenciales guardadas. */
     fun openAuthSetup() {
@@ -490,6 +537,7 @@ class UsageViewModel(
                         onLanguageChange = { LocaleHelper.apply(app, it) },
                         onDailySummaryChanged = { com.jpyunism.ollamacloudusage.DailySummaryWorker.schedule(app) },
                         historyStoreProvider = { container.historyStore },
+                        apiKeyValidator = OllamaApiKeyValidator(client = container.httpClient),
                     ) as T
                 }
             }

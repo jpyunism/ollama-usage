@@ -76,6 +76,7 @@ class UsageViewModelTest {
         repository: UsageRepository = mockk(relaxed = true),
         updateRepository: UpdateRepository = mockk(relaxed = true),
         historyStore: UsageHistoryStore = mockk(relaxed = true),
+        apiKeyValidator: OllamaApiKeyValidator = mockk(relaxed = true),
     ): UsageViewModel {
         val dispatcher = StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
@@ -85,6 +86,7 @@ class UsageViewModelTest {
             updateRepository = updateRepository,
             ioDispatcher = dispatcher,
             historyStoreProvider = { historyStore },
+            apiKeyValidator = apiKeyValidator,
         )
     }
 
@@ -617,5 +619,77 @@ class UsageViewModelTest {
         assertTrue("expected Success got $state", state is UiState.Success)
         assertTrue((state as UiState.Success).weeklyProjection == null)
         assertTrue(state.sessionProjection == null)
+    }
+
+    // ── Validacion en vivo de API key (issue #63) ─────────────────────
+
+    @Test
+    fun `validateApiKey con key valida expone Valid`() = runTest {
+        val validator = mockk<OllamaApiKeyValidator>()
+        coEvery { validator.validate("good-key") } returns OllamaApiKeyValidator.Result.Valid
+        val vm = buildVm(fakePrefs(), mockk(relaxed = true), apiKeyValidator = validator)
+        vm.validateApiKey("good-key")
+        testScheduler.advanceUntilIdle()
+        assertEquals(ApiKeyValidation.Valid, vm.apiKeyValidation.value)
+    }
+
+    @Test
+    fun `validateApiKey con 401 expone Invalid`() = runTest {
+        val validator = mockk<OllamaApiKeyValidator>()
+        coEvery { validator.validate("bad-key") } returns OllamaApiKeyValidator.Result.Invalid
+        val vm = buildVm(fakePrefs(), mockk(relaxed = true), apiKeyValidator = validator)
+        vm.validateApiKey("bad-key")
+        testScheduler.advanceUntilIdle()
+        assertEquals(ApiKeyValidation.Invalid, vm.apiKeyValidation.value)
+    }
+
+    @Test
+    fun `validateApiKey con 500 expone Inconclusive (offline graceful)`() = runTest {
+        val validator = mockk<OllamaApiKeyValidator>()
+        coEvery { validator.validate("k") } returns OllamaApiKeyValidator.Result.Inconclusive
+        val vm = buildVm(fakePrefs(), mockk(relaxed = true), apiKeyValidator = validator)
+        vm.validateApiKey("k")
+        testScheduler.advanceUntilIdle()
+        assertEquals(ApiKeyValidation.Inconclusive, vm.apiKeyValidation.value)
+    }
+
+    @Test
+    fun `validateApiKey con key en blanco queda Idle sin llamar al validator`() = runTest {
+        val validator = mockk<OllamaApiKeyValidator>()
+        coEvery { validator.validate(any()) } returns OllamaApiKeyValidator.Result.Valid
+        val vm = buildVm(fakePrefs(), mockk(relaxed = true), apiKeyValidator = validator)
+        vm.validateApiKey("   ")
+        testScheduler.advanceUntilIdle()
+        assertEquals(ApiKeyValidation.Idle, vm.apiKeyValidation.value)
+        coVerify(exactly = 0) { validator.validate(any()) }
+    }
+
+    @Test
+    fun `validateApiKey transiciona a InProgress mientras valida`() = runTest {
+        val validator = mockk<OllamaApiKeyValidator>()
+        coEvery { validator.validate("k") } coAnswers {
+            kotlinx.coroutines.delay(1000)
+            OllamaApiKeyValidator.Result.Valid
+        }
+        val vm = buildVm(fakePrefs(), mockk(relaxed = true), apiKeyValidator = validator)
+        vm.validateApiKey("k")
+        assertEquals(ApiKeyValidation.InProgress, vm.apiKeyValidation.value)
+        testScheduler.advanceUntilIdle()
+        assertEquals(ApiKeyValidation.Valid, vm.apiKeyValidation.value)
+    }
+
+    @Test
+    fun `resetApiKeyValidation cancela y vuelve a Idle`() = runTest {
+        val validator = mockk<OllamaApiKeyValidator>()
+        coEvery { validator.validate("k") } coAnswers {
+            kotlinx.coroutines.delay(1000)
+            OllamaApiKeyValidator.Result.Valid
+        }
+        val vm = buildVm(fakePrefs(), mockk(relaxed = true), apiKeyValidator = validator)
+        vm.validateApiKey("k")
+        assertEquals(ApiKeyValidation.InProgress, vm.apiKeyValidation.value)
+        vm.resetApiKeyValidation()
+        testScheduler.advanceUntilIdle()
+        assertEquals(ApiKeyValidation.Idle, vm.apiKeyValidation.value)
     }
 }

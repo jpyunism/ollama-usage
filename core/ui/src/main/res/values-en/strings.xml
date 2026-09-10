@@ -63,6 +63,10 @@
     <string name="change_auth_hint">Your current credential stays until you save a new one. Pick a method and paste the value.</string>
     <string name="show_key">Show key</string>
     <string name="hide_key">Hide key</string>
+    <string name="api_key_validating">Validating against ollama.com…</string>
+    <string name="api_key_valid">Valid API key</string>
+    <string name="api_key_invalid_live">Invalid API key or no permissions. Check you copied it in full.</string>
+    <string name="api_key_inconclusive">We could not validate the API key right now (network or server). You can save and try again.</string>
 
     <!-- Alerts -->
     <string name="consumption_alerts">Usage alerts</string>

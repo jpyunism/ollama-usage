@@ -63,6 +63,10 @@
     <string name="change_auth_hint">Tu credencial actual se mantiene hasta que guardes una nueva. Elige el método y pega el valor.</string>
     <string name="show_key">Mostrar clave</string>
     <string name="hide_key">Ocultar clave</string>
+    <string name="api_key_validating">Validando contra ollama.com…</string>
+    <string name="api_key_valid">API key válida</string>
+    <string name="api_key_invalid_live">API key inválida o sin permisos. Revisa que la copiaste completa.</string>
+    <string name="api_key_inconclusive">No pudimos validar la API key ahora (red o servidor). Puedes guardar e intentar de nuevo.</string>
 
     <!-- Alerts -->
     <string name="consumption_alerts">Alertas de consumo</string>

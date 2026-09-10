@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -54,7 +55,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jpyunism.ollamacloudusage.AuthSource
+import com.jpyunism.ollamacloudusage.ApiKeyValidation
 import com.jpyunism.ollamacloudusage.UiState
 import com.jpyunism.ollamacloudusage.UsageError
 import com.jpyunism.ollamacloudusage.UsageViewModel
@@ -67,6 +70,7 @@ fun CookieSetup(vm: UsageViewModel, state: UiState) {
     var apiKey by rememberSaveable { mutableStateOf(vm.currentSecret(AuthSource.API_KEY)) }
     var cookie by rememberSaveable { mutableStateOf(vm.currentSecret(AuthSource.COOKIE)) }
     var showApiKey by rememberSaveable { mutableStateOf(false) }
+    val apiKeyValidation by vm.apiKeyValidation.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
@@ -117,7 +121,10 @@ fun CookieSetup(vm: UsageViewModel, state: UiState) {
         if (source == AuthSource.API_KEY) {
             OutlinedTextField(
                 value = apiKey,
-                onValueChange = { apiKey = it },
+                onValueChange = {
+                    apiKey = it
+                    vm.validateApiKey(it)
+                },
                 label = { Text(stringResource(R.string.api_key_label)) },
                 leadingIcon = { Icon(Icons.Outlined.Key, contentDescription = null) },
                 trailingIcon = {
@@ -139,6 +146,7 @@ fun CookieSetup(vm: UsageViewModel, state: UiState) {
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            ApiKeyValidationFeedback(apiKeyValidation)
         }
 
         // ── Método: cookie ──
@@ -234,7 +242,7 @@ fun CookieSetup(vm: UsageViewModel, state: UiState) {
                 }
             },
             enabled = when (source) {
-                AuthSource.API_KEY -> apiKey.isNotBlank()
+                AuthSource.API_KEY -> apiKey.isNotBlank() && apiKeyValidation == ApiKeyValidation.Valid
                 AuthSource.COOKIE -> cookie.isNotBlank()
             },
             modifier = Modifier
@@ -246,6 +254,42 @@ fun CookieSetup(vm: UsageViewModel, state: UiState) {
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.save_and_check), style = MaterialTheme.typography.titleMedium)
         }
+    }
+}
+
+/**
+ * Feedback visual de la validacion en vivo de la API key (issue #63):
+ * spinner mientras valida, verde si es valida, rojo si es invalida y
+ * neutro/accionable si no se pudo concluir (offline).
+ */
+@Composable
+private fun ApiKeyValidationFeedback(validation: ApiKeyValidation) {
+    when (validation) {
+        ApiKeyValidation.Idle -> Unit
+        ApiKeyValidation.InProgress -> Row(verticalAlignment = Alignment.CenterVertically) {
+            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                stringResource(R.string.api_key_validating),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        ApiKeyValidation.Valid -> Text(
+            stringResource(R.string.api_key_valid),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        ApiKeyValidation.Invalid -> Text(
+            stringResource(R.string.api_key_invalid_live),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+        ApiKeyValidation.Inconclusive -> Text(
+            stringResource(R.string.api_key_inconclusive),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
