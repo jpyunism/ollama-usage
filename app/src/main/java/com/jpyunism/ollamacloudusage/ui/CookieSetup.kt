@@ -41,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,10 +63,10 @@ import com.jpyunism.ollamacloudusage.UsageViewModel
 @Composable
 fun CookieSetup(vm: UsageViewModel, state: UiState) {
     val isChangeAccess = vm.hasAuth()
-    var source by remember { mutableStateOf(if (isChangeAccess) vm.authSource.value else AuthSource.API_KEY) }
-    var apiKey by remember { mutableStateOf(vm.currentSecret(AuthSource.API_KEY)) }
-    var cookie by remember { mutableStateOf(vm.currentSecret(AuthSource.COOKIE)) }
-    var showApiKey by remember { mutableStateOf(false) }
+    var source by rememberSaveable { mutableStateOf(if (isChangeAccess) vm.authSource.value else AuthSource.API_KEY) }
+    var apiKey by rememberSaveable { mutableStateOf(vm.currentSecret(AuthSource.API_KEY)) }
+    var cookie by rememberSaveable { mutableStateOf(vm.currentSecret(AuthSource.COOKIE)) }
+    var showApiKey by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
