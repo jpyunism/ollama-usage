@@ -24,8 +24,6 @@ android {
         create("release") {
             val keystore = rootProject.file("keystore/release.jks")
             if (keystore.exists()) {
-                // Contraseñas desde local.properties (NO versionado) o env vars.
-                // Nunca hardcodear credenciales de firma en el repo.
                 val props = Properties().apply {
                     val f = rootProject.file("local.properties")
                     if (f.exists()) f.inputStream().use { load(it) }
@@ -77,27 +75,29 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":core:model"))
+    implementation(project(":core:net"))
+    implementation(project(":core:data"))
+    implementation(project(":core:notify"))
+    implementation(project(":core:ui"))
+    implementation(project(":feature:usage"))
+    implementation(project(":feature:settings"))
+    implementation(project(":feature:stats"))
+
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)
     implementation(libs.compose.material.icons.extended)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
-
-    implementation(libs.okhttp)
-    implementation(libs.jsoup)
-
+    implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.android)
-
-    // Background check + notificaciones de límite
     implementation(libs.androidx.work.runtime)
 
     // Tests
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
-    // Implementación real de org.json para tests unitarios (android.jar la mockea).
-    testImplementation(libs.org.json)
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui.test.junit4)
     androidTestImplementation(platform(libs.compose.bom))
