@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jpyunism.ollamacloudusage.UsageViewModel
 import com.jpyunism.ollamacloudusage.DownloadState
+import com.jpyunism.ollamacloudusage.CookieExpiry
 
 enum class Tab(val labelRes: Int, val icon: ImageVector, val selectedIcon: ImageVector) {
     Usage(R.string.tab_usage, Icons.Outlined.Speed, Icons.Filled.Speed),
@@ -74,6 +75,7 @@ fun UsageScreen(vm: UsageViewModel) {
     val download by vm.download.collectAsStateWithLifecycle()
     val history by vm.history.collectAsStateWithLifecycle()
     val isRefreshing by vm.isRefreshing.collectAsStateWithLifecycle()
+    val cookieExpiry by vm.cookieExpiry.collectAsStateWithLifecycle()
     val pagerState = rememberPagerState(pageCount = { Tab.entries.size })
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -133,6 +135,15 @@ fun UsageScreen(vm: UsageViewModel) {
                         onClick = { vm.startUpdateDownload(update!!) },
                     )
                 }
+                // Recordatorio proactivo de cookie (issue #62): banner con CTA
+                // para renovar cuando la cookie está por expirar o expiró.
+                if (cookieExpiry.status != CookieExpiry.Status.OK) {
+                    CookieExpiryBanner(
+                        expired = cookieExpiry.status == CookieExpiry.Status.EXPIRED,
+                        daysRemaining = cookieExpiry.daysRemaining,
+                        onRenew = { vm.renewCookie() },
+                    )
+                }
                 HorizontalPager(
                     state = pagerState,
                     beyondViewportPageCount = Tab.entries.size - 1,
@@ -170,6 +181,62 @@ private fun UpdateBanner(version: String, onClick: () -> Unit) {
             Spacer(Modifier.width(8.dp))
             Button(onClick = onClick) {
                 Text(stringResource(R.string.update_install))
+            }
+        }
+    }
+}
+
+/**
+ * Banner persistente del recordatorio proactivo de cookie (issue #62).
+ * Aparece solo cuando la cookie está por expirar (< 3 días) o ya expiró, y
+ * ofrece el CTA "Renovar ahora" que abre el WebView de login. Material 3.
+ */
+@Composable
+private fun CookieExpiryBanner(
+    expired: Boolean,
+    daysRemaining: Long,
+    onRenew: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (expired) {
+                MaterialTheme.colorScheme.errorContainer
+            } else {
+                MaterialTheme.colorScheme.tertiaryContainer
+            },
+        ),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.cookie_expiring_soon),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (expired) {
+                        MaterialTheme.colorScheme.onErrorContainer
+                    } else {
+                        MaterialTheme.colorScheme.onTertiaryContainer
+                    },
+                )
+                if (!expired) {
+                    Text(
+                        stringResource(R.string.cookie_expiring_days, daysRemaining),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (expired) {
+                            MaterialTheme.colorScheme.onErrorContainer
+                        } else {
+                            MaterialTheme.colorScheme.onTertiaryContainer
+                        },
+                    )
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            Button(onClick = onRenew) {
+                Text(stringResource(R.string.cookie_renew_now))
             }
         }
     }

@@ -285,4 +285,44 @@ class UsageRepositoryTest {
         // Guard: guarda el start del período semanal notificado.
         assertEquals(start, written[PrefsKeys.LAST_PACE_PERIOD_WEEK])
     }
+
+    // ─── Recordatorio proactivo de cookie (issue #62) ───
+
+    @Test
+    fun `cookieExpiryStatus con API key devuelve OK sin molestar`() = runTest {
+        val prefs = prefsWith() // authSource = API_KEY
+        val repo = buildRepo(prefs, mockk<UsageScraper>(), mutableListOf())
+        val status = repo.cookieExpiryStatus()
+        assertEquals(CookieExpiry.Status.OK, status.status)
+    }
+
+    @Test
+    fun `cookieExpiryStatus sin renovacion conocida devuelve EXPIRED`() = runTest {
+        val prefs = prefsWith(authSource = AuthSource.COOKIE.name, apiKey = null, cookie = "cookie")
+        every { prefs.getLong(PrefsKeys.COOKIE_RENEWED_AT, 0L) } returns 0L
+        val repo = buildRepo(prefs, mockk<UsageScraper>(), mutableListOf())
+        val status = repo.cookieExpiryStatus()
+        assertEquals(CookieExpiry.Status.EXPIRED, status.status)
+    }
+
+    @Test
+    fun `cookieExpiryStatus con renovacion reciente devuelve OK`() = runTest {
+        val prefs = prefsWith(authSource = AuthSource.COOKIE.name, apiKey = null, cookie = "cookie")
+        every { prefs.getLong(PrefsKeys.COOKIE_RENEWED_AT, 0L) } returns System.currentTimeMillis()
+        val repo = buildRepo(prefs, mockk<UsageScraper>(), mutableListOf())
+        val status = repo.cookieExpiryStatus()
+        assertEquals(CookieExpiry.Status.OK, status.status)
+    }
+
+    @Test
+    fun `recordCookieRenewal persiste el timestamp`() = runTest {
+        val prefs = prefsWith()
+        val written = mutableMapOf<String, Any?>()
+        every { prefs.edit() } returns editorRecording(written)
+        val repo = buildRepo(prefs, mockk<UsageScraper>(), mutableListOf())
+
+        repo.recordCookieRenewal()
+
+        assertTrue(written.containsKey(PrefsKeys.COOKIE_RENEWED_AT))
+    }
 }

@@ -143,6 +143,10 @@ class UsageViewModel(
 
     private var apiKeyValidationJob: Job? = null
 
+    /** Estado de expiración de la cookie (issue #62), para el banner. */
+    private val _cookieExpiry = MutableStateFlow(repository.cookieExpiryStatus())
+    val cookieExpiry: StateFlow<CookieExpiry.Result> = _cookieExpiry
+
     // ── Multi-cuenta (Feature A lote 2, issue #25) ──
     private val accountStore = AccountStore(prefs)
 
@@ -167,6 +171,9 @@ class UsageViewModel(
             .putString(PrefsKeys.COOKIE, cookie.trim())
             .putString(PrefsKeys.AUTH_SOURCE, AuthSource.COOKIE.name)
             .apply()
+        // Issue #62: registrar la renovación para el recordatorio proactivo.
+        repository.recordCookieRenewal()
+        _cookieExpiry.value = repository.cookieExpiryStatus()
         _authSource.value = AuthSource.COOKIE
         _showAuthSetup.value = false
         refresh()
@@ -174,6 +181,11 @@ class UsageViewModel(
 
     /** Abre el WebView de login de ollama.com para capturar la cookie. */
     fun openCookieWebView() {
+        _showCookieWebView.value = true
+    }
+
+    /** CTA "Renovar ahora" (issue #62): abre el WebView de login directo. */
+    fun renewCookie() {
         _showCookieWebView.value = true
     }
 

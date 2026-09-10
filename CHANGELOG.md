@@ -19,6 +19,45 @@ acceso), la app la valida en vivo contra ollama.com antes de guardar:
 Reutiliza `OllamaApiKeyValidator` (timeout 5s) y aplica el mismo patron de
 feedback en el dialogo de agregar cuenta y en el setup de acceso.
 
+### Recordatorio proactivo de cookie (issue #62)
+
+La cookie de sesion de ollama.com expira periodicamente y antes el usuario
+solo se enteraba al querer usar la app. Ahora la app detecta proactivamente
+cuando la cookie esta por expirar (menos de 3 dias estimados) o ya expiro y
+avisa con un CTA para renovarla:
+
+- **Banner persistente** en la pantalla principal: "Tu cookie expira pronto"
+  con el boton "Renovar ahora" que abre el WebView de login de ollama.com
+  para capturar la cookie nueva automaticamente.
+- **Notificacion** (si las alertas estan activadas) cuando la cookie expira
+  o esta por expirar, con tap que abre la app.
+- **Reset automatico**: al renovar la cookie exitosamente se registra la
+  nueva fecha y el banner desaparece.
+- **No molesta con API key**: el recordatorio solo aplica cuando el metodo
+  de auth es cookie.
+
+### Componentes nuevos
+
+- `CookieExpiry` (`:core:model`) — logica pura del calculo de dias restantes
+  y umbral de aviso, testeable en JVM.
+- `UsageRepository.cookieExpiryStatus()` / `recordCookieRenewal()` /
+  `notifyCookieExpiryIfNeeded()` (`:core:data`).
+- `UsageNotifier.notifyCookieExpiry()` (`:core:data`).
+- `CookieExpiryBanner` (`:app`) — banner Material 3 con CTA.
+- `UsageViewModel.cookieExpiry` / `renewCookie()` (`:feature:usage`).
+- `UsageWorker` y `UsageMonitorService` notifican en cada ciclo.
+
+### Tests
+
+- `CookieExpiryTest` (8 casos): sin renovacion, recien renovada, umbrales de
+  3 dias, expirada, vida util custom.
+- `UsageRepositoryTest` (4 casos nuevos): API key no molesta, sin renovacion
+  EXPIRED, renovacion reciente OK, persistencia del timestamp.
+
+### Localizacion
+
+- 7 strings nuevos en ES y EN (banner, CTA, notificaciones).
+
 ### Refactor (issue #65): Gradle multi-module
 
 El modulo `app` (95 archivos .kt) se dividio en 9 modulos Gradle por capa

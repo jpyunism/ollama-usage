@@ -79,6 +79,9 @@ class UsageMonitorService : Service() {
     private suspend fun refreshOnce(): Boolean {
         val repo = AppContainer.get(this).usageRepository
         val result = repo.refreshAndPropagate()
+        // Recordatorio proactivo de cookie (issue #62): notifica si la cookie
+        // está por expirar o expiró (solo si alertas on).
+        repo.notifyCookieExpiryIfNeeded()
         return result.exceptionOrNull() == null
     }
 

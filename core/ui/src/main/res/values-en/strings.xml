@@ -68,6 +68,15 @@
     <string name="api_key_invalid_live">Invalid API key or no permissions. Check you copied it in full.</string>
     <string name="api_key_inconclusive">We could not validate the API key right now (network or server). You can save and try again.</string>
 
+    <!-- Proactive cookie reminder (issue #62) -->
+    <string name="cookie_expiring_soon">Your cookie expires soon</string>
+    <string name="cookie_expiring_days">%1$d days left</string>
+    <string name="cookie_renew_now">Renew now</string>
+    <string name="cookie_expired_notification_title">Cookie expired</string>
+    <string name="cookie_expired_notification_message">Your session cookie expired. Renew it to keep using the app.</string>
+    <string name="cookie_expiring_notification_title">Cookie expiring</string>
+    <string name="cookie_expiring_notification_message">Your cookie expires in %1$d days. Renew it to keep access.</string>
+
     <!-- Alerts -->
     <string name="consumption_alerts">Usage alerts</string>
     <string name="alerts_description">The app checks your usage in the background and notifies you when you get close to your plan limit.</string>
