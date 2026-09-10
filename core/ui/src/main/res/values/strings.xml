@@ -153,6 +153,10 @@
     <string name="session_alert_title">Sesión al %1$s%%</string>
     <string name="session_alert_message">La sesión de Ollama Cloud está al %1$s%%. Se resetea pronto.</string>
 
+    <!-- Notificación proactiva de reset de sesión (issue #57) -->
+    <string name="session_reset_soon_title">Tu sesión se reinicia en 1h</string>
+    <string name="session_reset_soon_message">Quedan %1$s%% usados de la sesión. Aprovecha la ventana antes del reset.</string>
+
     <!-- Pace alerts (alerta temprana de ritmo, proyección cruza 100%) -->
     <string name="pace_alert_title_weekly">Ritmo semanal acelerado</string>
     <string name="pace_alert_title_session">Ritmo de sesión acelerado</string>

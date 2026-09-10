@@ -148,6 +148,7 @@ object UsageNotifier {
     private const val UPDATE_NOTIFICATION_ID = 1003
     const val DAILY_SUMMARY_NOTIFICATION_ID = 1004
     private const val COOKIE_EXPIRY_NOTIFICATION_ID = 1005
+    private const val SESSION_RESET_NOTIFICATION_ID = 1006
 
     /** Resumen diario programado (Feature B lote 2): % semana/sesión + proyección. */
     @SuppressLint("MissingPermission") // canNotify() verifica el permiso antes
@@ -211,6 +212,24 @@ object UsageNotifier {
             .build()
         runCatching {
             NotificationManagerCompat.from(context).notify(COOKIE_EXPIRY_NOTIFICATION_ID, notification)
+        }
+    }
+
+    /** Notificación proactiva de reset de sesión (issue #57): avisa 1h antes. */
+    @SuppressLint("MissingPermission") // canNotify() verifica el permiso antes
+    fun notifySessionResetSoon(context: Context, percent: Double) {
+        if (!canNotify(context)) return
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_notify_error)
+            .setContentTitle(context.getString(R.string.session_reset_soon_title))
+            .setContentText(context.getString(R.string.session_reset_soon_message, formatPercent(percent)))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(context.getString(R.string.session_reset_soon_message, formatPercent(percent))))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(openApp(context))
+            .build()
+        runCatching {
+            NotificationManagerCompat.from(context).notify(SESSION_RESET_NOTIFICATION_ID, notification)
         }
     }
 

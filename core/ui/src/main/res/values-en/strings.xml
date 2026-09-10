@@ -153,6 +153,10 @@
     <string name="session_alert_title">Session at %1$s%%</string>
     <string name="session_alert_message">Your Ollama Cloud session is at %1$s%%. It resets soon.</string>
 
+    <!-- Proactive session reset notification (issue #57) -->
+    <string name="session_reset_soon_title">Your session resets in 1h</string>
+    <string name="session_reset_soon_message">%1$s%% of the session is used. Make the most of the window before the reset.</string>
+
     <!-- Pace alerts (early pace warning, projection crosses 100%) -->
     <string name="pace_alert_title_weekly">Weekly pace too fast</string>
     <string name="pace_alert_title_session">Session pace too fast</string>

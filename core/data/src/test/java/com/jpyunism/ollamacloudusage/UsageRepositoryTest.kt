@@ -325,4 +325,24 @@ class UsageRepositoryTest {
 
         assertTrue(written.containsKey(PrefsKeys.COOKIE_RENEWED_AT))
     }
+
+    // ─── Notificación proactiva de reset de sesión (issue #57) ───
+
+    @Test
+    fun `refresh reprograma el aviso de reset de sesion con resetAt y percent`() = runTest {
+        val prefs = prefsWith()
+        val fetcher = mockk<UsageScraper>()
+        val data = sampleData() // sessionPercent 85, sessionResetAt 2026-08-08T18:00:00Z
+        every { fetcher.fetchUsage("sk-test") } returns data
+        val calls = mutableListOf<String>()
+        val repo = buildRepo(prefs, fetcher, calls)
+        val scheduled = mutableListOf<Pair<Instant?, Double>>()
+        repo.connectSessionResetScheduler { _, resetAt, percent -> scheduled += resetAt to percent }
+
+        repo.refreshAndPropagate()
+
+        assertEquals(1, scheduled.size)
+        assertEquals(data.sessionResetAt, scheduled[0].first)
+        assertEquals(85.0, scheduled[0].second, 0.001)
+    }
 }
