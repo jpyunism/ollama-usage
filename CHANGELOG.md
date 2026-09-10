@@ -58,6 +58,21 @@ avisa con un CTA para renovarla:
 
 - 7 strings nuevos en ES y EN (banner, CTA, notificaciones).
 
+### Notificación proactiva de reset de sesión (issue #57)
+
+La app ahora avisa al usuario 1 hora antes de que se resetee la sesión de
+Ollama Cloud, para que no pierda la ventana de uso. Solo notifica si el
+consumo de la sesión supera el 70% (caso en que importa avisar).
+
+- `SessionResetScheduler` (`:core:model`): lógica pura del delay (resetAt - 1h)
+  y del umbral de disparo (> 70%).
+- `SessionResetWorker` (`:core:notify`): OneTimeWorkRequest con delay hasta
+  el aviso; al disparar re-verifica el consumo con el último snapshot y no
+  notifica si bajó del 70% (criterio de cancelación).
+- Se reprograma en cada refresh que actualice el `resetAt` (vía
+  `UsageRepository` → `SessionResetWorker.schedule`).
+- Strings ES/EN en `:core:ui`.
+
 ### Refactor (issue #65): Gradle multi-module
 
 El modulo `app` (95 archivos .kt) se dividio en 9 modulos Gradle por capa

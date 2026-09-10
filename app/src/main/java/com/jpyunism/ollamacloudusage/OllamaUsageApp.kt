@@ -32,6 +32,11 @@ class OllamaUsageApp : Application() {
         SecurePrefs.purgeLegacy(this)
         // Crea los canales de notificación y programa el refresh de fondo.
         val interval = prefs.getInt(PrefsKeys.REFRESH_INTERVAL, PrefsKeys.DEFAULT_REFRESH_MINUTES)
+        // Notificación proactiva de reset de sesión (issue #57): conecta el
+        // programador real (SessionResetWorker) al pipeline de refresco.
+        container.usageRepository.connectSessionResetScheduler { ctx, resetAt, percent ->
+            SessionResetWorker.schedule(ctx, resetAt, percent)
+        }
         Handler(Looper.getMainLooper()).post {
             UsageNotifier.ensureChannels(this)
             UsageScheduler.schedule(this, interval)

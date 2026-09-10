@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.time.Instant
 
 /**
  * Único punto de entrada del refresco de consumo. Encapsula la resolución de
@@ -35,6 +36,20 @@ class UsageRepository(
     private val persistentHider: (Context) -> Unit = UsageNotifier::hidePersistent,
     private val alertNotifier: (Context, String, String) -> Unit = UsageNotifier::notifyLimit,
 ) {
+
+    /**
+     * Notificación proactiva de reset de sesión (issue #57): se reprograma en
+     * cada refresh que actualice el resetAt. No-op por defecto; se inyecta
+     * desde la capa :app (que depende de :core:notify) vía [setSessionResetScheduler].
+     */
+    @Volatile
+    var sessionResetScheduler: (Context, Instant?, Double) -> Unit = { _, _, _ -> }
+
+    /** Conecta el programador real (SessionResetWorker) desde la capa app. */
+    fun connectSessionResetScheduler(scheduler: (Context, Instant?, Double) -> Unit) {
+        sessionResetScheduler = scheduler
+    }
+
 
     /** true si hay credencial configurada para el método de auth actual. */
     fun hasAuth(): Boolean = when (authSource()) {
@@ -119,6 +134,10 @@ class UsageRepository(
             checkSessionThreshold(data)
             checkPaceAlerts()
         }
+
+        // Notificación proactiva de reset de sesión (issue #57): reprograma
+        // el aviso 1h antes del resetAt en cada refresh que lo actualice.
+        sessionResetScheduler(context, data.sessionResetAt, data.sessionPercent)
     }
 
     /**
