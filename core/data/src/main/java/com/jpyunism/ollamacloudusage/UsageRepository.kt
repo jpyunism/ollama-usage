@@ -149,8 +149,13 @@ class UsageRepository(
         val snapshots = historyStore.load()
 
         fun check(period: HistoryPeriod, lastKey: String, titleRes: Int, notificationId: Int) {
+            // Sin ancla real no se puede calcular el inicio del período: saltear
+            // (issue #74). Con API key el fallback de sesión es null y el guard
+            // nunca coincidiría → la alerta se dispararía en cada refresh.
             val anchor = dataAnchor(period) ?: fallbackResetAnchor(period, now())
+            if (anchor == null) return
             val alert = paceAlert(snapshots, period, anchor, now()) { p -> selectorOf(period, p) } ?: return
+            // Guard: el start del período notificado (estable con anchor real).
             val lastPeriod = prefs.getLong(lastKey, Long.MIN_VALUE)
             if (lastPeriod == alert.periodStart) return // ya notificado este período
             prefs.edit().putLong(lastKey, alert.periodStart).apply()

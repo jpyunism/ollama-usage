@@ -101,6 +101,19 @@ consumo de la sesión supera el 70% (caso en que importa avisar).
   `UsageRepository` → `SessionResetWorker.schedule`).
 - Strings ES/EN en `:core:ui`.
 
+### Corregido (issue #74): alerta de ritmo en bucle con API key
+
+Con API key, el ancla de sesión es `fallbackResetAnchor(SESSION)` que devuelve
+null: sin inicio de período no se puede proyectar el ritmo y el guard por
+período nunca coincidía, por lo que la alerta de ritmo se disparaba en cada
+refresh. Ahora:
+
+- `checkPaceAlerts()` saltea la alerta cuando el ancla es null (no se puede
+  calcular sin inicio del período).
+- `paceAlert()` devuelve null sin ancla (defensa en la capa pura).
+- Test: API key con 2 refrescos consecutivos verifica que la alerta de ritmo
+  de sesión no se repite.
+
 ### Refactor (issue #65): Gradle multi-module
 
 El modulo `app` (95 archivos .kt) se dividio en 9 modulos Gradle por capa

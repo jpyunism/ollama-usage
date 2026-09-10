@@ -349,6 +349,8 @@ fun paceAlert(
     now: Long,
     selector: (UsageSnapshot) -> Double,
 ): PaceAlert? {
+    // Sin ancla no hay inicio de período: no se puede proyectar (issue #74).
+    if (resetAnchor == null) return null
     val cp = currentPeriod(snapshots, period, resetAnchor, now, selector) ?: return null
     val proj = cp.projection ?: return null
     if (proj.toPercent <= 100.0) return null
