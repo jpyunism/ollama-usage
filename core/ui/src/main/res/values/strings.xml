@@ -68,6 +68,15 @@
     <string name="api_key_invalid_live">API key inválida o sin permisos. Revisa que la copiaste completa.</string>
     <string name="api_key_inconclusive">No pudimos validar la API key ahora (red o servidor). Puedes guardar e intentar de nuevo.</string>
 
+    <!-- Recordatorio proactivo de cookie (issue #62) -->
+    <string name="cookie_expiring_soon">Tu cookie expira pronto</string>
+    <string name="cookie_expiring_days">Quedan %1$d días</string>
+    <string name="cookie_renew_now">Renovar ahora</string>
+    <string name="cookie_expired_notification_title">Cookie expirada</string>
+    <string name="cookie_expired_notification_message">Tu cookie de sesión expiró. Renueva para seguir usando la app.</string>
+    <string name="cookie_expiring_notification_title">Cookie por expirar</string>
+    <string name="cookie_expiring_notification_message">Tu cookie expira en %1$d días. Renueva para no perder el acceso.</string>
+
     <!-- Alerts -->
     <string name="consumption_alerts">Alertas de consumo</string>
     <string name="alerts_description">La app revisa tu consumo en segundo plano y te avisa cuando se acerca al límite de tu plan.</string>

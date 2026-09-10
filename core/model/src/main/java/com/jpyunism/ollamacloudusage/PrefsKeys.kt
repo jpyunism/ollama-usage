@@ -12,6 +12,11 @@ object PrefsKeys {
     const val AUTH_SOURCE = "auth_source"
     const val LAST_UPDATED = "last_updated"
 
+    // Recordatorio proactivo de cookie (issue #62): timestamp (epoch millis)
+    // de la ultima renovacion conocida de la cookie. Se setea al guardar una
+    // cookie nueva y se usa para estimar la expiracion.
+    const val COOKIE_RENEWED_AT = "cookie_renewed_at"
+
     // Onboarding (issue #61). NO es un secreto: se guarda en claro.
     const val ONBOARDING_COMPLETED = "onboarding_completed"
 

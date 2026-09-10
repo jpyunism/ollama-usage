@@ -147,6 +147,7 @@ object UsageNotifier {
 
     private const val UPDATE_NOTIFICATION_ID = 1003
     const val DAILY_SUMMARY_NOTIFICATION_ID = 1004
+    private const val COOKIE_EXPIRY_NOTIFICATION_ID = 1005
 
     /** Resumen diario programado (Feature B lote 2): % semana/sesión + proyección. */
     @SuppressLint("MissingPermission") // canNotify() verifica el permiso antes
@@ -178,6 +179,38 @@ object UsageNotifier {
             .build()
         runCatching {
             NotificationManagerCompat.from(context).notify(UPDATE_NOTIFICATION_ID, notification)
+        }
+    }
+
+    /**
+     * Recordatorio proactivo de cookie (issue #62): avisa que la cookie
+     * expira pronto o ya expiró. El tap abre la app, donde el banner
+     * persistente ofrece el CTA "Renovar ahora" que abre el WebView de login.
+     */
+    @SuppressLint("MissingPermission") // canNotify() verifica el permiso antes
+    fun notifyCookieExpiry(context: Context, expired: Boolean, daysRemaining: Long) {
+        if (!canNotify(context)) return
+        val title = if (expired) {
+            context.getString(R.string.cookie_expired_notification_title)
+        } else {
+            context.getString(R.string.cookie_expiring_notification_title)
+        }
+        val message = if (expired) {
+            context.getString(R.string.cookie_expired_notification_message)
+        } else {
+            context.getString(R.string.cookie_expiring_notification_message, daysRemaining)
+        }
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_notify_error)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(openApp(context))
+            .build()
+        runCatching {
+            NotificationManagerCompat.from(context).notify(COOKIE_EXPIRY_NOTIFICATION_ID, notification)
         }
     }
 

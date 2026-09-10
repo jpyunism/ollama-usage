@@ -23,6 +23,10 @@ class UsageWorker(
 
         val result = repository.refreshAndPropagate()
 
+        // Recordatorio proactivo de cookie (issue #62): si la cookie está por
+        // expirar o expiró, notifica con CTA para renovar (solo si alertas on).
+        repository.notifyCookieExpiryIfNeeded()
+
         // Check de nueva versión (una vez por día, silencioso si no hay).
         if (UpdateChecker.shouldCheck(appContext)) {
             val info = runCatching { UpdateChecker.check(appContext) }.getOrNull()

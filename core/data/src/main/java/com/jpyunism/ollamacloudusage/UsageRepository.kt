@@ -232,4 +232,42 @@ class UsageRepository(
 
     /** Snapshots del histórico (el pipeline los registra en cada refresh). */
     fun historySnapshots(): List<UsageSnapshot> = historyStore.load()
+
+    // ── Recordatorio proactivo de cookie (issue #62) ──
+
+    /** Timestamp de la última renovación conocida de la cookie; null si nunca. */
+    fun cookieRenewedAt(): Long? =
+        prefs.getLong(PrefsKeys.COOKIE_RENEWED_AT, 0L).takeIf { it > 0 }
+
+    /** Registra la renovación de la cookie (se llama al guardar una nueva). */
+    fun recordCookieRenewal() {
+        prefs.edit().putLong(PrefsKeys.COOKIE_RENEWED_AT, now()).apply()
+    }
+
+    /**
+     * Estado de expiración de la cookie según la última renovación conocida.
+     * Solo aplica cuando el método de auth es cookie; con API key devuelve OK
+     * (no molesta, criterio de aceptación del issue #62).
+     */
+    fun cookieExpiryStatus(): CookieExpiry.Result {
+        if (authSource() != AuthSource.COOKIE) return CookieExpiry.Result(CookieExpiry.Status.OK, 0)
+        return CookieExpiry.evaluate(cookieRenewedAt(), now())
+    }
+
+    /**
+     * Evalúa la cookie y, si está por expirar o expiró, notifica al usuario
+     * con el CTA para renovar. Solo si las notificaciones están activadas.
+     * Se invoca desde [UsageWorker] y [UsageMonitorService] en cada ciclo.
+     */
+    fun notifyCookieExpiryIfNeeded() {
+        if (!prefs.getBoolean(PrefsKeys.NOTIF_ENABLED, true)) return
+        val status = cookieExpiryStatus()
+        when (status.status) {
+            CookieExpiry.Status.EXPIRING_SOON ->
+                UsageNotifier.notifyCookieExpiry(context, expired = false, status.daysRemaining)
+            CookieExpiry.Status.EXPIRED ->
+                UsageNotifier.notifyCookieExpiry(context, expired = true, status.daysRemaining)
+            CookieExpiry.Status.OK -> Unit
+        }
+    }
 }
