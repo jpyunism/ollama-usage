@@ -1,5 +1,6 @@
 package com.jpyunism.ollamacloudusage.ui
 
+import com.jpyunism.ollamacloudusage.core.ui.R
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -51,7 +52,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.jpyunism.ollamacloudusage.R
 import com.jpyunism.ollamacloudusage.UsageViewModel
 import com.jpyunism.ollamacloudusage.DownloadState
 

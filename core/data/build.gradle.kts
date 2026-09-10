@@ -31,6 +31,7 @@ kotlin {
 dependencies {
     api(project(":core:model"))
     implementation(project(":core:net"))
+    implementation(project(":core:ui"))
     implementation(libs.okhttp)
     implementation(libs.jsoup)
     implementation(libs.kotlinx.coroutines.android)
