@@ -3,6 +3,23 @@
 Todas las novedades de la app, agrupadas por version. Sigue semver
 (`MAJOR.MINOR.PATCH`).
 
+## Unreleased
+
+### Fix: notificaciones de umbral se sobreescriben (issue #73)
+
+Todas las alertas de umbral (semanal, sesion, pace) compartian el mismo ID de
+notificacion (1001), asi que si dos alertas disparaban en el mismo ciclo la
+segunda reemplazaba a la primera. Ahora cada tipo de alerta tiene su propio ID:
+
+- Semanal: `WEEKLY_ALERT_ID = 1007`
+- Sesion: `SESSION_ALERT_ID = 1008`
+- Pace semanal: `PACE_WEEKLY_ID = 1009`
+- Pace sesion: `PACE_SESSION_ID = 1012`
+
+`notifyLimit()` recibe el ID como parametro (default 1001) y `UsageRepository`
+pasa el ID correcto segun el tipo. Si semana y sesion cruzan umbral en el mismo
+ciclo, el usuario ve ambas notificaciones.
+
 ## v0.36.0 (2026-09-10)
 
 ### Validacion en vivo de API key (issue #63)

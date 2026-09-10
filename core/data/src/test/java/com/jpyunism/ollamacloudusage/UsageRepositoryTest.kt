@@ -7,6 +7,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
@@ -65,7 +66,7 @@ class UsageRepositoryTest {
             widgetUpdater = { _ -> calls += "widgetUpdate" },
             persistentShower = { _, _ -> calls += "persistent" },
             persistentHider = { _ -> calls += "persistentHide" },
-            alertNotifier = { _, _, _ -> calls += "alert" },
+            alertNotifier = { _, _, _, _ -> calls += "alert" },
         )
     }
 
@@ -85,6 +86,38 @@ class UsageRepositoryTest {
         assertTrue("widget" in calls)
         assertTrue("persistent" in calls)
         assertTrue("alert" in calls)
+    }
+
+    @Test
+    fun `dos alertas en el mismo ciclo usan IDs distintos y no se sobreescriben`() = runTest {
+        val prefs = prefsWith()
+        val fetcher = mockk<UsageScraper>()
+        // Semana 92% (cruza umbral semanal) y sesión 85% (cruza umbral de sesión)
+        // en el mismo refresh: ambas deben notificar con IDs distintos.
+        every { fetcher.fetchUsage("sk-test") } returns sampleData()
+        val notified = mutableListOf<Int>()
+        val repo = UsageRepository(
+            context = mockk<Context>(relaxed = true),
+            prefs = prefs,
+            scraper = fetcher,
+            apiScraper = fetcher,
+            historyStore = mockk(relaxed = true),
+            widgetSaver = { _, _ -> },
+            widgetUpdater = { _ -> },
+            persistentShower = { _, _ -> },
+            persistentHider = { _ -> },
+            alertNotifier = { _, _, _, id -> notified += id },
+        )
+
+        val result = repo.refreshAndPropagate()
+
+        assertTrue(result.isSuccess)
+        // Semana y sesión cruzan umbral en el mismo ciclo.
+        assertEquals(2, notified.size)
+        // Cada tipo usa su propio ID: no se sobreescriben.
+        assertTrue(UsageNotifier.WEEKLY_ALERT_ID in notified)
+        assertTrue(UsageNotifier.SESSION_ALERT_ID in notified)
+        assertNotEquals(notified[0], notified[1])
     }
 
     @Test
