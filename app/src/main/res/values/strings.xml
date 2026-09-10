@@ -212,7 +212,6 @@
     <string name="stats_comparison_toggle">Comparar semana anterior</string>
     <string name="share">Compartir</string>
     <string name="copied">Copiado al portapapeles</string>
-<<<<<<< HEAD
 
     <!-- Onboarding guiado (issue #61) -->
     <string name="onboarding_title">Configura tu cuenta</string>
