@@ -1,5 +1,41 @@
 # AGENTS.md — Ollama Cloud Usage
 
+## Estructura de módulos (Gradle multi-module)
+
+El proyecto está dividido en 9 módulos Gradle. Cada feature/capa vive en su
+propio módulo con sus tests. Respetar estos boundaries al agregar código:
+
+- **`:app`** — entry point: `OllamaUsageApp`, `MainActivity`, `UsageScreen`
+  (orquestador de las 3 tabs), manifest, proguard. Solo wiring, sin lógica.
+- **`:core:model`** — data classes puras (sin dependencias Android):
+  `UsageData`, `UsageHistory`, `Balance`, `TrafficLight`, `ProjectionEngine`,
+  `ResetStrings`, `DailySummary`, `PrefsKeys`, etc.
+- **`:core:net`** — `HttpClientFactory` (OkHttpClient builder).
+- **`:core:data`** — repos, scrapers, stores y auth: `UsageRepository`,
+  `OllamaUsageScraper`, `OllamaApiUsage`, `AccountStore`, `SecurePrefs`,
+  `UsageHistoryStore`, `UpdateChecker`, `LocaleHelper`, `AlertEngine`,
+  `UsageNotifier`, `UsageWidgetProvider`, `AppContainer` (DI wiring).
+- **`:core:notify`** — services y workers: `UsageMonitorService`,
+  `UsageWorker`, `UsageScheduler`, `DailySummaryWorker`, `UpdaterService`,
+  `CrashReporter`, `CrashActivity`.
+- **`:core:ui`** — `Theme`, `AppDarkMode`, `AppLanguage`, `AppTheme`,
+  `SettingsSection` y **todos los recursos** (strings ES/EN, colors, themes,
+  drawables, layouts, xml). Se exponen vía `api`.
+- **`:feature:usage`** — `UsageTab`, `UsageViewModel`, `ProjectionCard`,
+  `CookieSetup`, `CookieWebView`, onboarding completo (Screen + 3 steps + VM +
+  Prefs).
+- **`:feature:settings`** — `SettingsTab` + 8 secciones (`ui/settings/`).
+- **`:feature:stats`** — `StatsTab`.
+
+Reglas:
+- Los tests van con su código (mismo módulo).
+- `:core:model` no depende de nada; `:core:data` depende de `:core:model` y
+  `:core:net`; `:core:notify` depende de `:core:data`; `:feature:*` dependen
+  de las `:core:*` que necesiten; `:app` depende de todos.
+- Los recursos compartidos van en `:core:ui` y se exponen vía `api`.
+- Los manifests con permisos y services van en `:app` y `:core:notify`.
+- Mover archivos con `git mv` para preservar blame.
+
 ## Publicación de releases (obligatorio)
 
 Al terminar cualquier cambio de funcionalidad en este repo, **publicar siempre la nueva versión** antes de dar la tarea por cerrada:
