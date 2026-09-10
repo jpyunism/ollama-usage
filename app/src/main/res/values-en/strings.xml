@@ -248,4 +248,8 @@
     <string name="onboarding_validate_cookie_success">Cookie captured. You\'re all set.</string>
     <string name="onboarding_validate_error_invalid">The API key isn\'t valid. Make sure you copied the whole key.</string>
     <string name="onboarding_validate_error_inconclusive">We couldn\'t confirm the API key right now (network or server issue). You can keep going and try again later.</string>
+
+    <!-- Settings sections (issue #58) -->
+    <string name="expand">Expand</string>
+    <string name="collapse">Collapse</string>
 </resources>

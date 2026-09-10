@@ -248,4 +248,8 @@
     <string name="onboarding_validate_cookie_success">Cookie capturada. Todo listo.</string>
     <string name="onboarding_validate_error_invalid">La API key no es valida. Revisa que la copiaste completa.</string>
     <string name="onboarding_validate_error_inconclusive">No pudimos confirmar la API key ahora (problema de red o del servidor). Puedes continuar y reintentarlo mas tarde.</string>
+
+    <!-- Settings sections (issue #58) -->
+    <string name="expand">Expandir</string>
+    <string name="collapse">Colapsar</string>
 </resources>
