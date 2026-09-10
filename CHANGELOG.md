@@ -67,3 +67,11 @@ saber que hacia la app ni por que necesitaba una cookie o API key. Ahora:
   grafico, el sheet de evolucion por modelo, los dialogos de cuentas y el
   time picker del resumen diario. Se agrego el test instrumentado
   `UiStateSurviveRotationTest`.
+
+### Agregado (issue #54)
+
+- Proyeccion de agotamiento en la pantalla principal: tarjeta que
+  muestra, a este ritmo de consumo, cuando se agotaria la cuota semanal y de
+  sesion. Solo informativa; se oculta si hay menos de 3 snapshots en el
+  historico. Logica pura en `ProjectionEngine` (regresion lineal sobre los
+  ultimos 7 dias), UI en `ProjectionCard`, expuesta via `UsageViewModel`.
