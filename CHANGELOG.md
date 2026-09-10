@@ -3,7 +3,7 @@
 Todas las novedades de la app, agrupadas por version. Sigue semver
 (`MAJOR.MINOR.PATCH`).
 
-## Unreleased
+## v0.36.0 (2026-09-10)
 
 ### Validacion en vivo de API key (issue #63)
 
