@@ -319,6 +319,43 @@ class UsageRepositoryTest {
         assertEquals(start, written[PrefsKeys.LAST_PACE_PERIOD_WEEK])
     }
 
+    // ─── Alerta de ritmo con API key (issue #74) ───
+
+    @Test
+    fun `con API key la alerta de ritmo de sesion no se dispara en bucle`() = runTest {
+        // Con API key el ancla de sesión es null (fallbackResetAnchor(SESSION)
+        // devuelve null): sin inicio de período no se puede proyectar y la
+        // alerta de ritmo debe saltearse, no repetirse en cada refresh.
+        val prefs = prefsWith() // authSource = API_KEY
+        // Snapshots que dispararían la alerta de sesión si hubiera ancla.
+        val nowReal = System.currentTimeMillis()
+        val snaps = listOf(
+            UsageSnapshot(nowReal - 2000, sessionPercent = 0.0, weeklyPercent = 0.0),
+            UsageSnapshot(nowReal - 1000, sessionPercent = 90.0, weeklyPercent = 90.0),
+        )
+        val history = mockk<UsageHistoryStore>()
+        every { history.load() } returns snaps
+        every { history.record(any(), any(), any()) } returns snaps
+        every { history.clear() } returns Unit
+        val written = mutableMapOf<String, Any?>()
+        every { prefs.edit() } returns editorRecording(written)
+
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage("sk-test") } returns sampleData().copy(
+            sessionPercent = 10.0,
+            weeklyPercent = 10.0,
+        )
+        val calls = mutableListOf<String>()
+        val repo = buildRepo(prefs, fetcher, calls, history)
+
+        // Dos refrescos consecutivos: la alerta de ritmo no debe repetirse.
+        repo.refreshAndPropagate()
+        repo.refreshAndPropagate()
+
+        // Sin ancla de sesión no se notifica la alerta de ritmo de sesión.
+        assertFalse(written.containsKey(PrefsKeys.LAST_PACE_PERIOD_SESSION))
+    }
+
     // ─── Recordatorio proactivo de cookie (issue #62) ───
 
     @Test
