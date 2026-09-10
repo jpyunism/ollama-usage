@@ -13,6 +13,10 @@
 !debug.keystore
 keystore/
 
+# Module build dirs
+/core/*/build
+/feature/*/build
+
 # Misc
 *.log
 

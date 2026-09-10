@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.jpyunism.ollamacloudusage.ComparisonSeriesTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-09-10T11:56:22.469Z" hostname="server" time="0.012">
-  <properties/>
-  <testcase name="sin datos de la semana anterior devuelve listas vacias" classname="com.jpyunism.ollamacloudusage.ComparisonSeriesTest" time="0.005"/>
-  <testcase name="menos de 2 snapshots previos en el recorte no dibuja nada" classname="com.jpyunism.ollamacloudusage.ComparisonSeriesTest" time="0.006"/>
-  <testcase name="serie previa recortada a las horas transcurridas de la actual" classname="com.jpyunism.ollamacloudusage.ComparisonSeriesTest" time="0.001"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>
