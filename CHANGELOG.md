@@ -3,6 +3,25 @@
 Todas las novedades de la app, agrupadas por version. Sigue semver
 (`MAJOR.MINOR.PATCH`).
 
+## Unreleased
+
+### Accion "Refrescar ahora" en la notificacion persistente (issue #94)
+
+La notificacion permanente solo abria la app al tocarla; para forzar un
+refresco habia que abrir la app y tocar el boton. Ahora trae una accion
+"Refrescar ahora" que actualiza el consumo sin abrir la app:
+
+- `UsageNotifier.buildPersistent` agrega un `NotificationCompat.Action` con
+  icono propio (`ic_notification_refresh`) y label localizado ES/EN.
+- Nuevo `RefreshActionReceiver` (`:core:notify`), registrado en el manifest de
+  `:app` con `android:exported="false"`, recibe el broadcast y encola un
+  `OneTimeWorkRequest` de `UsageWorker` (trabajo unico `usage_manual_refresh`,
+  `ExistingWorkPolicy.KEEP` para no cancelar un refresco en vuelo).
+- El `PendingIntent` es un broadcast con `FLAG_IMMUTABLE`: nunca abre la app.
+- Sin auth configurada degrada en silencio: el pipeline devuelve `NoAuth` y el
+  worker lo resuelve como `Result.success()` (sin reintentos ni crash).
+- Tests: `RefreshActionReceiverTest` cubre el filtrado de la accion.
+
 ## v0.36.2 (2026-09-11)
 
 ### Fix: secciones de Configuracion mal alineadas al expandir

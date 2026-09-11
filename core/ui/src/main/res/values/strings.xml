@@ -143,6 +143,7 @@
     <string name="persistent_body_week_reset">Semana %1$s\n</string>
     <string name="persistent_body_session_reset">Sesión %1$s\n</string>
     <string name="persistent_body_plan_updated">Plan %1$s · Actualizado %2$s</string>
+    <string name="persistent_action_refresh">Refrescar ahora</string>
     <string name="chip_weekly">Ollama %1$s%%</string>
     <string name="nowbar_session">Sesión %1$s%%</string>
 

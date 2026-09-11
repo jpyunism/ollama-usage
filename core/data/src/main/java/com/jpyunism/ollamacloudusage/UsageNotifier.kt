@@ -27,6 +27,14 @@ object UsageNotifier {
     private const val NOTIFICATION_ID = 1001
     const val PERSISTENT_ID = 1002
 
+    /**
+     * Accion "Refrescar ahora" de la notificacion persistente (issue #94).
+     * La escucha [RefreshActionReceiver] (declarado en el manifest de `:app`),
+     * que encola un refresco sin abrir la app.
+     */
+    const val ACTION_REFRESH_NOW = "com.jpyunism.ollamacloudusage.action.REFRESH_NOW"
+    private const val REFRESH_REQUEST_CODE = 1
+
     // IDs por tipo de alerta de umbral (issue #73): cada tipo tiene su propio
     // ID para que dos alertas disparadas en el mismo ciclo no se sobreescriban.
     const val WEEKLY_ALERT_ID = 1007
@@ -139,6 +147,16 @@ object UsageNotifier {
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(openApp(context))
+            // Accion "Refrescar ahora" (issue #94): dispara el pipeline de
+            // refresco sin abrir la app. Sin auth configurada degrada en
+            // silencio (NoAuth -> Result.success en UsageWorker).
+            .addAction(
+                NotificationCompat.Action(
+                    R.drawable.ic_notification_refresh,
+                    context.getString(R.string.persistent_action_refresh),
+                    refreshNow(context),
+                ),
+            )
             .setExtras(extras)
             .build()
     }
@@ -149,6 +167,21 @@ object UsageNotifier {
             context,
             0,
             Intent().setClassName(context, "${context.packageName}.MainActivity"),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+    /**
+     * PendingIntent de la accion "Refrescar ahora" (issue #94): broadcast al
+     * [RefreshActionReceiver] (mismo package que la app). FLAG_IMMUTABLE por el
+     * requisito de Android 12+; nunca abre una activity.
+     */
+    private fun refreshNow(context: Context): PendingIntent =
+        PendingIntent.getBroadcast(
+            context,
+            REFRESH_REQUEST_CODE,
+            Intent()
+                .setClassName(context, "${context.packageName}.RefreshActionReceiver")
+                .setAction(ACTION_REFRESH_NOW),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
