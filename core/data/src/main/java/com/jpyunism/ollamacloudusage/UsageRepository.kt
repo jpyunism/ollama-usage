@@ -28,6 +28,7 @@ class UsageRepository(
     private val apiScraper: UsageScraper,
     private val historyStore: UsageHistoryStore,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
     private val now: () -> Long = System::currentTimeMillis,
     // ── Side-effects inyectables (defaults = implementación real) ──
     private val widgetSaver: (Context, UsageData) -> Unit = UsageWidgetProvider::saveData,
@@ -107,22 +108,25 @@ class UsageRepository(
         }
 
         val fetcher = if (authSource == AuthSource.API_KEY) apiScraper else scraper
-        runCatching { fetcher.fetchUsage(credential) }.fold(
-            onSuccess = { data ->
-                propagate(data)
-                Result.success(data)
-            },
-            onFailure = { Result.failure(UsageError.fromThrowable(it)) },
-        )
+        val data = runCatching { fetcher.fetchUsage(credential) }
+            .getOrElse { return@withContext Result.failure(UsageError.fromThrowable(it)) }
+        propagate(data)
+        Result.success(data)
     }
 
     /** Side-effects post-fetch. Se ejecuta solo tras un fetch exitoso. */
-    private fun propagate(data: UsageData) {
+    private suspend fun propagate(data: UsageData) {
         prefs.edit().putLong(PrefsKeys.LAST_UPDATED, now()).apply()
 
         // Widget del home screen: refleja el último consumo.
-        widgetSaver(context, data)
-        widgetUpdater(context)
+        // `AppWidgetManager.updateAppWidget()` exige main thread en Android
+        // < 12 (issue #79); si se invoca desde el ioDispatcher la actualización
+        // falla silenciosamente y el widget no se refresca. Por eso los
+        // side-effects del widget corren en el main dispatcher.
+        withContext(mainDispatcher) {
+            widgetSaver(context, data)
+            widgetUpdater(context)
+        }
 
         // Notificación permanente (pantalla de bloqueo) según preferencia.
         if (prefs.getBoolean(PrefsKeys.PERSISTENT_ENABLED, true)) {
