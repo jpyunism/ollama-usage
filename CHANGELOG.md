@@ -5,6 +5,16 @@ Todas las novedades de la app, agrupadas por version. Sigue semver
 
 ## Unreleased
 
+### Fix: markChecked se ejecuta aunque el check de update falla (issue #76)
+
+`UsageWorker` ejecutaba `UpdateChecker.markChecked()` despues de `runCatching`.
+Si `UpdateChecker.check()` fallaba con excepcion, `runCatching` capturaba el
+error pero `markChecked()` igual se ejecutaba, asi que el usuario no veia la
+notificacion de update disponible aunque esta existiera.
+
+Ahora `markChecked()` se ejecuta solo dentro del `if (info != null)`: si el
+check falla, no se marca y el proximo ciclo reintenta.
+
 ### Fix: notificaciones de umbral se sobreescriben (issue #73)
 
 Todas las alertas de umbral (semanal, sesion, pace) compartian el mismo ID de
