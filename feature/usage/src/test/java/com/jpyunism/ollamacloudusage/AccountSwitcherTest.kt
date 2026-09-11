@@ -83,6 +83,7 @@ class AccountSwitcherTest {
             updateRepository = mockk(relaxed = true),
             ioDispatcher = dispatcher,
             historyStoreProvider = { mockk(relaxed = true) },
+            apiKeyValidator = mockk(relaxed = true),
         )
     }
 

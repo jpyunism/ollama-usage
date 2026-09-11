@@ -90,7 +90,7 @@ class UsageViewModel(
     private val onLanguageChange: (AppLanguage) -> Unit = {},
     private val onDailySummaryChanged: () -> Unit = {},
     private val historyStoreProvider: () -> UsageHistoryStore,
-    private val apiKeyValidator: OllamaApiKeyValidator = OllamaApiKeyValidator(),
+    private val apiKeyValidator: OllamaApiKeyValidator,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)

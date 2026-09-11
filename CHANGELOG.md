@@ -28,6 +28,16 @@ dispatcher (`Dispatchers.Main`, inyectable como `mainDispatcher`), mientras el
 resto del pipeline sigue en el `ioDispatcher`. Se agregó un test que verifica
 que `widgetSaver`/`widgetUpdater` se ejecutan en el main dispatcher.
 
+### Fix: apiKeyValidator usa el httpClient compartido (issue #81)
+
+`UsageViewModel` defaulteaba a `OllamaApiKeyValidator()` (con su propio
+`OkHttpClient` sin interceptors). Al validar la API key en Settings, la
+validacion hacia una llamada HTTP extra por fuera del cliente compartido.
+
+Ahora se quito el default del parametro y el factory inyecta siempre
+`OllamaApiKeyValidator(client = container.httpClient)`, el mismo cliente
+compartido por el resto de la app (interceptors, timeouts).
+
 ### Fix: markChecked se ejecuta aunque el check de update falla (issue #76)
 
 `UsageWorker` ejecutaba `UpdateChecker.markChecked()` despues de `runCatching`.
