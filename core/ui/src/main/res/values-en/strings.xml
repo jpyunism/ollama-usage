@@ -223,6 +223,7 @@
     <string name="daily_summary">Daily summary</string>
     <string name="daily_summary_description">Get a notification with your usage every day at the chosen time.</string>
     <string name="daily_summary_time">Time</string>
+    <string name="daily_summary_disabled_hint">Turn on the switch to choose the time.</string>
     <string name="model_history_empty">Not enough data for this model yet.</string>
     <string name="model_history_current">Current: %1$s%%</string>
     <string name="stats_comparison">Previous week</string>

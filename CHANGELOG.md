@@ -3,6 +3,24 @@
 Todas las novedades de la app, agrupadas por version. Sigue semver
 (`MAJOR.MINOR.PATCH`).
 
+## Unreleased
+
+### Fix: secciones de Configuracion mal alineadas al expandir
+
+Al expandir una seccion en Configuracion el contenido quedaba pegado al borde
+de la tarjeta (sin el padding de 16 dp de la cabecera) y algunas secciones
+duplicaban el encabezado (icono + titulo + subtitulo) dentro del contenido.
+
+- `SettingsSection` ahora aplica padding horizontal de 16 dp al contenido
+  (alineado con la cabecera) y padding inferior de 16 dp.
+- Solo la cabecera es clickeable (no la tarjeta entera): tocar un slider,
+  switch o boton del contenido ya no colapsa la seccion.
+- Nuevo slot `trailing` en la cabecera para controles como el Switch, que
+  evita duplicar el encabezado (aplicado en Resumen diario).
+- `UpdateSection` ya no repite el encabezado dentro del contenido.
+- Fix adicional: el time picker del resumen diario guardaba siempre la hora
+  inicial (el estado elegido no se leia al confirmar).
+
 ## v0.36.1 (2026-09-11)
 
 ### Corregido (issue #74): alerta de ritmo en bucle con API key
