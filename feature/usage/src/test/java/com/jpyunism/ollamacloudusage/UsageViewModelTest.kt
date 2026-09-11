@@ -1,10 +1,17 @@
 package com.jpyunism.ollamacloudusage
 
+import android.content.Context
 import android.content.SharedPreferences
+import io.mockk.AnyTypedMatcher
+import io.mockk.SameInstanceMatcher
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkConstructor
+import io.mockk.mockkObject
+import io.mockk.unmockkConstructor
+import io.mockk.unmockkObject
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -13,6 +20,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -444,6 +452,7 @@ class UsageViewModelTest {
             ioDispatcher = StandardTestDispatcher(testScheduler),
             reschedule = { rescheduled = it },
             historyStoreProvider = { mockk(relaxed = true) },
+            apiKeyValidator = mockk(relaxed = true),
         )
         vm.updateSettings(vm.settings.value.copy(refreshIntervalMinutes = 30))
 
@@ -587,6 +596,7 @@ class UsageViewModelTest {
             ioDispatcher = dispatcher,
             onLanguageChange = { applied = it },
             historyStoreProvider = { mockk(relaxed = true) },
+            apiKeyValidator = mockk(relaxed = true),
         )
         vm.updateLanguage(AppLanguage.English)
 
@@ -721,5 +731,63 @@ class UsageViewModelTest {
         vm.resetApiKeyValidation()
         testScheduler.advanceUntilIdle()
         assertEquals(ApiKeyValidation.Idle, vm.apiKeyValidation.value)
+    }
+
+    // --- factory inyecta el httpClient compartido en el validator (issue #81) ---
+
+    @Test
+    fun `factory construye el validator con el httpClient compartido`() = runTest {
+        // Issue #81: UsageViewModel NO debe defaultear a OllamaApiKeyValidator()
+        // (que crearia su propio OkHttpClient sin interceptors). El factory debe
+        // pasar siempre container.httpClient. Verificamos que el validator se
+        // construya con la MISMA instancia de OkHttpClient que AppContainer.
+
+        mockkObject(com.jpyunism.ollamacloudusage.di.AppContainer)
+        val container = mockk<com.jpyunism.ollamacloudusage.di.AppContainer>(relaxed = true)
+        val sharedHttpClient = mockk<OkHttpClient>(relaxed = true)
+        val prefs = fakePrefs()
+        val usageRepository = mockk<UsageRepository>(relaxed = true)
+        val updateRepository = mockk<UpdateRepository>(relaxed = true)
+        val historyStore = mockk<UsageHistoryStore>(relaxed = true)
+        every { container.prefs } returns prefs
+        every { container.usageRepository } returns usageRepository
+        every { container.updateRepository } returns updateRepository
+        every { container.historyStore } returns historyStore
+        every { container.httpClient } returns sharedHttpClient
+        every { com.jpyunism.ollamacloudusage.di.AppContainer.get(any()) } returns container
+
+        // Mockea el constructor del validator. Confirmamos que el factory lo
+        // construye con la MISMA instancia de OkHttpClient compartido: si el
+        // default `OllamaApiKeyValidator()` (propio OkHttpClient) volviera, el
+        // validate() con la instancia compartida devolveria Inconclusive y el
+        // assert final fallaria.
+        mockkConstructor(OllamaApiKeyValidator::class)
+        coEvery {
+            constructedWith<OllamaApiKeyValidator>(
+                SameInstanceMatcher(sharedHttpClient),
+                AnyTypedMatcher(Any::class),
+                AnyTypedMatcher(Any::class),
+                AnyTypedMatcher(Any::class),
+            ).validate("sk-test")
+        } returns OllamaApiKeyValidator.Result.Valid
+        val app = mockk<Context>(relaxed = true)
+        every { app.applicationContext } returns app
+        // viewModelScope corre en Main: ligarlo al scheduler del test.
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val factory = UsageViewModel.factory(app)
+        val vm: UsageViewModel = factory.create(UsageViewModel::class.java)
+
+        vm.validateApiKey("sk-test")
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(
+            "el validator construido por el factory debe validar con el " +
+                "httpClient compartido (issue #81)",
+            ApiKeyValidation.Valid,
+            vm.apiKeyValidation.value,
+        )
+
+        unmockkConstructor(OllamaApiKeyValidator::class)
+        unmockkObject(com.jpyunism.ollamacloudusage.di.AppContainer)
     }
 }
