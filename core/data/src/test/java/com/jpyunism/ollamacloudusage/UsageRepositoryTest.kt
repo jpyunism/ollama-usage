@@ -5,14 +5,19 @@ import android.content.SharedPreferences
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.StandardTestDispatcher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
-import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.Instant
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class UsageRepositoryTest {
 
     private fun prefsWith(
@@ -62,6 +67,7 @@ class UsageRepositoryTest {
             scraper = fetcher,
             apiScraper = fetcher,
             historyStore = history,
+            mainDispatcher = UnconfinedTestDispatcher(),
             widgetSaver = { _, _ -> calls += "widget" },
             widgetUpdater = { _ -> calls += "widgetUpdate" },
             persistentShower = { _, _ -> calls += "persistent" },
@@ -102,6 +108,7 @@ class UsageRepositoryTest {
             scraper = fetcher,
             apiScraper = fetcher,
             historyStore = mockk(relaxed = true),
+            mainDispatcher = UnconfinedTestDispatcher(),
             widgetSaver = { _, _ -> },
             widgetUpdater = { _ -> },
             persistentShower = { _, _ -> },
@@ -445,6 +452,7 @@ class UsageRepositoryTest {
             scraper = fetcher,
             apiScraper = fetcher,
             historyStore = mockk(relaxed = true),
+            mainDispatcher = UnconfinedTestDispatcher(),
             now = { nowRef[0] },
         )
 
@@ -479,5 +487,43 @@ class UsageRepositoryTest {
         assertEquals(1, scheduled.size)
         assertEquals(data.sessionResetAt, scheduled[0].first)
         assertEquals(85.0, scheduled[0].second, 0.001)
+    }
+
+    // ─── Widget en main thread (issue #79) ───
+
+    @Test
+    fun `widgetSaver y widgetUpdater corren en el main dispatcher`() {
+        // Issue #79: `AppWidgetManager.updateAppWidget()` exige main thread en
+        // Android < 12. Los side-effects del widget deben ejecutarse en el
+        // dispatcher inyectado como `mainDispatcher` (Dispatchers.Main en
+        // producción), no en el ioDispatcher del refresh. Aquí verificamos que
+        // corren en el mismo dispatcher que el cuerpo del test (el injectado).
+        val main = StandardTestDispatcher()
+        val widgetThreads = mutableListOf<String>()
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage("sk-test") } returns sampleData()
+        val repo = UsageRepository(
+            context = mockk<Context>(relaxed = true),
+            prefs = prefsWith(),
+            scraper = fetcher,
+            apiScraper = fetcher,
+            historyStore = mockk(relaxed = true),
+            ioDispatcher = UnconfinedTestDispatcher(),
+            mainDispatcher = main,
+            widgetSaver = { _, _ -> widgetThreads += Thread.currentThread().name },
+            widgetUpdater = { _ -> widgetThreads += Thread.currentThread().name },
+            persistentShower = { _, _ -> },
+            persistentHider = { _ -> },
+            alertNotifier = { _, _, _, _ -> },
+        )
+
+        runTest(main) {
+            val mainThread = Thread.currentThread().name
+            repo.refreshAndPropagate()
+            // Ambos side-effects del widget deben haber corrido en el main dispatcher,
+            // es decir en el mismo thread que el cuerpo del test.
+            assertEquals(2, widgetThreads.size)
+            widgetThreads.forEach { assertEquals(mainThread, it) }
+        }
     }
 }

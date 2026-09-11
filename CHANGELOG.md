@@ -16,6 +16,18 @@ detectado automaticamente, issue #15) y, si no hay ancla, se muestra un hint
 "Comparativa no disponible sin fecha de reset (solo cookie)" en lugar de
 desactivarla en silencio.
 
+### Fix: widget no se actualiza en Android < 12 (issue #79)
+
+`widgetSaver` y `widgetUpdater` se ejecutaban dentro de `propagate()`, que corre
+en el `ioDispatcher`. Pero `AppWidgetManager.updateAppWidget()` exige main
+thread en Android < 12, así que la actualización podía fallar silenciosamente y
+el widget quedaba sin refrescar.
+
+Ahora los side-effects del widget (`saveData` + `updateAll`) corren en el main
+dispatcher (`Dispatchers.Main`, inyectable como `mainDispatcher`), mientras el
+resto del pipeline sigue en el `ioDispatcher`. Se agregó un test que verifica
+que `widgetSaver`/`widgetUpdater` se ejecutan en el main dispatcher.
+
 ### Fix: markChecked se ejecuta aunque el check de update falla (issue #76)
 
 `UsageWorker` ejecutaba `UpdateChecker.markChecked()` despues de `runCatching`.
