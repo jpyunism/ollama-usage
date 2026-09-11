@@ -128,15 +128,19 @@ fun StatsTab(history: HistoryState, isRefreshing: Boolean = false, onRefresh: ()
     val current = currentPeriod(snapshots, period, anchor, now, selector)
     // Feature D (#18): comparativa semana anterior, default ON; solo WEEK.
     var showComparison by rememberSaveable { mutableStateOf(true) }
-    // El ancla puede ser sintetizada (fallback domingo 21:00) — la comparativa
-    // usa la misma que el resto del gráfico (REQ-132: "el ancla existente").
-    val cmpAnchor = resetAnchor ?: fallbackResetAnchor(HistoryPeriod.WEEK, now)
+    // La comparativa requiere un ancla de reset REAL (cookie/scraper). Con API
+    // key el anchor de sesion/`weeklyResetAt` es null y el fallback sintetiza
+    // un domingo 21:00, pero el reset detectado de verdad (Feature D #15) se
+    // persiste como ancla semanal en `weeklyReset`. Si tampoco hay ancla real,
+    // la comparativa no se puede calcular y se muestra un hint (issue #80).
+    val cmpAnchor = weeklyReset
     val (cmpCurrent, cmpPrev) = if (period == HistoryPeriod.WEEK && cmpAnchor != null) {
         comparisonSeries(snapshots, period, cmpAnchor, now)
     } else {
         emptyList<Pair<Double, Double>>() to emptyList()
     }
     val comparison = if (showComparison && cmpPrev.size >= 2) cmpPrev else null
+    val comparisonUnavailable = period == HistoryPeriod.WEEK && weeklyReset == null
 
     PullToRefreshBox(
         isRefreshing = isRefreshing,
@@ -202,6 +206,18 @@ fun StatsTab(history: HistoryState, isRefreshing: Boolean = false, onRefresh: ()
                             label = { Text(stringResource(R.string.stats_comparison_toggle)) },
                         )
                     }
+                }
+                // Hint (issue #80): la comparativa no puede calcularse sin un
+                // ancla de reset real (cookie/scraper). Con API key el fallback
+                // sintetiza un domingo 21:00 que no refleja el reset real, asi
+                // que se informa al usuario en lugar de desactivarla en silencio.
+                if (comparisonUnavailable) {
+                    Text(
+                        stringResource(R.string.stats_comparison_unavailable),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
                 }
             }
         }

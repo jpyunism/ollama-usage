@@ -227,6 +227,7 @@
     <string name="model_history_current">Actual: %1$s%%</string>
     <string name="stats_comparison">Semana anterior</string>
     <string name="stats_comparison_toggle">Comparar semana anterior</string>
+    <string name="stats_comparison_unavailable">Comparativa no disponible sin fecha de reset (solo cookie)</string>
     <string name="share">Compartir</string>
     <string name="copied">Copiado al portapapeles</string>
 
