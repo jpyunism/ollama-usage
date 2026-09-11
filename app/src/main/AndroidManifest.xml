@@ -62,6 +62,10 @@
                 android:resource="@xml/widget_compact_info" />
         </receiver>
 
+        <receiver
+            android:name=".RefreshActionReceiver"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
