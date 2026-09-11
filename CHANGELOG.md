@@ -5,6 +5,17 @@ Todas las novedades de la app, agrupadas por version. Sigue semver
 
 ## Unreleased
 
+### Fix: hint cuando la comparativa semanal no esta disponible (issue #80)
+
+La comparativa semana actual vs anterior (`comparisonSeries`) necesitaba un
+`resetAnchor` real. Con API key el anchor de sesion es null y la comparativa se
+desactivaba silenciosamente, sin que el usuario supiera por que no la veia.
+
+Ahora la comparativa usa solo el ancla real (cookie/scraper o el reset
+detectado automaticamente, issue #15) y, si no hay ancla, se muestra un hint
+"Comparativa no disponible sin fecha de reset (solo cookie)" en lugar de
+desactivarla en silencio.
+
 ### Fix: markChecked se ejecuta aunque el check de update falla (issue #76)
 
 `UsageWorker` ejecutaba `UpdateChecker.markChecked()` despues de `runCatching`.
