@@ -9,6 +9,7 @@ import com.jpyunism.ollamacloudusage.PrefsKeys
 import com.jpyunism.ollamacloudusage.UpdateRepository
 import com.jpyunism.ollamacloudusage.UsageRepository
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -321,6 +322,17 @@ class UsageViewModel(
                     },
                     onFailure = { e -> UiState.Error(e as? UsageError ?: UsageError.Network(e.message ?: "")) },
                 )
+            } catch (e: CancellationException) {
+                // Cancelacion deliberada (refreshJob?.cancel() antes de uno
+                // nuevo): relanzar, no convertirla en un Error de UI.
+                throw e
+            } catch (t: Throwable) {
+                // Red de seguridad: si algo lanza de forma inesperada fuera del
+                // Result (p. ej. un side-effect de propagate protegido por
+                // runCatching, o una excepcion nueva en el pipeline), la UI
+                // NUNCA debe quedar colgada en UiState.Loading. Mapear a Error
+                // en vez de morir la corrutina con el spinner infinito.
+                _uiState.value = UiState.Error(t as? UsageError ?: UsageError.Network(t.message ?: ""))
             } finally {
                 _isRefreshing.value = false
             }

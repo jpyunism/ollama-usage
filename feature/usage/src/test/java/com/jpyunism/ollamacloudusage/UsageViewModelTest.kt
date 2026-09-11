@@ -790,4 +790,20 @@ class UsageViewModelTest {
         unmockkConstructor(OllamaApiKeyValidator::class)
         unmockkObject(com.jpyunism.ollamacloudusage.di.AppContainer)
     }
+
+    @Test
+    fun `una excepcion inesperada del repository no deja la UI en Loading`() = runTest {
+        val repo = mockk<UsageRepository>(relaxed = true)
+        every { repo.hasAuth() } returns true
+        // El repo LANZA en vez de devolver Result.failure: este era el bug del
+        // spinner infinito. El VM debe atraparlo y pasar a Error.
+        coEvery { repo.refreshAndPropagate() } throws IllegalStateException("boom inesperado")
+
+        val vm = buildVm(fakePrefs(), repo)
+        testScheduler.advanceUntilIdle()
+
+        assertTrue("la UI no debe quedar colgada en Loading", vm.uiState.value !is UiState.Loading)
+        assertTrue("debe mapear a Error", vm.uiState.value is UiState.Error)
+        assertFalse("el flag de refreshing debe resetearse", vm.isRefreshing.value)
+    }
 }
