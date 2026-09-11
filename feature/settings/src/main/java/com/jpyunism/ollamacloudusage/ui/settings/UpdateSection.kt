@@ -48,21 +48,15 @@ fun UpdateSection(
         subtitleRes = R.string.update_section_description,
         icon = Icons.Outlined.SystemUpdate,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconBox(Icons.Outlined.SystemUpdate)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.version_current, currentVersion),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    stringResource(R.string.update_auto_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+        Text(
+            stringResource(R.string.version_current, currentVersion),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            stringResource(R.string.update_auto_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Spacer(Modifier.height(12.dp))
 
         when {

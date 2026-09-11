@@ -3,6 +3,7 @@ package com.jpyunism.ollamacloudusage.ui.settings
 import com.jpyunism.ollamacloudusage.core.ui.R
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -39,6 +40,16 @@ import androidx.compose.ui.unit.dp
  * en la cabecera, chevron de expandir/colapsar, y contenido que se muestra
  * solo cuando esta expandida. El estado de expandido sobrevive la rotacion
  * (rememberSaveable) y la animacion usa animateContentSize.
+ *
+ * Solo la cabecera es clickeable (no la Card entera): asi tocar un control del
+ * contenido (slider, switch, boton) no colapsa la seccion.
+ *
+ * El contenido recibe el mismo padding horizontal que la cabecera (16 dp) para
+ * que quede alineado con el titulo; el padding inferior separa el ultimo
+ * control del borde de la Card.
+ *
+ * [trailing] permite colocar un control a la derecha del titulo en la cabecera
+ * (p.ej. un Switch), sin duplicar el encabezado dentro del contenido.
  */
 @Composable
 fun SettingsSection(
@@ -46,18 +57,19 @@ fun SettingsSection(
     subtitleRes: Int? = null,
     icon: ImageVector,
     initiallyExpanded: Boolean = false,
+    trailing: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     var expanded by rememberSaveable { mutableStateOf(initiallyExpanded) }
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        onClick = { expanded = !expanded },
     ) {
         Column(modifier = Modifier.animateContentSize()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clickable { expanded = !expanded }
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -76,6 +88,10 @@ fun SettingsSection(
                         )
                     }
                 }
+                if (trailing != null) {
+                    trailing()
+                    Spacer(Modifier.width(8.dp))
+                }
                 Icon(
                     imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
                     contentDescription = stringResource(
@@ -84,7 +100,12 @@ fun SettingsSection(
                 )
             }
             if (expanded) {
-                content()
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    content = content,
+                )
             }
         }
     }
