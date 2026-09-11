@@ -3,7 +3,7 @@
 Todas las novedades de la app, agrupadas por version. Sigue semver
 (`MAJOR.MINOR.PATCH`).
 
-## Unreleased
+## v0.37.1 (2026-09-11)
 
 ### Fix: la app se quedaba pegada en "Checking ollama.com..." (spinner infinito)
 
