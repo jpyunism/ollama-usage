@@ -14,8 +14,8 @@ android {
         applicationId = "com.jpyunism.ollamacloudusage"
         minSdk = 26
         targetSdk = 36
-        versionCode = 50
-        versionName = "0.36.1"
+        versionCode = 51
+        versionName = "0.36.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
