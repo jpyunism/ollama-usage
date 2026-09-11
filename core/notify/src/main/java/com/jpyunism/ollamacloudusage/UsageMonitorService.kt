@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import com.jpyunism.ollamacloudusage.PrefsKeys
 import com.jpyunism.ollamacloudusage.di.AppContainer
 import kotlinx.coroutines.CoroutineScope
@@ -32,6 +33,10 @@ class UsageMonitorService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         intervalMinutes = intent?.getIntExtra(EXTRA_INTERVAL, -1)?.takeIf { it > 0 }
             ?: SecurePrefs.get(this).getInt(PrefsKeys.REFRESH_INTERVAL, PrefsKeys.DEFAULT_REFRESH_MINUTES)
+        // Issue #77: con START_STICKY el sistema puede reiniciar el servicio sin
+        // perder el backoff acumulado. Cargar el contador persistido para no
+        // volver a martillar ollama.com tras un reinicio.
+        consecutiveFailures = prefs().getInt(PrefsKeys.CONSECUTIVE_FAILURES, 0)
         try {
             startForeground(UsageNotifier.PERSISTENT_ID, UsageNotifier.buildPersistent(this, null))
         } catch (_: IllegalStateException) {
@@ -59,13 +64,14 @@ class UsageMonitorService : Service() {
                 val ok = refreshOnce()
                 if (ok) {
                     consecutiveFailures = 0
+                    prefs().edit { putInt(PrefsKeys.CONSECUTIVE_FAILURES, 0) }
                     delay(intervalMinutes * 60_000L)
                 } else {
                     // Backoff exponencial: si el fetch falla en bucle (red caída,
                     // cookie inválida), no martillear ollama.com. 1, 2, 4... 30 min máx.
                     consecutiveFailures = (consecutiveFailures + 1).coerceAtMost(6)
-                    val backoffSeconds = (60L shl (consecutiveFailures - 1)).coerceAtMost(30 * 60L)
-                    delay(backoffSeconds * 1_000L)
+                    prefs().edit { putInt(PrefsKeys.CONSECUTIVE_FAILURES, consecutiveFailures) }
+                    delay(backoffSecondsFor(consecutiveFailures) * 1_000L)
                 }
             }
         }
@@ -89,6 +95,10 @@ class UsageMonitorService : Service() {
         scope.cancel()
         super.onDestroy()
     }
+
+    /** Backoff exponencial en segundos: 1, 2, 4... 30 min máx. (issue #77). */
+    internal fun backoffSecondsFor(failures: Int): Long =
+        (60L shl (failures - 1)).coerceAtMost(30 * 60L)
 
     companion object {
         private const val EXTRA_INTERVAL = "interval_minutes"

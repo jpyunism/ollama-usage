@@ -33,6 +33,11 @@ object PrefsKeys {
     const val REFRESH_INTERVAL = "refresh_interval"
     const val RESET_DISPLAY = "reset_display"
 
+    // Backoff exponencial del monitor (issue #77): se persiste para que un
+    // reinicio del servicio (START_STICKY) no pierda el backoff acumulado y
+    // vuelva a martillar ollama.com.
+    const val CONSECUTIVE_FAILURES = "consecutive_failures"
+
     // Threshold notifications (AlertEngine)
     const val LAST_NOTIFIED_WEEKLY = "last_notified_weekly"
     const val LAST_NOTIFIED_SESSION = "last_notified_session"

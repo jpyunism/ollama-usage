@@ -15,6 +15,16 @@ notificacion de update disponible aunque esta existiera.
 Ahora `markChecked()` se ejecuta solo dentro del `if (info != null)`: si el
 check falla, no se marca y el proximo ciclo reintenta.
 
+### Fix: backoff exponencial se resetea al reiniciar el servicio (issue #77)
+
+`UsageMonitorService` reseteaba `consecutiveFailures = 0` en cada
+`onStartCommand`. Con `START_STICKY`, si el sistema reiniciaba el servicio, el
+backoff se perdía y volvía a martillar ollama.com.
+
+Ahora el contador de fallos consecutivos se persiste en prefs y se carga al
+arrancar el servicio, de modo que un reinicio sticky conserva el backoff
+acumulado (1, 2, 4... 30 min máx).
+
 ### Fix: notificaciones de umbral se sobreescriben (issue #73)
 
 Todas las alertas de umbral (semanal, sesion, pace) compartian el mismo ID de
