@@ -3,6 +3,24 @@
 Todas las novedades de la app, agrupadas por version. Sigue semver
 (`MAJOR.MINOR.PATCH`).
 
+## Unreleased
+
+### Fix: la app se quedaba pegada en "Checking ollama.com..." (spinner infinito)
+
+Si un side-effect post-fetch (widget, notificacion persistente, scheduler de
+reset de sesion) lanzaba una excepcion, esta escapaba del pipeline y mataba la
+corrutina del ViewModel, dejando la UI atascada en `UiState.Loading` para
+siempre con el spinner de "Checking ollama.com...".
+
+- `UsageRepository.propagate()` ahora ejecuta todos los side-effects
+  best-effort con `runCatching`: un fallo de widget/notificacion/scheduler
+  nunca aborta un refresh ya exitoso.
+- `UsageViewModel.refresh()` agrega un `catch` de red de seguridad que mapea
+  cualquier excepcion inesperada a `UiState.Error` (respetando
+  `CancellationException`), de modo que la UI nunca queda colgada en Loading.
+- Tests de regresion: un side-effect que lanza no aborta el refresh exitoso;
+  una excepcion inesperada del repository deja la UI en Error, no en Loading.
+
 ## v0.37.0 (2026-09-11)
 
 ### Accion "Refrescar ahora" en la notificacion persistente (issue #94)

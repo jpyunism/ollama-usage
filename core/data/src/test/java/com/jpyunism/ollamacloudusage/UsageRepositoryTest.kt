@@ -611,4 +611,32 @@ class UsageRepositoryTest {
             widgetThreads.forEach { assertEquals(mainThread, it) }
         }
     }
+
+    @Test
+    fun `un side-effect que lanza no aborta un refresh exitoso`() = runTest {
+        val prefs = prefsWith()
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage("sk-test") } returns sampleData()
+        val repo = UsageRepository(
+            context = mockk<Context>(relaxed = true),
+            prefs = prefs,
+            scraper = fetcher,
+            apiScraper = fetcher,
+            historyStore = mockk(relaxed = true),
+            mainDispatcher = UnconfinedTestDispatcher(),
+            // El widget LANZA: antes del fix esto escapaba de propagate(),
+            // mataba la corrutina del ViewModel y dejaba la UI en Loading infinito.
+            widgetSaver = { _, _ -> throw IllegalStateException("boom del widget") },
+            widgetUpdater = { _ -> throw IllegalStateException("boom del widget") },
+            persistentShower = { _, _ -> },
+            persistentHider = { _ -> },
+            alertNotifier = { _, _, _, _ -> },
+        )
+
+        val result = repo.refreshAndPropagate()
+
+        // El fetch fue exitoso y el refresh NO falla aunque el widget reviente.
+        assertTrue(result.isSuccess)
+        assertEquals(92.0, result.getOrNull()!!.weeklyPercent, 0.001)
+    }
 }

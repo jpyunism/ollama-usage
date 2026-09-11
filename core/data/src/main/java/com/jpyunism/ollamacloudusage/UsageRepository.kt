@@ -139,47 +139,64 @@ class UsageRepository(
     private suspend fun propagate(data: UsageData) {
         prefs.edit().putLong(PrefsKeys.LAST_UPDATED, now()).apply()
 
-        // Widget del home screen: refleja el último consumo.
-        // `AppWidgetManager.updateAppWidget()` exige main thread en Android
-        // < 12 (issue #79); si se invoca desde el ioDispatcher la actualización
-        // falla silenciosamente y el widget no se refresca. Por eso los
-        // side-effects del widget corren en el main dispatcher.
-        withContext(mainDispatcher) {
-            widgetSaver(context, data)
-            widgetUpdater(context)
+        // Side-effects post-fetch, todos best-effort con runCatching: un fallo
+        // de widget/notificacion/scheduler NUNCA debe abortar un refresh que ya
+        // fue exitoso. Sin esta proteccion, una excepcion aqui escapaba del
+        // runCatching del fetch, mataba la corrutina del ViewModel y dejaba la
+        // UI colgada en UiState.Loading para siempre (spinner infinito).
+        runCatching {
+            // Widget del home screen: refleja el último consumo.
+            // `AppWidgetManager.updateAppWidget()` exige main thread en Android
+            // < 12 (issue #79); si se invoca desde el ioDispatcher la
+            // actualización falla silenciosamente y el widget no se refresca.
+            // Por eso los side-effects del widget corren en el main dispatcher.
+            withContext(mainDispatcher) {
+                widgetSaver(context, data)
+                widgetUpdater(context)
+            }
         }
 
         // Notificación permanente (pantalla de bloqueo) según preferencia.
-        if (prefs.getBoolean(PrefsKeys.PERSISTENT_ENABLED, true)) {
-            persistentShower(context, data)
-        } else {
-            persistentHider(context)
+        runCatching {
+            if (prefs.getBoolean(PrefsKeys.PERSISTENT_ENABLED, true)) {
+                persistentShower(context, data)
+            } else {
+                persistentHider(context)
+            }
         }
 
         // Histórico local: acumula el snapshot de este refresh (con desglose
         // por modelo semanal, Feature C REQ-120/122).
-        historyStore.record(
-            data.sessionPercent,
-            data.weeklyPercent,
-            models = data.weeklyModels.associate { it.model to it.percent },
-        )
+        runCatching {
+            historyStore.record(
+                data.sessionPercent,
+                data.weeklyPercent,
+                models = data.weeklyModels.associate { it.model to it.percent },
+            )
+        }
 
         // Ancla semanal automática (Feature D, issue #15): si la fuente no
         // entrega weeklyResetAt real (método API key), se detecta el reset
         // real del histórico y se persiste. El override de la fuente real
         // siempre gana (REQ-032).
-        updateWeeklyAnchor(data)
+        runCatching {
+            updateWeeklyAnchor(data)
+        }
 
         // Alertas de umbral — solo si el usuario las activó.
         if (prefs.getBoolean(PrefsKeys.NOTIF_ENABLED, true)) {
-            checkWeeklyThreshold(data)
-            checkSessionThreshold(data)
-            checkPaceAlerts()
+            runCatching {
+                checkWeeklyThreshold(data)
+                checkSessionThreshold(data)
+                checkPaceAlerts()
+            }
         }
 
         // Notificación proactiva de reset de sesión (issue #57): reprograma
         // el aviso 1h antes del resetAt en cada refresh que lo actualice.
-        sessionResetScheduler(context, data.sessionResetAt, data.sessionPercent)
+        runCatching {
+            sessionResetScheduler(context, data.sessionResetAt, data.sessionPercent)
+        }
     }
 
     /**
