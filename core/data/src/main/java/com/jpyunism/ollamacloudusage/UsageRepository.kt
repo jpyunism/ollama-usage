@@ -114,6 +114,27 @@ class UsageRepository(
         Result.success(data)
     }
 
+    /**
+     * Fetch del consumo de UNA cuenta puntual para la comparativa multi-cuenta
+     * (issue #93), SIN side-effects: no toca widget, notificaciones, alertas ni
+     * historico. La comparativa es solo lectura; los efectos del pipeline
+     * corresponden a la cuenta activa ([refreshAndPropagate]).
+     *
+     * Devuelve [Result.failure] con un [UsageError] si la key es invalida o
+     * falla la red, aislando el error por cuenta. Devuelve
+     * [Result.failure] con [UsageError.NoAuth] si el id no existe.
+     */
+    suspend fun fetchUsageForAccount(accountId: String): Result<UsageData> = withContext(ioDispatcher) {
+        val account = AccountStore(prefs).list().firstOrNull { it.id == accountId }
+            ?: return@withContext Result.failure(UsageError.NoAuth)
+        if (account.apiKey.isBlank()) return@withContext Result.failure(UsageError.NoAuth)
+        runCatching { apiScraper.fetchUsage(account.apiKey) }
+            .fold(
+                onSuccess = { Result.success(it) },
+                onFailure = { Result.failure(UsageError.fromThrowable(it)) },
+            )
+    }
+
     /** Side-effects post-fetch. Se ejecuta solo tras un fetch exitoso. */
     private suspend fun propagate(data: UsageData) {
         prefs.edit().putLong(PrefsKeys.LAST_UPDATED, now()).apply()

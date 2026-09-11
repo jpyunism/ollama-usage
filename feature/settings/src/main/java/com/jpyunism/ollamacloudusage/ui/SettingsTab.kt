@@ -14,6 +14,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jpyunism.ollamacloudusage.AlertSettings
 import com.jpyunism.ollamacloudusage.UsageViewModel
 import com.jpyunism.ollamacloudusage.ui.settings.AccountsSection
+import com.jpyunism.ollamacloudusage.ui.settings.AccountsComparisonSection
 import com.jpyunism.ollamacloudusage.ui.settings.AlertSection
 import com.jpyunism.ollamacloudusage.ui.settings.BackupSection
 import com.jpyunism.ollamacloudusage.ui.settings.DailySummarySection
@@ -57,6 +58,7 @@ fun SettingsTab(
         DailySummarySection(vm)
         RefreshSection(settings, onSave = ::save)
         AccountsSection(vm)
+        AccountsComparisonSection(vm)
         BackupSection(vm)
         UpdateSection(
             currentVersion = vm.appVersion,
