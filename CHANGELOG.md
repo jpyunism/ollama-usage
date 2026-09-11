@@ -3,7 +3,7 @@
 Todas las novedades de la app, agrupadas por version. Sigue semver
 (`MAJOR.MINOR.PATCH`).
 
-## Unreleased
+## v0.37.0 (2026-09-11)
 
 ### Accion "Refrescar ahora" en la notificacion persistente (issue #94)
 
