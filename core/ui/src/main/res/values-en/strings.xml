@@ -38,6 +38,10 @@
     <string name="stats_bars_title">Usage per period</string>
     <string name="stats_bars_in_progress">In progress</string>
     <string name="stats_bars_desc">Bar chart of usage per period</string>
+    <string name="stats_models_title">Usage by model over time</string>
+    <string name="stats_models_overlay">Overlay models</string>
+    <string name="stats_models_empty">Not enough data for this model yet.</string>
+    <string name="stats_models_desc">Line chart of usage percentage by model over time</string>
 
     <!-- Cookie / API key setup -->
     <string name="connect_account">Connect your account</string>

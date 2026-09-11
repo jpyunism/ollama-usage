@@ -89,7 +89,6 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import kotlin.math.abs
 import kotlinx.coroutines.launch
 
 
@@ -455,14 +454,8 @@ private fun LinearUsageBar(percent: Double, models: List<ModelUsage>) {
     }
 }
 
-private val palette = listOf(
-    Color(0xFF4F46E5), Color(0xFFF97316), Color(0xFF22C55E),
-    Color(0xFF2563EB), Color(0xFFEC4899), Color(0xFF14B8A6),
-    Color(0xFFEAB308), Color(0xFF8B5CF6), Color(0xFFEF4444), Color(0xFF06B6D4),
-)
-
 private fun modelColor(model: String): Color =
-    palette[abs(model.hashCode()) % palette.size]
+    com.jpyunism.ollamacloudusage.ui.modelColor(model)
 
 /**
  * Bottom sheet con la evolución del % de un modelo sobre el histórico
