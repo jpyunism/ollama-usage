@@ -218,6 +218,14 @@
     <string name="accounts_delete">Eliminar</string>
     <string name="accounts_label">Nombre</string>
     <string name="accounts_apikey">API key</string>
+    <string name="accounts_comparison_title">Comparativa de cuentas</string>
+    <string name="accounts_comparison_description">Consumo de cada cuenta lado a lado para decidir en cual trabajar.</string>
+    <string name="accounts_comparison_active">Activa</string>
+    <string name="accounts_comparison_week">Semana</string>
+    <string name="accounts_comparison_session">Sesion</string>
+    <string name="accounts_comparison_percent">%1$s%%</string>
+    <string name="accounts_comparison_error">No se pudo consultar</string>
+    <string name="accounts_comparison_retry">Reintentar</string>
     <string name="save_generic">Guardar</string>
     <string name="cancel">Cancelar</string>
     <string name="daily_summary_title">Resumen diario de consumo</string>

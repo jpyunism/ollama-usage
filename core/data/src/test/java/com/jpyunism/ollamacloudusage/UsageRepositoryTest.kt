@@ -269,6 +269,91 @@ class UsageRepositoryTest {
         assertTrue(calls.isEmpty())
     }
 
+    // ─── Comparativa entre cuentas (issue #93) ───
+
+    @Test
+    fun `fetchUsageForAccount usa la api key de la cuenta indicada`() = runTest {
+        val prefs = prefsWithAccounts(
+            accountsJson(Triple("a1", "Personal", "key-a1"), Triple("a2", "Trabajo", "key-a2")),
+            activeId = "a1",
+        )
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage("key-a2") } returns sampleData()
+        val repo = buildRepo(prefs, fetcher, mutableListOf())
+
+        val result = repo.fetchUsageForAccount("a2")
+
+        assertTrue(result.isSuccess)
+        assertEquals(92.0, result.getOrNull()!!.weeklyPercent, 0.001)
+        verify { fetcher.fetchUsage("key-a2") }
+    }
+
+    @Test
+    fun `fetchUsageForAccount no toca side-effects ni historico`() = runTest {
+        val prefs = prefsWithAccounts(
+            accountsJson(Triple("a1", "Personal", "key-a1")),
+            activeId = "a1",
+        )
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage("key-a1") } returns sampleData()
+        val calls = mutableListOf<String>()
+        val history = mockk<UsageHistoryStore>(relaxed = true)
+        val repo = buildRepo(prefs, fetcher, calls, history)
+
+        val result = repo.fetchUsageForAccount("a1")
+
+        assertTrue(result.isSuccess)
+        // La comparativa es solo lectura: sin widget, notif ni historico.
+        assertTrue(calls.isEmpty())
+        verify(exactly = 0) { history.record(any(), any(), any()) }
+    }
+
+    @Test
+    fun `fetchUsageForAccount con key invalida devuelve InvalidApiKey aislado`() = runTest {
+        val prefs = prefsWithAccounts(
+            accountsJson(Triple("a1", "Personal", "key-a1")),
+            activeId = "a1",
+        )
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage("key-a1") } throws InvalidApiKeyException()
+        val calls = mutableListOf<String>()
+        val repo = buildRepo(prefs, fetcher, calls)
+
+        val result = repo.fetchUsageForAccount("a1")
+
+        assertEquals(UsageError.InvalidApiKey, result.exceptionOrNull())
+        assertTrue(calls.isEmpty())
+    }
+
+    @Test
+    fun `fetchUsageForAccount con id inexistente devuelve NoAuth`() = runTest {
+        val prefs = prefsWithAccounts(
+            accountsJson(Triple("a1", "Personal", "key-a1")),
+            activeId = "a1",
+        )
+        val fetcher = mockk<UsageScraper>()
+        val repo = buildRepo(prefs, fetcher, mutableListOf())
+
+        val result = repo.fetchUsageForAccount("no-existe")
+
+        assertEquals(UsageError.NoAuth, result.exceptionOrNull())
+    }
+
+    @Test
+    fun `fetchUsageForAccount con error de red devuelve Network sin romper`() = runTest {
+        val prefs = prefsWithAccounts(
+            accountsJson(Triple("a1", "Personal", "key-a1")),
+            activeId = "a1",
+        )
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage("key-a1") } throws RuntimeException("timeout")
+        val repo = buildRepo(prefs, fetcher, mutableListOf())
+
+        val result = repo.fetchUsageForAccount("a1")
+
+        assertEquals(UsageError.Network("timeout"), result.exceptionOrNull())
+    }
+
     @Test
     fun `el historico se escribe en el store de la cuenta activa`() = runTest {
         val prefs = prefsWithAccounts(

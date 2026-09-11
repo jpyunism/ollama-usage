@@ -158,10 +158,22 @@ class UsageViewModel(
     private val _activeAccountId = MutableStateFlow(accountStore.activeId())
     val activeAccountId: StateFlow<String?> = _activeAccountId
 
+    // ── Comparativa entre cuentas (issue #93) ──
+
+    /**
+     * Filas de la comparativa multi-cuenta: label, si es la activa y el estado
+     * de consumo de cada una. Vacia con 0-1 cuentas (la vista se oculta).
+     */
+    private val _accountUsages = MutableStateFlow<List<AccountUsage>>(emptyList())
+    val accountUsages: StateFlow<List<AccountUsage>> = _accountUsages
+
+    private var accountsFetchJob: Job? = null
+
     private var refreshJob: Job? = null
 
     init {
         if (repository.hasAuth()) refresh()
+        refreshAccountUsages()
         checkForUpdate()
     }
 
@@ -410,6 +422,7 @@ class UsageViewModel(
         if (store.activeId() == before) return
         _activeAccountId.value = id
         refresh()
+        refreshAccountUsages()
     }
 
     /** Agrega una cuenta API key; queda activa y dispara refresh (REQ-102/106). */
@@ -418,6 +431,7 @@ class UsageViewModel(
         _accounts.value = AccountStore(prefs).list()
         _activeAccountId.value = created.id
         refresh()
+        refreshAccountUsages()
         return created
     }
 
@@ -425,6 +439,7 @@ class UsageViewModel(
     fun renameAccount(id: String, label: String) {
         AccountStore(prefs).rename(id, label)
         _accounts.value = AccountStore(prefs).list()
+        refreshAccountUsages()
     }
 
     /** Elimina una cuenta; si era la activa, reasigna y refresca. */
@@ -434,7 +449,51 @@ class UsageViewModel(
         _accounts.value = store.list()
         _activeAccountId.value = store.activeId()
         if (store.activeId() != null) refresh()
+        refreshAccountUsages()
     }
+
+    /**
+     * Consulta el consumo de todas las cuentas para la comparativa (issue #93).
+     * Publica las filas en estado [AccountUsageState.Loading] y luego resuelve
+     * cada cuenta de forma secuencial y aislada: el fallo de una (key invalida,
+     * red) no afecta a las demas. Cancela el fetch anterior para que los
+     * cambios de cuentas rapidos no se pisen. No-op con menos de 2 cuentas.
+     */
+    fun refreshAccountUsages() {
+        val store = AccountStore(prefs)
+        val accounts = store.list()
+        val activeId = store.activeId()
+        if (!showAccountsComparison(accounts)) {
+            accountsFetchJob?.cancel()
+            _accountUsages.value = emptyList()
+            return
+        }
+        accountsFetchJob?.cancel()
+        _accountUsages.value = accountUsageList(accounts, emptyMap(), activeId)
+        accountsFetchJob = viewModelScope.launch {
+            // Secuencial: una request por cuenta, sin saturar la red. El error
+            // se captura por cuenta (incluido un fetch que devuelva un Result
+            // inesperado) y no interrumpe el resto del loop.
+            for (account in accounts) {
+                val state = runCatching {
+                    repository.fetchUsageForAccount(account.id).fold(
+                        onSuccess = { data ->
+                            AccountUsageState.Success(
+                                weeklyPercent = data.weeklyPercent,
+                                sessionPercent = data.sessionPercent,
+                            )
+                        },
+                        onFailure = { e -> failureState(e) },
+                    )
+                }.getOrElse { e -> failureState(e) }
+                _accountUsages.value = _accountUsages.value.withState(account.id, state)
+            }
+        }
+    }
+
+    /** Mapea un Throwable del fetch por cuenta a un estado de error tipado. */
+    private fun failureState(e: Throwable): AccountUsageState.Failure =
+        AccountUsageState.Failure(e as? UsageError ?: UsageError.Network(e.message ?: ""))
 
     /** Chequea una vez por día si hay release más nuevo (silencioso). */
     fun checkForUpdate() {

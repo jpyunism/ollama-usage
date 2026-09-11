@@ -22,6 +22,24 @@ refresco habia que abrir la app y tocar el boton. Ahora trae una accion
   worker lo resuelve como `Result.success()` (sin reintentos ni crash).
 - Tests: `RefreshActionReceiverTest` cubre el filtrado de la accion.
 
+### Feature: comparativa de consumo entre cuentas (issue #93)
+
+Con varias cuentas de Ollama Cloud cargadas ya se podia cambiar la activa, pero
+solo se veia el consumo de esa cuenta. Ahora Configuracion tiene una seccion
+"Comparativa de cuentas" con una tarjeta por cuenta: label, % semanal, % de
+sesion, indicador de cuenta activa y una barra de progreso por periodo con el
+color del semaforo (verde/ambar/rojo segun los umbrales de alerta).
+
+- El consumo de cada cuenta se trae por separado con su propia API key
+  (`UsageRepository.fetchUsageForAccount`), reusando el scraper oficial
+  `/api/usage` sin side-effects: no toca widget, notificaciones, alertas ni
+  historico (eso corresponde a la cuenta activa).
+- Los errores quedan aislados por cuenta: una API key invalida muestra su
+  tarjeta en error con boton "Reintentar" sin ocultar las demas.
+- El fetch es secuencial con estado de carga por cuenta, sin bloquear la UI.
+- La seccion se oculta con 0 o 1 cuentas.
+- Localizado ES/EN.
+
 ## v0.36.2 (2026-09-11)
 
 ### Fix: secciones de Configuracion mal alineadas al expandir
