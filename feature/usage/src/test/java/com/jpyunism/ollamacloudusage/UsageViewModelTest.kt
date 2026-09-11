@@ -151,6 +151,36 @@ class UsageViewModelTest {
         assertEquals(UsageError.Network("timeout"), (state as UiState.Error).error)
     }
 
+    // ─── Banner de cookie tras renovar (issue #78) ───
+
+    @Test
+    fun `refresh actualiza el banner de cookie con el status recalculado`() = runTest {
+        // Issue #78: tras renovar la cookie, el refresh debe propagar el nuevo
+        // status al banner aunque el fetch falle. El repo mockeado devuelve
+        // EXPIRED antes de renovar y OK después.
+        val prefs = fakePrefs()
+        every { prefs.contains(PrefsKeys.COOKIE) } returns true
+        every { prefs.getString(PrefsKeys.COOKIE, null) } returns "cookie"
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage(any()) } throws CookieExpiredException()
+        val repo = fakeRepository(prefs, fetcher, hasAuth = true)
+        every { repo.cookieExpiryStatus() } returns CookieExpiry.Result(CookieExpiry.Status.EXPIRED, 0)
+
+        val vm = buildVm(prefs, repo)
+        testScheduler.advanceUntilIdle()
+        assertEquals(CookieExpiry.Status.EXPIRED, vm.cookieExpiry.value.status)
+
+        // El usuario renueva la cookie: el repo ahora reporta OK.
+        every { repo.cookieExpiryStatus() } returns CookieExpiry.Result(CookieExpiry.Status.OK, 7)
+
+        // Un nuevo refresh (aunque falle) debe propagar el status OK al banner.
+        vm.refresh()
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(CookieExpiry.Status.OK, vm.cookieExpiry.value.status)
+        assertTrue(vm.uiState.value is UiState.Error)
+    }
+
     @Test
     fun `refresh normal setea Loading e isRefreshing true y termina false`() = runTest {
         val prefs = fakePrefs()

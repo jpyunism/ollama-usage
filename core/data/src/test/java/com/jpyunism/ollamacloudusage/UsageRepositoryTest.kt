@@ -396,6 +396,71 @@ class UsageRepositoryTest {
         assertTrue(written.containsKey(PrefsKeys.COOKIE_RENEWED_AT))
     }
 
+    // ─── Banner de cookie tras renovar (issue #78) ───
+
+    @Test
+    fun `renovar la cookie pasa el status de EXPIRED a OK`() = runTest {
+        // Escenario del issue #78: cookie expirada (sin renovación conocida)
+        // -> el usuario pega una cookie nueva -> el status debe pasar de
+        // EXPIRED a OK sin depender de un refresh exitoso.
+        val prefs = prefsWith(authSource = AuthSource.COOKIE.name, apiKey = null, cookie = "cookie")
+        val renewedAt = longArrayOf(0L)
+        every { prefs.getLong(PrefsKeys.COOKIE_RENEWED_AT, 0L) } answers { renewedAt[0] }
+        val nowRef = longArrayOf(1_000_000_000_000L)
+        val repo = UsageRepository(
+            context = mockk<Context>(relaxed = true),
+            prefs = prefs,
+            scraper = mockk<UsageScraper>(relaxed = true),
+            apiScraper = mockk<UsageScraper>(relaxed = true),
+            historyStore = mockk(relaxed = true),
+            now = { nowRef[0] },
+        )
+
+        // Sin renovación conocida -> EXPIRED.
+        assertEquals(CookieExpiry.Status.EXPIRED, repo.cookieExpiryStatus().status)
+
+        // El usuario renueva la cookie: se registra la renovación (el prefs
+        // ahora devuelve el timestamp nuevo).
+        renewedAt[0] = nowRef[0]
+        repo.recordCookieRenewal()
+
+        // El status debe pasar a OK (renovación reciente).
+        assertEquals(CookieExpiry.Status.OK, repo.cookieExpiryStatus().status)
+    }
+
+    @Test
+    fun `refreshAndPropagate recalcula el status de la cookie al inicio`() = runTest {
+        // Issue #78: el repo debe recalcular cookieExpiryStatus al inicio de
+        // cada refresh. Si el fetch falla (cookie expirada) pero el usuario
+        // renovó, el status cacheado ya refleja la renovación.
+        val prefs = prefsWith(authSource = AuthSource.COOKIE.name, apiKey = null, cookie = "cookie")
+        val renewedAt = longArrayOf(0L)
+        every { prefs.getLong(PrefsKeys.COOKIE_RENEWED_AT, 0L) } answers { renewedAt[0] }
+        val nowRef = longArrayOf(1_000_000_000_000L)
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage("cookie") } throws CookieExpiredException()
+        val repo = UsageRepository(
+            context = mockk<Context>(relaxed = true),
+            prefs = prefs,
+            scraper = fetcher,
+            apiScraper = fetcher,
+            historyStore = mockk(relaxed = true),
+            now = { nowRef[0] },
+        )
+
+        // Primer refresh con cookie expirada -> Error, status EXPIRED.
+        assertEquals(UsageError.CookieExpired, repo.refreshAndPropagate().exceptionOrNull())
+        assertEquals(CookieExpiry.Status.EXPIRED, repo.cookieExpiryStatus().status)
+
+        // El usuario renueva la cookie.
+        renewedAt[0] = nowRef[0]
+        repo.recordCookieRenewal()
+
+        // Segundo refresh (aunque falle de nuevo) recalcula el status -> OK.
+        assertEquals(UsageError.CookieExpired, repo.refreshAndPropagate().exceptionOrNull())
+        assertEquals(CookieExpiry.Status.OK, repo.cookieExpiryStatus().status)
+    }
+
     // ─── Notificación proactiva de reset de sesión (issue #57) ───
 
     @Test
