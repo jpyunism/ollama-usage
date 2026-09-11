@@ -240,6 +240,10 @@ fun StatsTab(history: HistoryState, isRefreshing: Boolean = false, onRefresh: ()
             }
         }
 
+        // Evolucion temporal por modelo (issue #92): se oculta sola si el
+        // historico no tiene >= 3 snapshots con desglose por modelo.
+        ModelTimelineSection(snapshots = snapshots)
+
         summary.lastClosed?.let { closed ->
             val label = if (period == HistoryPeriod.WEEK) {
                 stringResource(R.string.stats_week_of, formatDate(closed.start))

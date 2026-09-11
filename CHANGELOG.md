@@ -40,6 +40,29 @@ color del semaforo (verde/ambar/rojo segun los umbrales de alerta).
 - La seccion se oculta con 0 o 1 cuentas.
 - Localizado ES/EN.
 
+### Feature: grafico de evolucion temporal por modelo (issue #92)
+
+El historico ya persistia el desglose % semanal por modelo en cada snapshot
+(Feature C, issue #20), pero solo se veia el % actual en una lista estatica.
+
+- Nueva seccion "Evolucion por modelo" en Stats: chips con los top 5 modelos
+  ordenados por % desc (mas un chip "Otros" con el resto), toggle "Superponer
+  modelos" para ver uno solo o hasta 3 lineas a la vez, y grafico de linea
+  (Canvas, mismo patron y eje temporal que el grafico semanal) con el % de
+  cada modelo a lo largo del historico.
+- La seccion se oculta si el historico no tiene al menos 3 snapshots con
+  desglose por modelo (snapshots viejos o fuente sin modelos). Si el modelo
+  elegido tiene menos de 3 puntos, se muestra un mensaje en vez de un grafico
+  vacio.
+- Logica pura en `:core:model` (`ModelTimeline.kt`): `modelSeries` (serie de un
+  modelo, omitiendo snapshots sin el dato en vez de contar 0),
+  `othersSeries`, `latestModelShares`/`topModelNames`/`hasOtherModels` y
+  `hasModelHistory`/`modelSeriesVisible`; 12 tests JVM nuevos.
+- La paleta por modelo se movio a `:core:ui` (`ModelColors.kt`) para que la
+  barra de consumo de Usage y la evolucion en Stats pinten el mismo modelo con
+  el mismo color.
+- Strings ES/EN.
+
 ## v0.36.2 (2026-09-11)
 
 ### Fix: secciones de Configuracion mal alineadas al expandir
