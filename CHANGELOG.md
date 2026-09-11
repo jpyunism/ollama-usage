@@ -25,6 +25,19 @@ Ahora el contador de fallos consecutivos se persiste en prefs y se carga al
 arrancar el servicio, de modo que un reinicio sticky conserva el backoff
 acumulado (1, 2, 4... 30 min máx).
 
+### Fix: banner de cookie expira no se actualiza tras renovar (issue #78)
+
+Cuando la cookie expiraba, `refreshAndPropagate()` fallaba con
+`CookieExpiredException` y la UI mostraba el banner de "cookie expira pronto".
+Al pegar una cookie nueva, `saveCookie()` guardaba y registraba la renovación,
+pero el banner podía seguir mostrándose porque el estado interno no se
+recalculaba.
+
+Ahora `UsageRepository` recalcula `cookieExpiryStatus()` al inicio de cada
+`refreshAndPropagate()` y al registrar una renovación, y `UsageViewModel`
+propaga ese estado al banner tras cada refresh (aunque el fetch falle). El
+banner desaparece en cuanto se renueva la cookie.
+
 ### Fix: notificaciones de umbral se sobreescriben (issue #73)
 
 Todas las alertas de umbral (semanal, sesion, pace) compartian el mismo ID de

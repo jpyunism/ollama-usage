@@ -45,6 +45,16 @@ class UsageRepository(
     @Volatile
     var sessionResetScheduler: (Context, Instant?, Double) -> Unit = { _, _, _ -> }
 
+    /**
+     * Estado de expiración de la cookie recalculado en cada refresh (issue
+     * #78). Se cachea para que [cookieExpiryStatus] refleje la última
+     * renovación conocida sin depender de un refresh previo exitoso: si el
+     * usuario renueva la cookie y el fetch falla, el banner igual se
+     * actualiza. Null hasta el primer cálculo.
+     */
+    @Volatile
+    private var cachedCookieExpiry: CookieExpiry.Result? = null
+
     /** Conecta el programador real (SessionResetWorker) desde la capa app. */
     fun connectSessionResetScheduler(scheduler: (Context, Instant?, Double) -> Unit) {
         sessionResetScheduler = scheduler
@@ -75,6 +85,13 @@ class UsageRepository(
      * [UsageError].
      */
     suspend fun refreshAndPropagate(): Result<UsageData> = withContext(ioDispatcher) {
+        // Issue #78: recalcular el estado de expiración de la cookie al inicio
+        // de cada refresh. Si el usuario renovó la cookie (recordCookieRenewal)
+        // y el fetch falla, el banner igual refleja el nuevo estado en vez de
+        // quedarse mostrando "cookie expira pronto" con datos viejos. Se
+        // invalida el cache para forzar el recálculo (no leer el valor viejo).
+        cachedCookieExpiry = null
+        cachedCookieExpiry = cookieExpiryStatus()
         val authSource = authSource()
         // Multi-cuenta (Feature A lote 2): con lista de cuentas API key, la
         // credencial y el histórico vienen de la cuenta activa (REQ-102/103).
@@ -271,16 +288,26 @@ class UsageRepository(
     /** Registra la renovación de la cookie (se llama al guardar una nueva). */
     fun recordCookieRenewal() {
         prefs.edit().putLong(PrefsKeys.COOKIE_RENEWED_AT, now()).apply()
+        // Issue #78: refrescar el estado cacheado de inmediato para que el
+        // banner deje de mostrar "cookie expira pronto" sin esperar un refresh.
+        // Se invalida el cache antes de recalcular para no leer el valor viejo.
+        cachedCookieExpiry = null
+        cachedCookieExpiry = cookieExpiryStatus()
     }
 
     /**
      * Estado de expiración de la cookie según la última renovación conocida.
      * Solo aplica cuando el método de auth es cookie; con API key devuelve OK
      * (no molesta, criterio de aceptación del issue #62).
+     *
+     * Devuelve el valor cacheado (recalculado en cada refresh y en cada
+     * renovación) si existe; si no, lo calcula al vuelo.
      */
     fun cookieExpiryStatus(): CookieExpiry.Result {
         if (authSource() != AuthSource.COOKIE) return CookieExpiry.Result(CookieExpiry.Status.OK, 0)
-        return CookieExpiry.evaluate(cookieRenewedAt(), now())
+        return cachedCookieExpiry ?: CookieExpiry.evaluate(cookieRenewedAt(), now()).also {
+            cachedCookieExpiry = it
+        }
     }
 
     /**

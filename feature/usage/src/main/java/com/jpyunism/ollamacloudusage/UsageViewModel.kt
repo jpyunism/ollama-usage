@@ -283,6 +283,10 @@ class UsageViewModel(
         refreshJob = viewModelScope.launch {
             try {
                 val result = repository.refreshAndPropagate()
+                // Issue #78: el repo recalculó el estado de expiración de la
+                // cookie al inicio del refresh; propagarlo al banner aunque el
+                // fetch falle (p. ej. tras renovar la cookie).
+                _cookieExpiry.value = repository.cookieExpiryStatus()
                 _uiState.value = result.fold(
                     onSuccess = { data ->
                         // El pipeline ya guardó widget, notif e histórico; la UI
