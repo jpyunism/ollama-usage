@@ -3,7 +3,7 @@
 Todas las novedades de la app, agrupadas por version. Sigue semver
 (`MAJOR.MINOR.PATCH`).
 
-## Unreleased
+## v0.37.2 (2026-09-12)
 
 ### Fix: congelamiento al inicio (widget ya no bloquea el main thread)
 
