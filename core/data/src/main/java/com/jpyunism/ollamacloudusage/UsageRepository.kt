@@ -30,6 +30,12 @@ class UsageRepository(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
     private val now: () -> Long = System::currentTimeMillis,
+    // Ejecutor dedicado para los side-effects del widget: updateAppWidget es
+    // una llamada binder síncrona que puede colgar segundos; nunca debe
+    // bloquear el refresh ni el main thread. Inyectable para tests.
+    private val widgetExecutor: (Runnable) -> Unit = { r ->
+        Thread(r, "widget-updater").apply { isDaemon = true }.start()
+    },
     // ── Side-effects inyectables (defaults = implementación real) ──
     private val widgetSaver: (Context, UsageData) -> Unit = UsageWidgetProvider::saveData,
     private val widgetUpdater: (Context) -> Unit = { UsageWidgetProvider.updateAll(it) },
@@ -146,14 +152,21 @@ class UsageRepository(
         // UI colgada en UiState.Loading para siempre (spinner infinito).
         runCatching {
             // Widget del home screen: refleja el último consumo.
-            // `AppWidgetManager.updateAppWidget()` exige main thread en Android
-            // < 12 (issue #79); si se invoca desde el ioDispatcher la
-            // actualización falla silenciosamente y el widget no se refresca.
-            // Por eso los side-effects del widget corren en el main dispatcher.
-            withContext(mainDispatcher) {
-                widgetSaver(context, data)
-                widgetUpdater(context)
-            }
+            // `AppWidgetManager.updateAppWidget()` es una llamada binder
+            // SINCRONA al system server que puede bloquear largos segundos
+            // si el launcher/host del widget no responde (tras force-stop,
+            // al arrancar, o por backpressure del binder). Correrla en el
+            // main thread congela la UI con el spinner infinito. Se mueve a
+            // un executor dedicado y fire-and-forget: el widget se entera
+            // cuando puede; el refresh NUNCA espera al widget.
+            widgetExecutor(
+                Runnable {
+                    runCatching {
+                        widgetSaver(context, data)
+                        widgetUpdater(context)
+                    }
+                }
+            )
         }
 
         // Notificación permanente (pantalla de bloqueo) según preferencia.
