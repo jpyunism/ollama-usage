@@ -68,6 +68,9 @@ class UsageRepositoryTest {
             apiScraper = fetcher,
             historyStore = history,
             mainDispatcher = UnconfinedTestDispatcher(),
+            // En los tests del pipeline el widget corre inline (determinista);
+            // el test del freeze inyecta su propio executor con threads reales.
+            widgetExecutor = { r -> r.run() },
             widgetSaver = { _, _ -> calls += "widget" },
             widgetUpdater = { _ -> calls += "widgetUpdate" },
             persistentShower = { _, _ -> calls += "persistent" },
@@ -109,6 +112,7 @@ class UsageRepositoryTest {
             apiScraper = fetcher,
             historyStore = mockk(relaxed = true),
             mainDispatcher = UnconfinedTestDispatcher(),
+            widgetExecutor = { r -> r.run() },
             widgetSaver = { _, _ -> },
             widgetUpdater = { _ -> },
             persistentShower = { _, _ -> },
@@ -574,17 +578,17 @@ class UsageRepositoryTest {
         assertEquals(85.0, scheduled[0].second, 0.001)
     }
 
-    // ─── Widget en main thread (issue #79) ───
+    // ─── Widget FUERA del main thread (fix: freeze al inicio) ───
 
     @Test
-    fun `widgetSaver y widgetUpdater corren en el main dispatcher`() {
-        // Issue #79: `AppWidgetManager.updateAppWidget()` exige main thread en
-        // Android < 12. Los side-effects del widget deben ejecutarse en el
-        // dispatcher inyectado como `mainDispatcher` (Dispatchers.Main en
-        // producción), no en el ioDispatcher del refresh. Aquí verificamos que
-        // corren en el mismo dispatcher que el cuerpo del test (el injectado).
-        val main = StandardTestDispatcher()
-        val widgetThreads = mutableListOf<String>()
+    fun `widgetSaver y widgetUpdater corren fuera del main thread y el refresh no espera`() {
+        // `updateAppWidget()` es una llamada binder SINCRONA que puede colgar
+        // segundos cuando el launcher no responde; si corre en el main thread
+        // congela la UI con el spinner infinito. El widget debe ejecutarse en
+        // un executor dedicado, fire-and-forget: el refresh NUNCA espera al
+        // widget ni bloquea el main thread.
+        val widgetThreads = java.util.concurrent.CopyOnWriteArrayList<String>()
+        val gate = java.util.concurrent.CountDownLatch(1)
         val fetcher = mockk<UsageScraper>()
         every { fetcher.fetchUsage("sk-test") } returns sampleData()
         val repo = UsageRepository(
@@ -594,21 +598,29 @@ class UsageRepositoryTest {
             apiScraper = fetcher,
             historyStore = mockk(relaxed = true),
             ioDispatcher = UnconfinedTestDispatcher(),
-            mainDispatcher = main,
+            widgetExecutor = { r -> Thread(r, "widget-exec").apply { isDaemon = true; start() } },
             widgetSaver = { _, _ -> widgetThreads += Thread.currentThread().name },
-            widgetUpdater = { _ -> widgetThreads += Thread.currentThread().name },
+            widgetUpdater = { _ ->
+                widgetThreads += Thread.currentThread().name
+                gate.await(5, java.util.concurrent.TimeUnit.SECONDS) // bloquea el executor, no el refresh
+            },
             persistentShower = { _, _ -> },
             persistentHider = { _ -> },
             alertNotifier = { _, _, _, _ -> },
         )
 
-        runTest(main) {
+        runTest {
             val mainThread = Thread.currentThread().name
-            repo.refreshAndPropagate()
-            // Ambos side-effects del widget deben haber corrido en el main dispatcher,
-            // es decir en el mismo thread que el cuerpo del test.
-            assertEquals(2, widgetThreads.size)
-            widgetThreads.forEach { assertEquals(mainThread, it) }
+            val result = repo.refreshAndPropagate() // retorna AUNQUE el widget este colgado
+            assertTrue("el refresh no debe depender del widget", result.isSuccess)
+            // El widget corre en OTRO thread, nunca el main.
+            gate.countDown()
+            val deadline = System.nanoTime() + 5_000_000_000L
+            while (widgetThreads.size < 2 && System.nanoTime() < deadline) {
+                Thread.sleep(20)
+            }
+            assertTrue("el widget debe haber corrido 2 veces", widgetThreads.size >= 2)
+            widgetThreads.forEach { assertNotEquals("el widget no debe correr en el main", mainThread, it) }
         }
     }
 

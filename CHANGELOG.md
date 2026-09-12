@@ -3,6 +3,19 @@
 Todas las novedades de la app, agrupadas por version. Sigue semver
 (`MAJOR.MINOR.PATCH`).
 
+## Unreleased
+
+### Fix: congelamiento al inicio (widget ya no bloquea el main thread)
+
+La actualizacion del widget de home screen corria en el main thread dentro
+del refresh (`updateAppWidget` es una llamada binder SINCRONA al system
+server). Cuando el launcher/host del widget no respondia (tras force-stop,
+al arrancar, o por backpressure del binder), el main thread quedaba colgado
+segundos y la UI se congelaba en "Checking ollama.com..." sin lanzar ninguna
+excepcion (por eso el catch de la v0.37.1 no alcanzaba). El widget ahora
+corre fire-and-forget en un executor dedicado: el refresh nunca espera al
+widget y el main thread nunca se bloquea por el binder.
+
 ## v0.37.1 (2026-09-11)
 
 ### Fix: la app se quedaba pegada en "Checking ollama.com..." (spinner infinito)
