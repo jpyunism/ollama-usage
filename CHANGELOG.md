@@ -3,6 +3,28 @@
 Todas las novedades de la app, agrupadas por version. Sigue semver
 (`MAJOR.MINOR.PATCH`).
 
+## v0.38.1 (2026-09-12)
+
+### Fix: spinner congelado al iniciar (el update-check tumbaba el arranque)
+
+Al lanzar la app con `update_last_check_ms` vencido y sin salida a Internet
+(sin red, DNS caido, proxy inaccesible), el chequeo diario de actualizaciones
+lanzaba un `IOException` que **no estaba capturado** en el camino del
+`UsageViewModel` (el `UsageWorker` si lo protegia con `runCatching`, el
+ViewModel no). La excepcion escapaba de la corrutina de arranque, se registraba
+en el `CrashReporter` y la interfaz quedaba mostrando el spinner de
+"Consultando ollama.com..." sin recuperarse nunca ni mostrar error.
+
+- `UpdateChecker.check()` captura cualquier fallo (red, DNS, proxy, timeout,
+  respuesta no-2xx) y devuelve `null`: el chequeo es best-effort y nunca
+  propaga una excepcion a quien lo invoca.
+- `UsageViewModel.checkForUpdate()` y `checkForUpdateNow()` envuelven el
+  chequeo en `runCatching`. El spinner del boton "Revisar" siempre se apaga y
+  `checkResult` siempre se resuelve (Available / UpToDate), aunque falle la red.
+- Tests de regresion: `check()` con `IOException`, con HTTP 503 y con JSON
+  corrupto devuelve `null` sin lanzar; un update-check que falla no propaga la
+  excepcion ni impide cargar el consumo.
+
 ## v0.37.2 (2026-09-12)
 
 ### Fix: congelamiento al inicio (widget ya no bloquea el main thread)

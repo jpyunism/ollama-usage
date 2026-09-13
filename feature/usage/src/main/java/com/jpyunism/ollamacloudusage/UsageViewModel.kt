@@ -507,12 +507,21 @@ class UsageViewModel(
     private fun failureState(e: Throwable): AccountUsageState.Failure =
         AccountUsageState.Failure(e as? UsageError ?: UsageError.Network(e.message ?: ""))
 
-    /** Chequea una vez por día si hay release más nuevo (silencioso). */
+    /**
+     * Chequea una vez por día si hay release más nuevo (silencioso).
+     *
+     * Best-effort: el resultado del chequeo NO debe poder tumbar la corrutina
+     * ni afectar la UI. Aunque [UpdateRepository.check] ya devuelve null ante
+     * fallos de red, aquí se envuelve otra vez para que ninguna excepción
+     * inesperada (un repo fake, un cambio futuro) escape de la corrutina.
+     */
     fun checkForUpdate() {
         if (!updateRepository.shouldCheck()) return
         viewModelScope.launch {
-            val info = withContext(ioDispatcher) { updateRepository.check() }
-            updateRepository.markChecked()
+            val info = runCatching {
+                withContext(ioDispatcher) { updateRepository.check() }
+            }.getOrNull()
+            runCatching { updateRepository.markChecked() }
             if (info != null) _update.value = info
         }
     }
@@ -528,13 +537,22 @@ class UsageViewModel(
         }
     }
 
-    /** Revisa de nuevo aunque no haya pasado el intervalo (botón manual). */
+    /**
+     * Revisa de nuevo aunque no haya pasado el intervalo (botón manual).
+     *
+     * El estado [checkResult] SIEMPRE se resuelve (Available / UpToDate /
+     * Failed) aunque el chequeo falle: si la corrutina muriera por una
+     * excepción, el spinner del botón quedaría girando para siempre, que es
+     * justo el síntoma que se está arreglando.
+     */
     fun checkForUpdateNow() {
         if (_checkingUpdate.value) return
         _checkingUpdate.value = true
         _checkResult.value = null
         viewModelScope.launch {
-            val info = withContext(ioDispatcher) { updateRepository.check() }
+            val info = runCatching {
+                withContext(ioDispatcher) { updateRepository.check() }
+            }.getOrNull()
             _checkingUpdate.value = false
             _checkResult.value = if (info != null) {
                 _update.value = info
