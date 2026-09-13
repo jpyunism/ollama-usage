@@ -57,16 +57,47 @@
             android:textSize="34sp"
             android:textStyle="bold" />
 
-        <ProgressBar
-            android:id="@+id/widget_progress"
-            style="?android:attr/progressBarStyleHorizontal"
+        <!-- Semáforo (REQ-021): las tres barras van pre-tintadas y el provider
+             alterna su visibilidad. No se puede cambiar el drawable en runtime
+             porque ProgressBar#setProgressDrawable NO es @RemotableViewMethod
+             (RemoteViews lanza ActionException y el launcher muestra
+             "Couldn't add widget"); tampoco setProgressTintList, que necesita
+             RemoteViews#setColorStateList (API 31) con minSdk 26. La visibilidad
+             sí es una acción permitida en todas las versiones soportadas. -->
+        <FrameLayout
             android:layout_width="0dp"
             android:layout_height="10dp"
             android:layout_weight="1"
             android:layout_marginStart="14dp"
-            android:layout_gravity="center_vertical"
-            android:max="100"
-            android:progressDrawable="@drawable/widget_progress" />
+            android:layout_gravity="center_vertical">
+
+            <ProgressBar
+                android:id="@+id/widget_progress_green"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:max="100"
+                android:progressDrawable="@drawable/widget_progress_green"
+                android:visibility="gone" />
+
+            <ProgressBar
+                android:id="@+id/widget_progress_amber"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:max="100"
+                android:progressDrawable="@drawable/widget_progress_amber"
+                android:visibility="gone" />
+
+            <ProgressBar
+                android:id="@+id/widget_progress_red"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:max="100"
+                android:progressDrawable="@drawable/widget_progress_red"
+                android:visibility="gone" />
+        </FrameLayout>
     </LinearLayout>
 
     <TextView

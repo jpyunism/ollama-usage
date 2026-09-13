@@ -35,14 +35,40 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <ProgressBar
-        android:id="@+id/widget_compact_progress"
-        style="?android:attr/progressBarStyleHorizontal"
+    <!-- Semáforo por visibilidad: mismo motivo que widget_usage.xml
+         (setProgressDrawable no es @RemotableViewMethod). -->
+    <FrameLayout
         android:layout_width="0dp"
         android:layout_height="10dp"
         android:layout_weight="1"
         android:layout_marginStart="12dp"
-        android:layout_gravity="center_vertical"
-        android:max="100"
-        android:progressDrawable="@drawable/widget_progress_green" />
+        android:layout_gravity="center_vertical">
+
+        <ProgressBar
+            android:id="@+id/widget_compact_progress_green"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:max="100"
+            android:progressDrawable="@drawable/widget_progress_green"
+            android:visibility="gone" />
+
+        <ProgressBar
+            android:id="@+id/widget_compact_progress_amber"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:max="100"
+            android:progressDrawable="@drawable/widget_progress_amber"
+            android:visibility="gone" />
+
+        <ProgressBar
+            android:id="@+id/widget_compact_progress_red"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:max="100"
+            android:progressDrawable="@drawable/widget_progress_red"
+            android:visibility="gone" />
+    </FrameLayout>
 </LinearLayout>

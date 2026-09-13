@@ -3,6 +3,56 @@
 Todas las novedades de la app, agrupadas por version. Sigue semver
 (`MAJOR.MINOR.PATCH`).
 
+## v0.38.3 (2026-09-13)
+
+### Fix: el launcher mostraba "Couldn't add widget" (acción no permitida en RemoteViews)
+
+Al agregar el widget al home screen, el launcher respondía con un recuadro
+**"Couldn't add widget"** en vez del widget. La causa estaba en el semáforo de
+la barra de progreso:
+
+```kotlin
+views.setInt(R.id.widget_progress, "setProgressDrawable", R.drawable.widget_progress_red)
+```
+
+`RemoteViews` solo permite invocar métodos anotados `@RemotableViewMethod` en
+vistas `@RemoteView`. **`ProgressBar#setProgressDrawable` no lo está** (se
+verificó contra el código de AOSP; tampoco `setProgressDrawableTiled`), así que
+`RemoteViews.apply()` lanzaba:
+
+```
+android.widget.RemoteViews$ActionException:
+  view: android.widget.ProgressBar doesn't have method: setProgressDrawable(int)
+    at android.widget.RemoteViews.performApply(RemoteViews.java:6506)
+    at android.widget.RemoteViews.apply(RemoteViews.java:6115)
+```
+
+La excepción aborta la **inflación completa** del widget, el `AppWidgetHostView`
+del launcher cae a su *error view* y el usuario ve "Couldn't add widget". El
+mismo error había que evitarlo con las tres variantes del semáforo.
+
+**Fix:** el semáforo ahora se resuelve por **visibilidad**. El layout declara
+las tres barras pre-tintadas (verde/ámbar/rojo) en el mismo slot y el provider
+muestra solo la del nivel activo, aplicándole el progreso con `setProgressBar`:
+
+```kotlin
+setViewVisibility(greenId, if (activeId == greenId) View.VISIBLE else View.GONE)
+setProgressBar(activeId, 100, percent, false)
+```
+
+`setViewVisibility` y `setProgressBar` sí son acciones válidas en API 26+ (el
+mínimo de la app). Se descartó `setProgressTintList`, que necesita
+`RemoteViews#setColorStateList` (API 31).
+
+**Verificación:**
+- Test instrumentado nuevo (`UsageWidgetRemoteViewsTest`) que hace
+  `RemoteViews.apply()` — el mismo camino del launcher — sobre las dos
+  variantes y los tres niveles del semáforo. Con el bug reintroducido falla con
+  el `ActionException` exacto citado arriba; con el fix, los 6 tests pasan.
+- Validado en el launcher real del emulador: el widget 4×2 se agrega y muestra
+  "Ollama Cloud · Plan Pro · SESSION 42.5% · resets soon · Week: 61%" con la
+  barra en verde; sin *error view* ni `ActionException` en logcat.
+
 ## v0.38.2 (2026-09-13)
 
 ### Fix: spinner congelado al ingresar la cookie (recursión infinita en `modelColor`)
