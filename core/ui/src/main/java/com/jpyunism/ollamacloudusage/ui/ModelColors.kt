@@ -1,7 +1,6 @@
 package com.jpyunism.ollamacloudusage.ui
 
 import androidx.compose.ui.graphics.Color
-import kotlin.math.abs
 
 /**
  * Paleta de colores por modelo (Feature C, issue #20). Vive en :core:ui para
@@ -16,6 +15,14 @@ private val modelPalette = listOf(
     Color(0xFFEAB308), Color(0xFF8B5CF6), Color(0xFFEF4444), Color(0xFF06B6D4),
 )
 
-/** Color estable de un modelo: hash del nombre -> indice de la paleta. */
+/**
+ * Color estable de un modelo: hash del nombre -> indice de la paleta.
+ *
+ * OJO con el `abs`: `abs(Int.MIN_VALUE)` sigue siendo negativo (overflow), asi
+ * que un nombre de modelo cuyo hashCode sea Int.MIN_VALUE daria un indice
+ * negativo y `modelPalette[-8]` lanzaria IndexOutOfBoundsException en plena
+ * composicion. El `and 0x7FFFFFFF` normaliza a un entero no negativo sin
+ * overflow.
+ */
 fun modelColor(model: String): Color =
-    modelPalette[abs(model.hashCode()) % modelPalette.size]
+    modelPalette[(model.hashCode() and 0x7FFFFFFF) % modelPalette.size]

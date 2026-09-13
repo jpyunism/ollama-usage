@@ -3,6 +3,51 @@
 Todas las novedades de la app, agrupadas por version. Sigue semver
 (`MAJOR.MINOR.PATCH`).
 
+## v0.38.2 (2026-09-13)
+
+### Fix: spinner congelado al ingresar la cookie (recursión infinita en `modelColor`)
+
+Al guardar una cookie válida la app entra a la pantalla de consumo, y ahí se
+componía la lista de modelos por uso. `UsageTab.kt` definía un wrapper local
+`modelColor(...)` que pretendía delegar en el de `:core:ui`, pero la llamada
+`com.jpyunism.ollamacloudusage.ui.modelColor(model)` resolvía **a la misma
+función local** (mismo paquete `ui`) en vez de a la de `:core:ui`:
+
+```kotlin
+private fun modelColor(model: String): Color =
+    com.jpyunism.ollamacloudusage.ui.modelColor(model)  // ← se llama a sí misma
+```
+
+La recursión infinita moría con `StackOverflowError` en el hilo de composición
+(el `Recomposer`), justo mientras se dibujaba el frame. El `CrashReporter`
+además se tragaba la excepción para "dejar la app viva", así que el hilo
+principal quedaba inservible y la UI se congelaba en el último frame dibujado:
+el spinner de "Consultando ollama.com...". Sin crash visible ni forma de
+recuperarse. Reproducido en el emulador con 24/24 frames idénticos y el stack
+real en `crash.log`.
+
+- Se elimina el wrapper recursivo; la UI usa directamente la función de
+  `:core:ui` (importada con alias `coreModelColor` para que no se repita la
+  colisión de nombres).
+- `CrashReporter` ahora **re-lanza siempre** la excepción tras registrarla y
+  abrir `CrashActivity`: con el hilo muerto, tragarse el error solo escondía el
+  problema. `CrashActivity` corre en su propio proceso (`:crash`) para
+  sobrevivir a la muerte del proceso principal.
+- `CrashReporter` captura `Throwable` (no `Exception`) al escribir el log: un
+  `OutOfMemoryError` es un `Error`, así que el handler moría justo cuando el
+  heap estaba agotado y no dejaba ningún rastro.
+- `UsageViewModel.startUpdateDownload()` recursaba infinitamente: llamaba a
+  `startUpdateDownload(info)`, que Kotlin resolvía al método de la clase en vez
+  del lambda inyectado en el constructor (mismo nombre). Se renombra el lambda
+  a `onUpdateDownload`.
+- `modelColor` indexaba con `abs(hashCode)`: `abs(Int.MIN_VALUE)` sigue siendo
+  negativo, así que un modelo cuyo hash sea `Int.MIN_VALUE` producía un índice
+  negativo y `IndexOutOfBoundsException` en composición. Ahora usa
+  `and 0x7FFFFFFF`.
+- Tests de regresión: `ModelColorTest` (hash `Int.MIN_VALUE` no rompe, color
+  estable, colores distintos) y `StartUpdateDownloadTest` (delega en el lambda
+  inyectado sin recursar). Ambos fallan sin el fix.
+
 ## v0.38.1 (2026-09-12)
 
 ### Fix: spinner congelado al iniciar (el update-check tumbaba el arranque)

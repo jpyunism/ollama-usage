@@ -87,7 +87,7 @@ class UsageViewModel(
     private val updateRepository: UpdateRepository,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val reschedule: (Int) -> Unit = {},
-    private val startUpdateDownload: (UpdateInfo) -> Unit = {},
+    private val onUpdateDownload: (UpdateInfo) -> Unit = {},
     private val onLanguageChange: (AppLanguage) -> Unit = {},
     private val onDailySummaryChanged: () -> Unit = {},
     private val historyStoreProvider: () -> UsageHistoryStore,
@@ -526,10 +526,19 @@ class UsageViewModel(
         }
     }
 
-    /** Descarga e instala la actualización (servicio en primer plano con progreso). */
+    /**
+     * Descarga e instala la actualización (servicio en primer plano con
+     * progreso).
+     *
+     * OJO: el lambda inyectado en el constructor se llama [onUpdateDownload]
+     * justamente para que este método NO colisione con él. Con ambos llamados
+     * `startUpdateDownload`, la referencia interna resolvía al método de la
+     * clase (no al lambda) y la llamada recursaba infinitamente hasta morir
+     * con StackOverflowError en el hilo principal, dejando la UI congelada.
+     */
     fun startUpdateDownload(info: UpdateInfo) {
         _download.value = DownloadState.Downloading(0)
-        startUpdateDownload(info)
+        onUpdateDownload(info)
         viewModelScope.launch {
             UpdaterService.state.collect { state ->
                 _download.value = state
@@ -638,7 +647,7 @@ class UsageViewModel(
                         repository = container.usageRepository,
                         updateRepository = container.updateRepository,
                         reschedule = { UsageScheduler.schedule(app, it) },
-                        startUpdateDownload = { info -> UpdaterService.start(app, info.downloadUrl, info.sha256) },
+                        onUpdateDownload = { info -> UpdaterService.start(app, info.downloadUrl, info.sha256) },
                         onLanguageChange = { LocaleHelper.apply(app, it) },
                         onDailySummaryChanged = { com.jpyunism.ollamacloudusage.DailySummaryWorker.schedule(app) },
                         historyStoreProvider = { container.historyStore },
