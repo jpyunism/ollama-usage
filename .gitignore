@@ -23,5 +23,8 @@ keystore/
 # CodeGraph local index
 .codegraph/
 
+# Graphify local output (graph.json, graph.html, report)
+graphify-out/
+
 # Kotlin sessions
 .kotlin/
