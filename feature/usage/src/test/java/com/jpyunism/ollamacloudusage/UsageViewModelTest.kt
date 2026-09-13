@@ -377,6 +377,52 @@ class UsageViewModelTest {
         assertEquals(UpdateCheckOutcome.UpToDate, vm.checkResult.value)
     }
 
+    // ── Regresion: el chequeo de actualizacion NUNCA cuelga la UI ──
+    // Bug del spinner congelado: un IOException sin capturar del update-check
+    // al arrancar dejaba la app colgada en "Consultando ollama.com…".
+
+    @Test
+    fun `checkForUpdate con repo que lanza no propaga la excepcion`() = runTest {
+        val updateRepo = mockk<UpdateRepository>(relaxed = true)
+        every { updateRepo.shouldCheck() } returns true
+        every { updateRepo.check() } throws java.io.IOException("sin red")
+        val vm = buildVm(fakePrefs(), mockk(relaxed = true), updateRepo)
+        // No debe lanzar: la corrutina de arranque sobrevive.
+        testScheduler.advanceUntilIdle()
+        assertEquals(null, vm.update.value)
+    }
+
+    @Test
+    fun `checkForUpdateNow con repo que lanza resuelve checkResult en vez de colgar el spinner`() = runTest {
+        val updateRepo = mockk<UpdateRepository>(relaxed = true)
+        every { updateRepo.check() } throws java.io.IOException("sin red")
+        val vm = buildVm(fakePrefs(), mockk(relaxed = true), updateRepo)
+        vm.checkForUpdateNow()
+        testScheduler.advanceUntilIdle()
+        // El spinner del boton debe apagarse pase lo que pase.
+        assertFalse(vm.checkingUpdate.value)
+        assertEquals(UpdateCheckOutcome.UpToDate, vm.checkResult.value)
+    }
+
+    @Test
+    fun `update-check fallido no impide el refresh del consumo`() = runTest {
+        val prefs = fakePrefs()
+        every { prefs.contains(PrefsKeys.COOKIE) } returns true
+        every { prefs.getString(PrefsKeys.COOKIE, null) } returns "aid=abc; __Secure-session=xyz"
+        val fetcher = mockk<UsageScraper>()
+        every { fetcher.fetchUsage(any()) } returns sampleData()
+        val repo = fakeRepository(prefs, fetcher, hasAuth = true)
+        val updateRepo = mockk<UpdateRepository>(relaxed = true)
+        every { updateRepo.shouldCheck() } returns true
+        every { updateRepo.check() } throws java.io.IOException("sin red")
+
+        val vm = buildVm(prefs, repo, updateRepo)
+        testScheduler.advanceUntilIdle()
+
+        // Aunque el update-check falle, el consumo se carga igual.
+        assertTrue("expected Success got ${vm.uiState.value}", vm.uiState.value is UiState.Success)
+    }
+
     // ─────────── Configuración de alertas ───────────
 
     @Test

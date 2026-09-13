@@ -2,6 +2,7 @@ package com.jpyunism.ollamacloudusage
 
 import android.content.Context
 import android.content.pm.PackageManager
+import okhttp3.Call
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -61,20 +62,41 @@ object UpdateChecker {
         SecurePrefs.get(context).edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply()
     }
 
-    /** Consulta el release latest y devuelve la update si es más nueva que la instalada. */
-    fun check(context: Context): UpdateInfo? {
+    /**
+     * Consulta el release latest y devuelve la update si es más nueva que la
+     * instalada. Devuelve null ante cualquier fallo (red, DNS, proxy, timeout,
+     * respuesta no-2xx): el chequeo de actualizaciones es best-effort y NUNCA
+     * debe propagar una excepción a quien lo invoque.
+     *
+     * Sin este `runCatching`, un `IOException` (p. ej. `ConnectException` al
+     * arrancar sin red o tras un proxy caído) escapaba de la corrutina del
+     * ViewModel y llegaba al manejador de crash: la UI quedaba mostrando el
+     * spinner de "Consultando ollama.com…" sin recuperarse nunca.
+     */
+    fun check(context: Context): UpdateInfo? = checkWith(context) { client.newCall(it) }
+
+    /**
+     * Variante con el ejecutor de la request y la version instalada
+     * inyectables, para testear sin red ni PackageManager (mismo patrón que
+     * [OllamaApiKeyValidator]).
+     */
+    internal fun checkWith(
+        context: Context,
+        installedVersion: String = currentVersion(context),
+        callFactory: (Request) -> Call,
+    ): UpdateInfo? = runCatching {
         val request = Request.Builder()
             .url(RELEASES_URL)
             .header("Accept", "application/vnd.github+json")
             .header("User-Agent", "OllamaUsage/Android")
             .build()
 
-        client.newCall(request).execute().use { resp ->
-            if (!resp.isSuccessful) return null
+        callFactory(request).execute().use { resp ->
+            if (!resp.isSuccessful) return@runCatching null
             val body = resp.body?.string().orEmpty()
-            return parseRelease(body, currentVersion(context))
+            return@runCatching parseRelease(body, installedVersion)
         }
-    }
+    }.getOrNull()
 
     fun currentVersion(context: Context): String = runCatching {
         context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0"
