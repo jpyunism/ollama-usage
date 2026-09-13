@@ -19,6 +19,15 @@ import kotlin.math.roundToInt
  * Los datos se guardan en SharedPreferences claras (no son secretos) tras
  * cada refresh en segundo plano (WorkManager o servicio en primer plano).
  * El widget solo lee y renderiza — nunca hace red — y al tocarlo abre la app.
+ *
+ * IMPORTANTE (RemoteViews): cada método que este archivo invoca sobre una
+ * vista debe estar anotado `@RemotableViewMethod` en el framework. En
+ * particular `ProgressBar#setProgressDrawable` NO lo está, así que no se
+ * puede cambiar el drawable de la barra en runtime: el semáforo se resuelve
+ * alternando la visibilidad de tres barras pre-tintadas (ver
+ * `widget_usage.xml`). Si se usa un método no permitido, `RemoteViews.apply()`
+ * lanza `ActionException`, la inflación del widget falla completa y el
+ * launcher muestra "Couldn't add widget" en lugar del widget.
  */
 open class UsageWidgetProvider : AppWidgetProvider() {
 
@@ -102,7 +111,48 @@ open class UsageWidgetProvider : AppWidgetProvider() {
             }.getOrNull()
         }
 
-        private fun buildViews(context: Context, data: UsageData?): RemoteViews {
+        /**
+         * Aplica el semáforo alternando visibilidad: tres ProgressBar
+         * pre-tintadas (verde/ámbar/rojo) en el mismo slot y solo la del nivel
+         * activo se muestra y recibe el progreso.
+         *
+         * No se usa `setInt(..., "setProgressDrawable", ...)` porque
+         * `ProgressBar#setProgressDrawable` no es `@RemotableViewMethod`:
+         * RemoteViews lanzaría `ActionException` y el launcher mostraría
+         * "Couldn't add widget" (bug reportado). `setProgressBar` y
+         * `setViewVisibility` sí son acciones válidas en API 26+.
+         */
+        private fun RemoteViews.applyTrafficLight(
+            greenId: Int,
+            amberId: Int,
+            redId: Int,
+            level: TrafficLightLevel,
+            percent: Double,
+        ) {
+            val activeId = when (level) {
+                TrafficLightLevel.GREEN -> greenId
+                TrafficLightLevel.AMBER -> amberId
+                TrafficLightLevel.RED -> redId
+            }
+            setViewVisibility(greenId, if (activeId == greenId) View.VISIBLE else View.GONE)
+            setViewVisibility(amberId, if (activeId == amberId) View.VISIBLE else View.GONE)
+            setViewVisibility(redId, if (activeId == redId) View.VISIBLE else View.GONE)
+            setProgressBar(activeId, 100, percent.roundToInt().coerceIn(0, 100), false)
+        }
+
+        /** Oculta las tres barras (estado sin datos). */
+        private fun RemoteViews.hideTrafficLight(greenId: Int, amberId: Int, redId: Int) {
+            setViewVisibility(greenId, View.GONE)
+            setViewVisibility(amberId, View.GONE)
+            setViewVisibility(redId, View.GONE)
+        }
+
+        /**
+         * RemoteViews del widget 4×2 (público también para los tests de
+         * instrumentación, que verifican que `apply()` no lance — el mismo
+         * camino que recorre el launcher).
+         */
+        fun buildViews(context: Context, data: UsageData?): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_usage)
             val openApp = PendingIntent.getActivity(
                 context,
@@ -117,7 +167,11 @@ open class UsageWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.widget_plan, "")
                 views.setTextViewText(R.id.widget_week, "")
                 views.setTextViewText(R.id.widget_session_reset, "")
-                views.setViewVisibility(R.id.widget_progress, View.GONE)
+                views.hideTrafficLight(
+                    R.id.widget_progress_green,
+                    R.id.widget_progress_amber,
+                    R.id.widget_progress_red,
+                )
             } else {
                 views.setTextViewText(
                     R.id.widget_session,
@@ -155,33 +209,26 @@ open class UsageWidgetProvider : AppWidgetProvider() {
                     R.id.widget_session_reset,
                     listOfNotNull(reset, balanceText).joinToString(" · "),
                 )
-                views.setProgressBar(
-                    R.id.widget_progress,
-                    100,
-                    data.sessionPercent.roundToInt().coerceIn(0, 100),
-                    false,
-                )
-                views.setViewVisibility(R.id.widget_progress, View.VISIBLE)
-                // Semáforo de la barra (REQ-021): RemoteViews#setColorStateList
-                // requiere API 31 (minSdk 26), así que se selecciona el drawable
-                // clip del nivel (verde/ámbar/rojo) con la misma paleta que la app.
+                // Semáforo de la barra (REQ-021) por visibilidad: RemoteViews
+                // no puede cambiar el progressDrawable en runtime.
                 val (alert, critical) = thresholds(context)
                 val level = TrafficLight.paceColor(data.sessionPercent, alert, critical)
-                views.setInt(
-                    R.id.widget_progress,
-                    "setProgressDrawable",
-                    when (level) {
-                        TrafficLightLevel.GREEN -> R.drawable.widget_progress_green
-                        TrafficLightLevel.AMBER -> R.drawable.widget_progress_amber
-                        TrafficLightLevel.RED -> R.drawable.widget_progress_red
-                    },
+                views.applyTrafficLight(
+                    R.id.widget_progress_green,
+                    R.id.widget_progress_amber,
+                    R.id.widget_progress_red,
+                    level,
+                    data.sessionPercent,
                 )
             }
             return views
         }
 
-        /** Renderiza el widget compacto 2×1: % de semana + barra con semáforo. */
-        private fun buildCompactViews(context: Context, data: UsageData?): RemoteViews {
+        /**
+         * Renderiza el widget compacto 2×1: % de semana + barra con semáforo.
+         * Público también para los tests de instrumentación (ver buildViews).
+         */
+        fun buildCompactViews(context: Context, data: UsageData?): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_compact)
             views.setOnClickPendingIntent(
                 R.id.widget_compact_root,
@@ -194,33 +241,27 @@ open class UsageWidgetProvider : AppWidgetProvider() {
             )
             if (data == null) {
                 views.setTextViewText(R.id.widget_compact_percent, context.getString(R.string.checking_usage))
-                views.setViewVisibility(R.id.widget_compact_progress, View.GONE)
+                views.hideTrafficLight(
+                    R.id.widget_compact_progress_green,
+                    R.id.widget_compact_progress_amber,
+                    R.id.widget_compact_progress_red,
+                )
             } else {
                 views.setTextViewText(
                     R.id.widget_compact_percent,
                     context.getString(R.string.widget_session, formatPercent(data.weeklyPercent)),
                 )
-                views.setProgressBar(
-                    R.id.widget_compact_progress,
-                    100,
-                    data.weeklyPercent.roundToInt().coerceIn(0, 100),
-                    false,
-                )
-                views.setViewVisibility(R.id.widget_compact_progress, View.VISIBLE)
                 val (alert, critical) = thresholds(context)
                 val level = TrafficLight.paceColor(data.weeklyPercent, alert, critical)
-                views.setInt(
-                    R.id.widget_compact_progress,
-                    "setProgressDrawable",
-                    when (level) {
-                        TrafficLightLevel.GREEN -> R.drawable.widget_progress_green
-                        TrafficLightLevel.AMBER -> R.drawable.widget_progress_amber
-                        TrafficLightLevel.RED -> R.drawable.widget_progress_red
-                    },
+                views.applyTrafficLight(
+                    R.id.widget_compact_progress_green,
+                    R.id.widget_compact_progress_amber,
+                    R.id.widget_compact_progress_red,
+                    level,
+                    data.weeklyPercent,
                 )
             }
             return views
         }
-
     }
 }
