@@ -24,9 +24,14 @@
             </intent-filter>
         </activity>
 
+        <!-- Pantalla de error: proceso propio (:crash) para que sobreviva a la
+             muerte del proceso principal cuando se re-lanza un crash del hilo
+             main. Sin esto, el diálogo de error se cerraría junto con la app y
+             el usuario no alcanzaría a copiar el stack. -->
         <activity
             android:name=".CrashActivity"
             android:exported="false"
+            android:process=":crash"
             android:theme="@style/Theme.OllamaUsage" />
 
         <service

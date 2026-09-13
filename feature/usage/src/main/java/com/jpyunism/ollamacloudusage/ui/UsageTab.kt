@@ -83,6 +83,7 @@ import com.jpyunism.ollamacloudusage.shareSummaryText
 import com.jpyunism.ollamacloudusage.formatReset
 import com.jpyunism.ollamacloudusage.groupModels
 import com.jpyunism.ollamacloudusage.TrafficLight
+import com.jpyunism.ollamacloudusage.ui.modelColor as coreModelColor
 import com.jpyunism.ollamacloudusage.othersGroup
 import com.jpyunism.ollamacloudusage.sortedByUsage
 import java.time.Duration
@@ -396,7 +397,7 @@ private fun UsageMeterCard(
                                         if (others?.contains(m) == true) {
                                             MaterialTheme.colorScheme.outlineVariant
                                         } else {
-                                            modelColor(m.model)
+                                            coreModelColor(m.model)
                                         },
                                         CircleShape,
                                     )
@@ -441,7 +442,7 @@ private fun LinearUsageBar(percent: Double, models: List<ModelUsage>) {
             )
         } else {
             segments.forEach { s ->
-                val color = s.colorKey?.let { modelColor(it) }
+                val color = s.colorKey?.let { coreModelColor(it) }
                     ?: MaterialTheme.colorScheme.outlineVariant
                 Box(
                     Modifier
@@ -453,9 +454,6 @@ private fun LinearUsageBar(percent: Double, models: List<ModelUsage>) {
         }
     }
 }
-
-private fun modelColor(model: String): Color =
-    com.jpyunism.ollamacloudusage.ui.modelColor(model)
 
 /**
  * Bottom sheet con la evolución del % de un modelo sobre el histórico
