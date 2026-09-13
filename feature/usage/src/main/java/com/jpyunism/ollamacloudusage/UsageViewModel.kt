@@ -428,7 +428,7 @@ class UsageViewModel(
      * (REQ-102). No-op si el id no existe.
      */
     fun switchAccount(id: String) {
-        val store = AccountStore(prefs)
+        val store = accountStore
         val before = store.activeId()
         store.setActive(id)
         if (store.activeId() == before) return
@@ -439,8 +439,8 @@ class UsageViewModel(
 
     /** Agrega una cuenta API key; queda activa y dispara refresh (REQ-102/106). */
     fun addAccount(label: String, apiKey: String): Account {
-        val created = AccountStore(prefs).add(label, apiKey)
-        _accounts.value = AccountStore(prefs).list()
+        val created = accountStore.add(label, apiKey)
+        _accounts.value = accountStore.list()
         _activeAccountId.value = created.id
         refresh()
         refreshAccountUsages()
@@ -449,15 +449,15 @@ class UsageViewModel(
 
     /** Renombra una cuenta sin tocar la credencial. */
     fun renameAccount(id: String, label: String) {
-        AccountStore(prefs).rename(id, label)
-        _accounts.value = AccountStore(prefs).list()
+        accountStore.rename(id, label)
+        _accounts.value = accountStore.list()
         refreshAccountUsages()
     }
 
     /** Elimina una cuenta; si era la activa, reasigna y refresca. */
     fun removeAccount(id: String) {
-        AccountStore(prefs).remove(id)
-        val store = AccountStore(prefs)
+        accountStore.remove(id)
+        val store = accountStore
         _accounts.value = store.list()
         _activeAccountId.value = store.activeId()
         if (store.activeId() != null) refresh()
@@ -472,7 +472,7 @@ class UsageViewModel(
      * cambios de cuentas rapidos no se pisen. No-op con menos de 2 cuentas.
      */
     fun refreshAccountUsages() {
-        val store = AccountStore(prefs)
+        val store = accountStore
         val accounts = store.list()
         val activeId = store.activeId()
         if (!showAccountsComparison(accounts)) {

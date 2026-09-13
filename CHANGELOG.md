@@ -3,6 +3,39 @@
 Todas las novedades de la app, agrupadas por version. Sigue semver
 (`MAJOR.MINOR.PATCH`).
 
+## v0.38.4 (2026-09-13)
+
+### Limpieza interna (auditoría ponytail): sin cambios de comportamiento
+
+Auditoría de mínimos sobre el repo. Tres hallazgos, ninguno un bug:
+
+**1. `UsageViewModel` creaba 9 `AccountStore` cuando ya tenía uno.** El campo
+`accountStore` existía y solo se usaba para inicializar los `StateFlow`; los 8
+métodos restantes (`switchAccount`, `addAccount`, `renameAccount`,
+`removeAccount`, `refreshAccountUsages`) instanciaban `AccountStore(prefs)` de
+nuevo. `AccountStore` es stateless (solo envuelve `prefs`), así que no era un
+bug de correctitud — era inconsistencia y ruido. Ahora todos usan el campo.
+
+**2. `AppContainer.resetForTest()` eliminado.** Era `internal` con cero
+llamadores en todo el repo: código muerto dejado "por si acaso" (YAGNI).
+
+**3. `UsageNotifier.notifyLimit` ya no falla en silencio.** El `runCatching`
+que envolvía `NotificationManagerCompat.notify` no dejaba rastro de nada:
+
+```kotlin
+runCatching { NotificationManagerCompat.from(context).notify(id, notification) }
+```
+
+Esa alerta es el **único** aviso al usuario de que se acercó a su cuota; si
+fallaba, nadie se enteraba. Se agregó `.onFailure { Log.w(TAG, ...) }`. No se
+re-lanza: el refresh ya fue exitoso y un fallo de notificación no debe
+abrirlo. Requiere `TAG` y el import de `android.util.Log` (ambos nuevos en el
+archivo; `android.util.Log` ya se usaba en `CrashReporter`).
+
+**Verificación:** `:core:data:testDebugUnitTest` y
+`:feature:usage:testDebugUnitTest` en verde; `lintDebug` + `assembleRelease`
+OK. Sin cambios de comportamiento observable.
+
 ## v0.38.3 (2026-09-13)
 
 ### Fix: el launcher mostraba "Couldn't add widget" (acción no permitida en RemoteViews)
