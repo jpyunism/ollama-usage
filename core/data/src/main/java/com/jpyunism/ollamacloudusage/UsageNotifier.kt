@@ -12,6 +12,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -22,6 +23,7 @@ import java.time.format.DateTimeFormatter
 
 object UsageNotifier {
 
+    private const val TAG = "UsageNotifier"
     const val CHANNEL_ID = "usage_alerts"
     const val CHANNEL_PERSISTENT_ID = "usage_persistent"
     private const val NOTIFICATION_ID = 1001
@@ -81,6 +83,11 @@ object UsageNotifier {
 
         runCatching {
             NotificationManagerCompat.from(context).notify(notificationId, notification)
+        }.onFailure {
+            // La alerta de limite es el unico aviso al usuario de que se acerco
+            // a su cuota: si falla en silencio no hay forma de saberlo. No se
+            // re-lanza (el refresh ya fue exitoso), solo se deja rastro.
+            Log.w(TAG, "No se pudo publicar la notificacion de limite", it)
         }
     }
 

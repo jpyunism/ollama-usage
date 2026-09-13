@@ -66,10 +66,5 @@ class AppContainer(context: Context) {
             instance ?: synchronized(this) {
                 instance ?: AppContainer(context).also { instance = it }
             }
-
-        /** Solo para tests: permite reiniciar el grafo entre casos. */
-        internal fun resetForTest() {
-            instance = null
-        }
     }
 }
