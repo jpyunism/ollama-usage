@@ -1,5 +1,10 @@
 # AGENTS.md — Ollama Cloud Usage
 
+> **Antes de codear, leé [`docs/CONVENCIONES.md`](docs/CONVENCIONES.md)** — contrato de
+> contexto por story (spec en `docs/specs/NN-*.md` antes del código), review adversarial
+> con severidad HIGH/MEDIUM/LOW, verificación empírica y cierre de gate. Complementa
+> (no reemplaza) a este archivo.
+
 ## Estructura de módulos (Gradle multi-module)
 
 El proyecto está dividido en 9 módulos Gradle. Cada feature/capa vive en su
