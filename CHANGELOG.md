@@ -3,6 +3,30 @@
 Todas las novedades de la app, agrupadas por version. Sigue semver
 (`MAJOR.MINOR.PATCH`).
 
+## v0.38.7 (2026-11-15)
+
+### Fix: con API key todo daba "network error: No value for limits"
+
+Ollama reescribió `GET /api/usage` el 2026-11: ahora es una serie temporal de
+actividad (`totals` + `buckets`, `range=24h|7d|30d`) y **eliminó `limits.*`**,
+que era el único campo que la app leía. Con cualquier API key válida el refresco
+fallaba con `JSONException: No value for limits` (mostrado como error de red) y
+no se podía configurar la cuenta por API key. La key no tenía nada que ver.
+
+- El consumo ahora se lee de `GET /api/balance`, que entrega
+  `included.session.remaining_percent`, `included.weekly.remaining_percent` y
+  `resets_at` para cada ventana: `consumo = 100 - restante`.
+- Soportado también el esquema de créditos en dólares
+  (`allowance_usd` / `balance_usd` / `period.until`) y el formato legacy
+  `limits.*` con fracciones 0..1, por si Ollama vuelve a cambiarlo.
+- **Nuevo:** las fechas de reset de sesión y semana ahora son reales (vienen de
+  la API); antes la app las estimaba porque la API vieja no las daba.
+- El desglose por modelo se pide a `/api/usage?range=24h|7d&group_by=model`
+  (best-effort: si la API limita a 429 se pierde el desglose, nunca el
+  porcentaje).
+- HTTP 429 ahora dice "Demasiadas consultas a la API. Reintenta en un minuto."
+  en vez de un error genérico.
+
 ## v0.38.6 (2026-11-15)
 
 ### Fix: tocar "Actualizar" mataba la app (y el update nunca avanzaba)
