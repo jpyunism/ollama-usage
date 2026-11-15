@@ -21,6 +21,12 @@ class OllamaUsageApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // CrashActivity corre en su propio proceso (:crash) y esta Application
+        // se inicializa también ahí. Agendar WorkManager en ese proceso lanza
+        // IllegalStateException ("WorkManager is not initialized properly") y
+        // mata la pantalla de error, tapando el crash original. El pipeline de
+        // la app solo tiene sentido en el proceso principal.
+        if (!isMainProcess()) return
         val container = AppContainer.get(this)
         val prefs = container.prefs
         // Aplica el idioma guardado (o el del sistema) antes de crear la UI.
@@ -46,4 +52,20 @@ class OllamaUsageApp : Application() {
             DailySummaryWorker.schedule(this)
         }
     }
+
+    /**
+     * true si esta instancia corre en el proceso principal de la app.
+     * `Application.getProcessName()` es API 28+; en 26-27 se resuelve por
+     * `ActivityManager` con el pid actual, con fallback a true (nunca dejar la
+     * app sin pipeline por un fallo de la consulta).
+     */
+    private fun isMainProcess(): Boolean = runCatching {
+        val name = if (android.os.Build.VERSION.SDK_INT >= 28) {
+            Application.getProcessName()
+        } else {
+            val am = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            am.runningAppProcesses?.firstOrNull { it.pid == android.os.Process.myPid() }?.processName
+        }
+        name == null || name == packageName
+    }.getOrDefault(true)
 }

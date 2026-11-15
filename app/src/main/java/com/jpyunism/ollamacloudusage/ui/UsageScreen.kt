@@ -37,6 +37,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,12 +48,17 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.currentStateAsState
+import androidx.lifecycle.Lifecycle
 import com.jpyunism.ollamacloudusage.UsageViewModel
+import com.jpyunism.ollamacloudusage.UpdaterService
 import com.jpyunism.ollamacloudusage.DownloadState
 import com.jpyunism.ollamacloudusage.CookieExpiry
 
@@ -79,6 +85,8 @@ fun UsageScreen(vm: UsageViewModel) {
     val pagerState = rememberPagerState(pageCount = { Tab.entries.size })
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
     var settingsSaveJob by remember { mutableStateOf<Job?>(null) }
     val settingsSavedMessage = stringResource(R.string.settings_saved)
 
@@ -92,6 +100,19 @@ fun UsageScreen(vm: UsageViewModel) {
                 message = settingsSavedMessage,
                 duration = SnackbarDuration.Short,
             )
+        }
+    }
+
+    // Al volver del ajuste "Instalar apps desconocidas" con el permiso ya
+    // concedido, retoma la descarga sin obligar a tocar Actualizar de nuevo.
+    LaunchedEffect(lifecycleState, download, update) {
+        val pending = update
+        if (lifecycleState == Lifecycle.State.RESUMED &&
+            pending != null &&
+            download is DownloadState.NeedsPermission &&
+            UpdaterService.canRequestPackageInstalls(context)
+        ) {
+            vm.startUpdateDownload(pending)
         }
     }
 
@@ -132,7 +153,14 @@ fun UsageScreen(vm: UsageViewModel) {
                 if (update != null && download !is DownloadState.Downloading) {
                     UpdateBanner(
                         version = update!!.versionName,
-                        onClick = { vm.startUpdateDownload(update!!) },
+                        needsPermission = download is DownloadState.NeedsPermission,
+                        onClick = {
+                            if (download is DownloadState.NeedsPermission) {
+                                UpdaterService.openInstallPermissionSettings(context)
+                            } else {
+                                vm.startUpdateDownload(update!!)
+                            }
+                        },
                     )
                 }
                 // Recordatorio proactivo de cookie (issue #62): banner con CTA
@@ -161,7 +189,7 @@ fun UsageScreen(vm: UsageViewModel) {
 }
 
 @Composable
-private fun UpdateBanner(version: String, onClick: () -> Unit) {
+private fun UpdateBanner(version: String, needsPermission: Boolean, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
@@ -174,13 +202,23 @@ private fun UpdateBanner(version: String, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                stringResource(R.string.update_available, version),
+                text = if (needsPermission) {
+                    stringResource(R.string.update_needs_permission_message)
+                } else {
+                    stringResource(R.string.update_available, version)
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f),
             )
             Spacer(Modifier.width(8.dp))
             Button(onClick = onClick) {
-                Text(stringResource(R.string.update_install))
+                Text(
+                    if (needsPermission) {
+                        stringResource(R.string.update_install_permission)
+                    } else {
+                        stringResource(R.string.update_install)
+                    },
+                )
             }
         }
     }

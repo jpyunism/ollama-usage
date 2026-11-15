@@ -3,6 +3,38 @@
 Todas las novedades de la app, agrupadas por version. Sigue semver
 (`MAJOR.MINOR.PATCH`).
 
+## v0.38.6 (2026-11-15)
+
+### Fix: tocar "Actualizar" mataba la app (y el update nunca avanzaba)
+
+Tocar el botón **Actualizar** del banner de nueva versión cerraba la app: el
+proceso moría con `ForegroundServiceDidNotStartInTimeException` y la pantalla
+quedaba congelada en el último frame. Por eso la actualización automática nunca
+se completaba.
+
+- `UpdaterService.onStartCommand()` llama `startForeground()` **antes** de
+  cualquier validación. Antes lo hacía después de comprobar el permiso
+  "Instalar apps desconocidas"; sin ese permiso (el estado normal: lo tiene la
+  app con la que instalaste el APK, no Ollama Usage) el servicio retornaba sin
+  publicar el foreground y el sistema mataba el proceso a los ~5 s.
+- `UpdaterService.start()` ya no arranca el servicio cuando falta el permiso:
+  publica `NeedsPermission`, notifica y abre el ajuste del sistema para
+  concederlo. Al volver con el permiso concedido, la descarga se retoma sola.
+- El banner ahora muestra el aviso de permiso y el CTA "Habilitar instalación"
+  en vez de repetir un botón que no hacía nada.
+- `UsageViewModel.startUpdateDownload()` cancela el collector anterior: cada
+  toque dejaba un collector colgado en `viewModelScope`.
+- Al volver del ajuste "Instalar apps desconocidas" con el permiso ya
+  concedido, la descarga se reintenta automáticamente al reanudar la app.
+
+### Fix: la pantalla de error de crash ya no se cae sola
+
+`CrashActivity` corre en su propio proceso (`:crash`) y la `Application` se
+inicializaba también ahí: agendar WorkManager en ese proceso lanzaba
+`IllegalStateException: WorkManager is not initialized properly` y mataba la
+pantalla de error, tapando el crash original. Ahora el pipeline de la app solo
+arranca en el proceso principal.
+
 ## v0.38.4 (2026-09-13)
 
 ### Limpieza interna (auditoría ponytail): sin cambios de comportamiento

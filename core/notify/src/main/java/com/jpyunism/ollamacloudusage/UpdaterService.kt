@@ -44,22 +44,32 @@ class UpdaterService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val url = intent?.getStringExtra(EXTRA_URL) ?: run {
-            stopSelf()
-            return START_NOT_STICKY
-        }
-        expectedSha256 = intent?.getStringExtra(EXTRA_SHA256)
-        // Sin el permiso "Instalar apps desconocidas" el instalador del sistema
-        // rechaza el APK; avisamos antes de descargar.
-        if (!canRequestPackageInstalls(this)) {
-            state.value = DownloadState.NeedsPermission
-            notifyNeedsPermission(this)
+        // startForeground() PRIMERO y sin condiciones: si el servicio arrancó
+        // con startForegroundService() y no lo llama en ~5 s, el sistema mata
+        // el proceso entero con ForegroundServiceDidNotStartInTimeException
+        // (RemoteServiceException en el hilo main). Antes esto se validaba
+        // después del permiso de instalación, así que sin el permiso la app
+        // moría al tocar "Actualizar".
+        startForeground(NOTIFICATION_ID, buildProgress(this, 0))
+
+        val url = intent?.getStringExtra(EXTRA_URL)
+        if (url == null) {
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
         }
+        expectedSha256 = intent.getStringExtra(EXTRA_SHA256)
+        // Sin el permiso "Instalar apps desconocidas" el instalador del sistema
+        // rechaza el APK; avisamos antes de descargar. El foreground ya está
+        // publicado, así que este camino no puede tumbar el proceso.
+        if (!canRequestPackageInstalls(this)) {
+            state.value = DownloadState.NeedsPermission
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            notifyNeedsPermission(this)
+            stopSelf()
+            return START_NOT_STICKY
+        }
         state.value = DownloadState.Idle
-        startForeground(NOTIFICATION_ID, buildProgress(this, 0))
         scope.launch { downloadAndInstall(url) }
         return START_NOT_STICKY
     }
@@ -139,11 +149,30 @@ class UpdaterService : Service() {
         /** Progreso de la descarga, observable desde la UI (SettingsTab). */
         val state = MutableStateFlow<DownloadState>(DownloadState.Idle)
 
-        fun start(context: Context, url: String, sha256: String? = null) {
+        /**
+         * Arranca la descarga del APK. Devuelve false (sin arrancar el
+         * servicio) si falta el permiso "Instalar apps desconocidas": en ese
+         * caso deja [state] en [DownloadState.NeedsPermission] y publica la
+         * notificación con el aviso.
+         *
+         * No arrancar el servicio en ese caso es deliberado: un
+         * `startForegroundService()` que retorna sin `startForeground()` hace
+         * que el sistema mate el proceso del usuario a los ~5 s.
+         */
+        fun start(context: Context, url: String, sha256: String? = null): Boolean {
+            if (!canRequestPackageInstalls(context)) {
+                state.value = DownloadState.NeedsPermission
+                notifyNeedsPermission(context)
+                // El usuario ya expresó la intención de instalar: lo llevamos
+                // directo al ajuste del sistema en vez de dejarlo sin feedback.
+                openInstallPermissionSettings(context)
+                return false
+            }
             val intent = Intent(context, UpdaterService::class.java)
                 .putExtra(EXTRA_URL, url)
                 .putExtra(EXTRA_SHA256, sha256)
             ContextCompat.startForegroundService(context, intent)
+            return true
         }
 
         /** SHA-256 en hex del archivo; true si coincide con [expected]. */

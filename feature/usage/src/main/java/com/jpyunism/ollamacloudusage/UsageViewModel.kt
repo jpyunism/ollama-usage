@@ -172,6 +172,8 @@ class UsageViewModel(
 
     private var refreshJob: Job? = null
 
+    private var downloadJob: Job? = null
+
     init {
         if (repository.hasAuth()) refresh()
         refreshAccountUsages()
@@ -539,10 +541,11 @@ class UsageViewModel(
     fun startUpdateDownload(info: UpdateInfo) {
         _download.value = DownloadState.Downloading(0)
         onUpdateDownload(info)
-        viewModelScope.launch {
-            UpdaterService.state.collect { state ->
-                _download.value = state
-            }
+        // Un solo collector vivo: sin cancelar el anterior, cada toque dejaba
+        // un collector colgado en viewModelScope para siempre.
+        downloadJob?.cancel()
+        downloadJob = viewModelScope.launch {
+            UpdaterService.state.collect { state -> _download.value = state }
         }
     }
 
