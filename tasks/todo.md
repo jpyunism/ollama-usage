@@ -1,34 +1,10 @@
-# Todo: Lote 2 top-5 mejoras
+# Todo: refresh con precisión al minuto (spec 12)
 
-## Feature A — Multi-cuenta API keys (#25)
-- [x] A1 (RED) AccountStoreTest: JSON accounts, CRUD, activa, migración
-- [x] A2 (GREEN) AccountStore
-- [x] A3 (RED) UsageHistoryStore con storageKey paramétrico
-- [x] A4 Repo: credencial + history por cuenta activa
-- [x] A5b UI (chips en Uso, gestión en Configuración) + strings
-
-## Feature B — Resumen diario programado (#19)
-- [x] B1 (RED) nextDailyRunMillis + dailySummaryText
-- [x] B2 (GREEN) funciones puras
-- [x] B3 DailySummaryWorker (delay, reprograma, fallback snapshot)
-- [x] B4 Settings switch + time picker + reprogramación + strings
-
-## Feature C — Histórico por modelo (#20)
-- [x] C1 (RED) tests snapshot.models + serialización m + dedupe
-- [x] C2 (GREEN) UsageSnapshot.models + encode/parse + record + modelPercent
-- [x] C3 UI bottom sheet evolución por modelo + strings
-
-## Feature D — Comparativa semana anterior (#18)
-- [x] D1 (RED) comparisonSeries (últimos 2 períodos, horas vs %, recorte)
-- [x] D2 (GREEN) función pura
-- [x] D3 Overlay en UsageChart + toggle + solo WEEK
-
-## Feature E — Compartir consumo (#22)
-- [x] E1 (RED) shareSummaryText
-- [x] E2 (GREEN) función pura + strings
-- [x] E3 Botón Share: clipboard + ACTION_SEND + snackbar
-
-## Cierre
-- [x] V1 Suite completa + lint + assembleRelease
-- [x] V2 Validación emulador test64 (AGENTS.md)
-- [x] V3 Release v0.32.0 (versionCode 44) + APK + screenshots + Telegram
+- [x] T1 (RED) `RefreshOptionsTest`: presets, `modeFor`, `sanitize`, `modeDefault`
+- [x] T2 (GREEN) `RefreshOptions` puro
+- [x] T3 (RED) `UsageSchedulerEngineTest`
+- [x] T4 (GREEN) `RefreshEngine` + `engineFor` + `fallbackToPeriodic`
+- [x] T5 (GREEN) `UsageMonitorService.onTimeout` + `onDestroy` → fallback
+- [x] T6 UI `RefreshSection`: modos, presets, stepper, campo, línea de motor
+- [x] T7 (androidTest) `SchedulerFallbackTest`: work encolado + intervalo pendiente
+- [ ] T8 Emulador + release v0.38.8

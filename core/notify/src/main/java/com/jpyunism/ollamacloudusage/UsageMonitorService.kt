@@ -31,6 +31,8 @@ class UsageMonitorService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        stopRequested = false
+        timeoutHandled = false
         intervalMinutes = intent?.getIntExtra(EXTRA_INTERVAL, -1)?.takeIf { it > 0 }
             ?: SecurePrefs.get(this).getInt(PrefsKeys.REFRESH_INTERVAL, PrefsKeys.DEFAULT_REFRESH_MINUTES)
         // Issue #77: con START_STICKY el sistema puede reiniciar el servicio sin
@@ -57,6 +59,29 @@ class UsageMonitorService : Service() {
     }
 
     private fun prefs() = SecurePrefs.get(this)
+
+    /**
+     * API 34: el sistema corta el FGS por tiempo. En la práctica es el tope
+     * diario de 6 h de los FGS `dataSync` (Android 15+).
+     */
+    @Deprecated("Deprecated in Java")
+    override fun onTimeout(startId: Int) = handleTimeout(startId)
+
+    /** API 35+. El sistema avisa antes de matar el servicio. */
+    override fun onTimeout(startId: Int, fgsType: Int) = handleTimeout(startId)
+
+    /**
+     * El sistema ya no va a permitir el FGS (tope diario agotado): caer a
+     * WorkManager de 15 min y dejar el intervalo pendiente para retomarlo
+     * cuando la app vuelva a foreground. Sin esto el refresco moría en
+     * silencio a mitad de día.
+     */
+    private fun handleTimeout(startId: Int) {
+        timeoutHandled = true
+        UsageScheduler.fallbackToPeriodic(this, pendingInterval = intervalMinutes)
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf(startId)
+    }
 
     private fun startLoop() {
         scope.launch {
@@ -93,6 +118,12 @@ class UsageMonitorService : Service() {
 
     override fun onDestroy() {
         scope.cancel()
+        // Si el sistema mató el servicio sin que el usuario cambiara la
+        // frecuencia (tope diario de dataSync, OEM agresivo), no dejar el
+        // refresco muerto en silencio: WorkManager de 15 min como red.
+        if (!stopRequested && !timeoutHandled) {
+            runCatching { UsageScheduler.fallbackToPeriodic(this, pendingInterval = intervalMinutes) }
+        }
         super.onDestroy()
     }
 
@@ -103,6 +134,14 @@ class UsageMonitorService : Service() {
     companion object {
         private const val EXTRA_INTERVAL = "interval_minutes"
 
+        /** true cuando la app pidió parar (cambio a WorkManager); no es un corte del sistema. */
+        @Volatile
+        private var stopRequested = false
+
+        /** true cuando el sistema ya avisó del corte por tiempo (onTimeout). */
+        @Volatile
+        private var timeoutHandled = false
+
         fun start(context: Context, intervalMinutes: Int) {
             val intent = Intent(context, UsageMonitorService::class.java)
                 .putExtra(EXTRA_INTERVAL, intervalMinutes)
@@ -110,6 +149,7 @@ class UsageMonitorService : Service() {
         }
 
         fun stop(context: Context) {
+            stopRequested = true
             context.stopService(Intent(context, UsageMonitorService::class.java))
         }
     }

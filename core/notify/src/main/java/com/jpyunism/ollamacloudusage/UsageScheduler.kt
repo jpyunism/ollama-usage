@@ -22,6 +22,36 @@ object UsageScheduler {
     const val KEY_PENDING_FGS = "pending_fgs_interval"
 
     /**
+     * Motor que ejecuta el refresco para [intervalMinutes]. La UI lo muestra
+     * para no prometer una precisión que el motor no puede dar.
+     */
+    fun engineFor(intervalMinutes: Int): RefreshEngine {
+        val safe = intervalMinutes.coerceIn(MIN_REFRESH_MINUTES, MAX_REFRESH_MINUTES)
+        return if (safe < MIN_PERIODIC_MINUTES) RefreshEngine.FOREGROUND_SERVICE else RefreshEngine.WORK_MANAGER
+    }
+
+    /**
+     * Red de seguridad cuando el FGS ya no puede sostener el refresco (p. ej.
+     * Android 15 agotó el tope diario de 6 h de los FGS `dataSync`): deja
+     * programado el WorkManager de 15 min para que el consumo no se congele en
+     * silencio, y guarda el intervalo pedido en [KEY_PENDING_FGS] para
+     * restaurarlo con [retryPending] cuando la app vuelva a foreground.
+     */
+    fun fallbackToPeriodic(context: Context, pendingInterval: Int? = null) {
+        val prefs = SecurePrefs.get(context)
+        pendingInterval?.let { prefs.edit().putInt(KEY_PENDING_FGS, it).apply() }
+        val request = PeriodicWorkRequestBuilder<UsageWorker>(
+            MIN_PERIODIC_MINUTES.toLong(),
+            TimeUnit.MINUTES,
+        ).build()
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            WORK_NAME,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            request,
+        )
+    }
+
+    /**
      * Programa el refresco. Para intervalos >= 15 min usa WorkManager;
      * para intervalos menores usa el servicio en primer plano (más preciso).
      *
@@ -43,15 +73,7 @@ object UsageScheduler {
                 prefs.edit().remove(KEY_PENDING_FGS).apply()
             } else {
                 prefs.edit().putInt(KEY_PENDING_FGS, safe).apply()
-                val fallback = PeriodicWorkRequestBuilder<UsageWorker>(
-                    MIN_PERIODIC_MINUTES.toLong(),
-                    TimeUnit.MINUTES,
-                ).build()
-                WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                    WORK_NAME,
-                    ExistingPeriodicWorkPolicy.UPDATE,
-                    fallback,
-                )
+                fallbackToPeriodic(context)
             }
         } else {
             // Frecuencia normal: WorkManager periódico.

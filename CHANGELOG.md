@@ -3,6 +3,35 @@
 Todas las novedades de la app, agrupadas por version. Sigue semver
 (`MAJOR.MINOR.PATCH`).
 
+## v0.38.8 (2026-11-15)
+
+### Nuevo: control de frecuencia con precisión al minuto
+
+El slider anterior sólo tenía 31 posiciones entre 1 y 720 min: cada paso saltaba
+~23 min y era imposible fijar 5, 10, 20, 45 o 90 minutos.
+
+- Tres modos como atajo: **Tiempo real** (3 min), **Equilibrado** (15 min) y
+  **Ahorro** (2 h). El modo se deduce del valor; pulsarlo sólo lo cambia.
+- Presets: 1, 5, 10, 15, 30, 1 h, 2 h, 6 h y 12 h.
+- Botones −/+ de un minuto y campo para escribir **cualquier** valor entre 1 y
+  720. Un valor inválido (vacío, `0`, `999`) no cambia nada.
+- Debajo del control se indica el motor real y su precisión:
+  "Servicio en primer plano · notificación persistente…" o
+  "WorkManager · puede retrasarse si el teléfono está en reposo".
+
+### Fix: el refresco ya no muere en silencio a mitad de día
+
+Con frecuencias de 1–14 min el refresco lo sostiene un servicio en primer plano
+`dataSync`; Android 15+ lo limita a **6 h al día**. Al agotarse, el servicio se
+detenía y no se reprogramaba nada hasta abrir la app.
+
+- `UsageMonitorService.onTimeout()` (API 34/35) detecta el corte y cae a
+  WorkManager de 15 min, dejando el intervalo pedido pendiente para retomarlo
+  al volver a foreground.
+- `onDestroy` sin parada explícita (OEM agresivo) hace lo mismo.
+- `UsageScheduler.engineFor()` expone el motor elegido para que la UI no
+  prometa precisión que no puede dar.
+
 ## v0.38.7 (2026-11-15)
 
 ### Fix: con API key todo daba "network error: No value for limits"

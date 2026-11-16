@@ -101,7 +101,16 @@
     <string name="countdown_example">Ejemplo: "Sesión resetea en 36 min"</string>
     <string name="date_example">Ejemplo: "Sesión resetea el 8 ago, 18:00"</string>
     <string name="refresh_frequency">Frecuencia de refresco</string>
-    <string name="refresh_frequency_description">Cada cuánto se actualiza el consumo en segundo plano. De 1 a 14 min usa un servicio en primer plano; de 15 min en adelante usa WorkManager.</string>
+    <string name="refresh_frequency_description">Cada cuánto se actualiza el consumo en segundo plano. Elige un atajo o escribe el minuto exacto (1–720).</string>
+    <string name="refresh_mode_realtime">Tiempo real</string>
+    <string name="refresh_mode_balanced">Equilibrado</string>
+    <string name="refresh_mode_saver">Ahorro</string>
+    <string name="refresh_engine_foreground">Servicio en primer plano · notificación persistente. Android puede limitarlo a 6 h al día; después queda el refresco de 15 min.</string>
+    <string name="refresh_engine_workmanager">WorkManager · puede retrasarse si el teléfono está en reposo (Doze).</string>
+    <string name="refresh_minutes_unit">min</string>
+    <string name="refresh_decrease">Restar un minuto</string>
+    <string name="refresh_increase">Sumar un minuto</string>
+    <string name="refresh_exact_hint">Minuto exacto</string>
     <string name="min_1">1 min</string>
     <string name="hours_12">12 h</string>
     <string name="settings_saved">Configuración guardada</string>

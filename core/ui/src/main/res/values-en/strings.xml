@@ -101,7 +101,16 @@
     <string name="countdown_example">Example: "Session resets in 36 min"</string>
     <string name="date_example">Example: "Session resets on 8 Aug, 18:00"</string>
     <string name="refresh_frequency">Refresh frequency</string>
-    <string name="refresh_frequency_description">How often usage is updated in the background. From 1 to 14 min it uses a foreground service; from 15 min on it uses WorkManager.</string>
+    <string name="refresh_frequency_description">How often usage is updated in the background. Pick a shortcut or type the exact minute (1–720).</string>
+    <string name="refresh_mode_realtime">Real time</string>
+    <string name="refresh_mode_balanced">Balanced</string>
+    <string name="refresh_mode_saver">Power saving</string>
+    <string name="refresh_engine_foreground">Foreground service · persistent notification. Android may cap it at 6 h per day; after that the 15 min refresh takes over.</string>
+    <string name="refresh_engine_workmanager">WorkManager · may be delayed while the phone is idle (Doze).</string>
+    <string name="refresh_minutes_unit">min</string>
+    <string name="refresh_decrease">Remove one minute</string>
+    <string name="refresh_increase">Add one minute</string>
+    <string name="refresh_exact_hint">Exact minute</string>
     <string name="min_1">1 min</string>
     <string name="hours_12">12 h</string>
     <string name="settings_saved">Settings saved</string>

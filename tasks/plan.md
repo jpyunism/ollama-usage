@@ -1,41 +1,39 @@
-# Plan: Lote 2 top-5 mejoras (spec `docs/spec-lote2-top5-mejoras.md`)
+# Plan: refresh con precisión al minuto (spec `docs/specs/12-refresh-interval-precision.md`)
 
-Orden de implementación A (#25 multi-cuenta) → B (#19 resumen diario) →
-C (#20 histórico por modelo) → D (#18 comparativa semanal) → E (#22 compartir).
-E es independiente; D depende del gráfico existente; A es la de mayor alcance.
-TDD RED→GREEN por feature.
+P1 + P2 elegidas por JuanPa: control nuevo (presets + minuto exacto + modos) y
+fix del cap de 6 h/día del FGS `dataSync`. TDD RED→GREEN por unidad.
 
 ## Steps
 
-### Feature A — Multi-cuenta API keys (#25)
-1. **A1 (RED)** — `AccountStoreTest.kt`: JSON accounts en prefs; add/rename/remove/active; migración de API key única; sin cookie multi-cuenta.
-2. **A2 (GREEN)** — `AccountStore` (puro + prefs).
-3. **A3 (RED)** — `UsageHistoryStore` con `storageKey` paramétrico (default legacy).
-4. **A4** — `UsageRepository`: credencial desde cuenta activa; history store por cuenta activa; test.
-5. **A5** — `UsageViewModel.switchAccount(id)` + refresh; UI: switcher en Uso (chips) y gestión en Configuración (add/rename/remove); strings es/en; tests de VM.
+1. **T1 (RED)** — `RefreshOptionsTest` (`:feature:settings`): presets
+   `1,5,10,15,30,60,120,360,720` ordenados y dentro de rango; `modeFor`
+   (≤5 real, ≤30 equilibrado, resto ahorro); `sanitize` (0, 721, -5 → default);
+   `modeDefault` (3/15/120).
+2. **T2 (GREEN)** — `RefreshOptions` (objeto puro, sin Android) en
+   `feature/settings/.../ui/settings/`.
+3. **T3 (RED)** — `UsageSchedulerTest` (`:core:notify`): `engineFor(1|14)` =
+   FOREGROUND_SERVICE; `engineFor(15|720)` = WORK_MANAGER.
+4. **T4 (GREEN)** — `RefreshEngine` enum + `UsageScheduler.engineFor` +
+   `fallbackToPeriodic(context)` (WM 15 min, `ExistingPeriodicWorkPolicy.UPDATE`).
+5. **T5 (GREEN)** — `UsageMonitorService`: `onTimeout` (API 35+) y `onDestroy`
+   sin parada explícita → `fallbackToPeriodic` + `KEY_PENDING_FGS` + stopSelf.
+6. **T6 (UI)** — `RefreshSection`: 3 modos (chips), 9 presets (chips), stepper
+   −/+, campo numérico, línea de motor/precisión. Strings es/en.
+7. **T7 (androidTest)** — `fallbackToPeriodic` deja el work
+   `usage_periodic_check` encolado en WorkManager.
+8. **T8** — Validación en emulador (valor escrito a mano, persistencia tras
+   force-stop, sin crash) + release v0.38.8.
 
-### Feature B — Resumen diario programado (#19)
-6. **B1 (RED)** — `nextDailyRunMillis` (hora futura hoy, mañana si pasó, zona) + `dailySummaryText` (% semana/sesión, proyección opcional, sin datos → null).
-7. **B2 (GREEN)** — funciones puras.
-8. **B3** — `DailySummaryWorker` (OneTime con delay, reprograma al terminar; refresh via repository; fallback al último snapshot si falla la red; notificación propia en canal `usage_alerts`).
-9. **B4** — Settings: switch + time picker + reprogramación al cambiar; strings es/en.
+## Riesgos
 
-### Feature C — Histórico por modelo (#20)
-10. **C1 (RED)** — tests: snapshot con `models` (nullable), serialización `m` opcional, parse tolerante, dedupe considera modelos.
-11. **C2 (GREEN)** — `UsageSnapshot.models`, encode/parse, `record` guarda weeklyModels, `modelPercent()`.
-12. **C3** — UI: al tocar modelo en lista de Uso → bottom sheet con gráfico de evolución (reusa patrón UsageChart); estado vacío; strings.
+- El cap de 6 h no se puede esperar en un test: se cubre la pieza que importa
+  (el fallback a WorkManager) y `onTimeout` delega en ella.
+- `TextField` dentro de una sección plegable: cuidar foco del IME y que el
+  debounce de guardado no pierda el valor.
+- Presets en dos filas (`FlowRow`) para no desbordar en pantallas angostas.
 
-### Feature D — Comparativa semana anterior (#18)
-13. **D1 (RED)** — `comparisonSeries`: dos últimos períodos cerrados + actual, puntos (horas desde inicio, %), recorte a duración transcurrida.
-14. **D2 (GREEN)** — función pura en `UsageHistory.kt`.
-15. **D3** — `UsageChart` con parámetro `comparison` + overlay punteado + toggle chip (default ON, solo si hay datos); solo WEEK.
+## Verificación
 
-### Feature E — Compartir consumo (#22)
-16. **E1 (RED)** — `shareSummaryText`: formato, top modelo semanal, sin modelos omite top.
-17. **E2 (GREEN)** — función pura + strings.
-18. **E3** — Botón Share en Uso: clipboard + ACTION_SEND chooser + snackbar "Copiado".
-
-## Cierre
-19. **V1** — Suite completa + lint + `assembleRelease` verde.
-20. **V2** — Validación emulador test64 (AGENTS.md): flujos afectados, persistencia tras force-stop, ambos flujos de cuenta, logcat sin crash/ANR.
-21. **V3** — Release v0.32.0 (versionCode 44) + APK firmado + screenshots + Telegram.
+- `./gradlew testDebugUnitTest lintDebug assembleRelease`.
+- Emulador: escribir `45` → texto WorkManager; preset `3` → servicio en primer
+  plano; force-stop + relanzar → valor persistido; `adb logcat -b crash` limpio.
